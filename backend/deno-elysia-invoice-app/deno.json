@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window"],
+    "target": "esnext",
+    "module": "esnext",
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "tasks": {
+    "build": {
+      "command": "deno run --allow-read --allow-write --allow-net src/app.ts",
+      "desc": "Run the application"
+    }
+  },
+  "fmt": {
+    "options": {
+      "lineWidth": 80
+    }
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}

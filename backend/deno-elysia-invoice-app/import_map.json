@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "elysia": "https://deno.land/x/elysia@latest/mod.ts",
+    "uuid": "https://deno.land/x/uuid@v2.0.0/mod.ts",
+    "jwt": "https://deno.land/x/djwt@v2.0.0/mod.ts",
+    "sqlite": "https://deno.land/x/sqlite@v3.6.0/mod.ts"
+  }
+}
