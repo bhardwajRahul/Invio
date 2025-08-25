@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from "https://deno.land/std/uuid/mod.ts";
-
 export interface Invoice {
   id: string;
   customer_id: string;
@@ -14,14 +12,14 @@ export interface Invoice {
 
 export class InvoiceModel {
   constructor(
-    public id: string = uuidv4.generate(),
     public customer_id: string,
     public issue_date: Date,
+    public total: number,
+    public id: string = crypto.randomUUID(),
     public due_date?: Date,
     public status: "draft" | "sent" | "paid" | "overdue" = "draft",
     public notes?: string,
-    public total: number,
-    public share_token: string = uuidv4.generate(),
+    public share_token: string = crypto.randomUUID(),
     public created_at: Date = new Date()
   ) {}
 
