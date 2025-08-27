@@ -1,22 +1,16 @@
+-- Drop existing tables to recreate with new schema
+DROP TABLE IF EXISTS invoice_items;
+DROP TABLE IF EXISTS invoices;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS templates;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS invoice_attachments;
+
 -- Business/Seller information (stored in settings)
 CREATE TABLE settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
-
--- Insert default business settings
-INSERT OR IGNORE INTO settings (key, value) VALUES 
-  ('companyName', 'Your Company'),
-  ('companyAddress', '123 Business St, City, State 12345'),
-  ('companyEmail', 'contact@yourcompany.com'),
-  ('companyPhone', '+1 (555) 123-4567'),
-  ('companyTaxId', 'TAX123456789'),
-  ('currency', 'USD'),
-  ('logo', ''),
-  ('paymentMethods', 'Bank Transfer, PayPal, Credit Card'),
-  ('bankAccount', 'Account: 1234567890, Routing: 987654321'),
-  ('paymentTerms', 'Due in 30 days'),
-  ('defaultNotes', 'Thank you for your business!');
 
 -- Enhanced customers table
 CREATE TABLE customers (
@@ -90,13 +84,27 @@ CREATE TABLE templates (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert a default template
+-- Insert default business settings
+INSERT OR IGNORE INTO settings (key, value) VALUES 
+  ('companyName', 'Your Company'),
+  ('companyAddress', '123 Business St, City, State 12345'),
+  ('companyEmail', 'contact@yourcompany.com'),
+  ('companyPhone', '+1 (555) 123-4567'),
+  ('companyTaxId', 'TAX123456789'),
+  ('currency', 'USD'),
+  ('logo', ''),
+  ('paymentMethods', 'Bank Transfer, PayPal, Credit Card'),
+  ('bankAccount', 'Account: 1234567890, Routing: 987654321'),
+  ('paymentTerms', 'Due in 30 days'),
+  ('defaultNotes', 'Thank you for your business!');
+
+-- Insert a simple default template
 INSERT OR IGNORE INTO templates (id, name, html, is_default) VALUES 
-('default-template', 'Default Invoice Template', '<html><body><h1>Invoice {{invoiceNumber}}</h1><p>Customer: {{customerName}}</p><p>Total: {{currency}} {{total}}</p></body></html>', TRUE);
+('default-template', 'Default Invoice Template', '<h1>Invoice #{{invoiceNumber}}</h1><p>Total: {{currency}} {{total}}</p>', TRUE);
 
 -- Index for performance
-CREATE INDEX idx_invoices_number ON invoices(invoice_number);
-CREATE INDEX idx_invoices_customer ON invoices(customer_id);
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_invoices_share_token ON invoices(share_token);
-CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_share_token ON invoices(share_token);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);

@@ -8,7 +8,7 @@ import {
   deleteInvoice, 
   publishInvoice 
 } from "../controllers/invoices.ts";
-import { getTemplates, createTemplate } from "../controllers/templates.ts";
+import { getTemplates, createTemplate, getTemplateById, renderTemplate, loadTemplateFromFile } from "../controllers/templates.ts";
 import { updateSettings, getSettings } from "../controllers/settings.ts";
 import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer } from "../controllers/customers.ts";
 
@@ -38,21 +38,27 @@ adminRoutes.use("/settings/*", basicAuth({
   password: ADMIN_PASS,
 }));
 
+// Protect admin alias routes as well
+adminRoutes.use("/admin/*", basicAuth({
+  username: ADMIN_USER,
+  password: ADMIN_PASS,
+}));
+
 // Invoice routes
 adminRoutes.post("/invoices", async (c) => {
   const data = await c.req.json();
-  const invoice = await createInvoice(data);
+  const invoice = createInvoice(data);
   return c.json(invoice);
 });
 
-adminRoutes.get("/invoices", async (c) => {
-  const invoices = await getInvoices();
+adminRoutes.get("/invoices", (c) => {
+  const invoices = getInvoices();
   return c.json(invoices);
 });
 
-adminRoutes.get("/invoices/:id", async (c) => {
+adminRoutes.get("/invoices/:id", (c) => {
   const id = c.req.param("id");
-  const invoice = await getInvoiceById(id);
+  const invoice = getInvoiceById(id);
   if (!invoice) {
     return c.json({ error: "Invoice not found" }, 404);
   }
@@ -62,19 +68,19 @@ adminRoutes.get("/invoices/:id", async (c) => {
 adminRoutes.put("/invoices/:id", async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
-  const invoice = await updateInvoice(id, data);
+  const invoice = updateInvoice(id, data);
   return c.json(invoice);
 });
 
-adminRoutes.delete("/invoices/:id", async (c) => {
+adminRoutes.delete("/invoices/:id", (c) => {
   const id = c.req.param("id");
-  await deleteInvoice(id);
+  deleteInvoice(id);
   return c.json({ success: true });
 });
 
-adminRoutes.post("/invoices/:id/publish", async (c) => {
+adminRoutes.post("/invoices/:id/publish", (c) => {
   const id = c.req.param("id");
-  const result = await publishInvoice(id);
+  const result = publishInvoice(id);
   return c.json(result);
 });
 
@@ -90,6 +96,101 @@ adminRoutes.post("/templates", async (c) => {
   return c.json(template);
 });
 
+// Get template by ID
+adminRoutes.get("/templates/:id", (c) => {
+  const id = c.req.param("id");
+  const template = getTemplateById(id);
+  if (!template) {
+    return c.json({ error: "Template not found" }, 404);
+  }
+  return c.json(template);
+});
+
+// Preview template with sample data
+adminRoutes.post("/templates/:id/preview", async (c) => {
+  const id = c.req.param("id");
+  const data = await c.req.json();
+  
+  const template = getTemplateById(id);
+  if (!template) {
+    return c.json({ error: "Template not found" }, 404);
+  }
+  
+  // Add sample data if not provided
+  const sampleData = {
+    companyName: "Sample Company Inc",
+    companyAddress: "123 Business St, City, State 12345",
+    companyEmail: "contact@sample.com",
+    companyPhone: "+1-555-123-4567",
+    companyTaxId: "TAX123456",
+    invoiceNumber: "INV-2025-001",
+    issueDate: "2025-08-26",
+    dueDate: "2025-09-25",
+    currency: "USD",
+    status: "draft",
+    customerName: "John Doe",
+    customerEmail: "john@example.com",
+    customerAddress: "456 Client Ave, City, State 54321",
+    highlightColor: data.highlightColor || "#2563eb",
+    highlightColorLight: data.highlightColorLight || "#dbeafe",
+    subtotal: 2500.00,
+    discountAmount: 250.00,
+    discountPercentage: 10,
+    taxRate: 8.5,
+    taxAmount: 191.25,
+    total: 2441.25,
+    hasDiscount: true,
+    hasTax: true,
+    showItemCode: true,
+    items: [
+      {
+        itemCode: "WEB-001",
+        description: "Website Development",
+        quantity: 1,
+        unitPrice: 2500.00,
+        lineTotal: 2500.00,
+        notes: "Custom responsive website with modern design"
+      }
+    ],
+    notes: "Thank you for your business! Payment is due within 30 days.",
+    paymentTerms: "Net 30 days",
+    paymentMethods: "Bank Transfer, Credit Card",
+    bankAccount: "Account: 123-456-789, Routing: 987-654-321",
+    ...data
+  };
+  
+  try {
+    const renderedHtml = renderTemplate(template.html, sampleData);
+    return new Response(renderedHtml, {
+      headers: { "Content-Type": "text/html" }
+    });
+  } catch (error) {
+    return c.json({ error: "Failed to render template", details: String(error) }, 500);
+  }
+});
+
+// Load template from file
+adminRoutes.post("/templates/load-from-file", async (c) => {
+  try {
+    const { filePath, name, isDefault, highlightColor } = await c.req.json();
+    
+    const html = await loadTemplateFromFile(filePath);
+    const template = await createTemplate({
+      name,
+      html,
+      isDefault: isDefault || false
+    });
+    
+    return c.json({ 
+      ...template, 
+      highlightColor: highlightColor || "#2563eb",
+      message: "Template loaded successfully from file" 
+    });
+  } catch (error) {
+    return c.json({ error: "Failed to load template from file", details: String(error) }, 500);
+  }
+});
+
 // Settings routes
 adminRoutes.get("/settings", async (c) => {
   const settings = await getSettings();
@@ -97,6 +198,31 @@ adminRoutes.get("/settings", async (c) => {
 });
 
 adminRoutes.put("/settings", async (c) => {
+  const data = await c.req.json();
+  const settings = await updateSettings(data);
+  return c.json(settings);
+});
+
+// Partial update (PATCH) to merge provided keys only
+adminRoutes.patch("/settings", async (c) => {
+  const data = await c.req.json();
+  const settings = await updateSettings(data);
+  return c.json(settings);
+});
+
+// Optional admin-prefixed aliases for clarity/documentation parity
+adminRoutes.get("/admin/settings", async (c) => {
+  const settings = await getSettings();
+  return c.json(settings);
+});
+
+adminRoutes.put("/admin/settings", async (c) => {
+  const data = await c.req.json();
+  const settings = await updateSettings(data);
+  return c.json(settings);
+});
+
+adminRoutes.patch("/admin/settings", async (c) => {
   const data = await c.req.json();
   const settings = await updateSettings(data);
   return c.json(settings);

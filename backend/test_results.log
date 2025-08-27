@@ -1,0 +1,71 @@
+=== Enhanced Invio API Test Results ===
+Test started at: Wed Aug 27 17:30:10 UTC 2025
+
+[0;34m[2025-08-27 17:30:10][0m 🚀 Starting Enhanced Invio API Tests
+[0;34m[2025-08-27 17:30:10][0m ====================================
+[0;34m[2025-08-27 17:30:10][0m 🧹 Database Cleanup
+[0;34m[2025-08-27 17:30:10][0m ==================
+[0;34m[2025-08-27 17:30:11][0m Keeping existing data
+[0;34m[2025-08-27 17:30:11][0m Checking if server is running...
+[0;32m✅ Server is running[0m
+[0;34m[2025-08-27 17:30:11][0m Testing: Health Check
+[0;32m✅ Health Check[0m
+[0;34m[2025-08-27 17:30:11][0m Testing: Admin Auth Test (should fail without auth)
+[0;32m✅ Admin Auth Test (should fail without auth)[0m
+[0;34m[2025-08-27 17:30:12][0m Testing: Admin Auth Test (should work with auth)
+[0;32m✅ Admin Auth Test (should work with auth)[0m
+[0;34m[2025-08-27 17:30:12][0m Testing built-in templates...
+[0;34m[2025-08-27 17:30:12][0m Testing: List Built-in Templates
+[0;32m✅ List Built-in Templates[0m
+[0;34m[2025-08-27 17:30:12][0m Creating enhanced customer...
+[0;32m✅ Customer created with ID: b4689dd1-d502-4716-80fd-b56beb68e75d[0m
+[0;34m[2025-08-27 17:30:12][0m Testing: Create Enhanced Customer (Display)
+[0;32m✅ Create Enhanced Customer (Display)[0m
+[0;34m[2025-08-27 17:30:12][0m Testing: Configure Business Settings
+[0;32m✅ Configure Business Settings[0m
+[0;34m[2025-08-27 17:30:12][0m Creating enhanced invoice with multiple line items...
+[0;32m✅ Invoice created with ID: 00e3c01e-2540-445b-a1f4-7f8ae091cda5[0m
+[0;34m[2025-08-27 17:30:12][0m Testing: Create Professional Invoice (Display)
+[0;32m✅ Create Professional Invoice (Display)[0m
+[0;34m[2025-08-27 17:30:12][0m Testing: View Public Invoice JSON
+[0;32m✅ View Public Invoice JSON[0m
+[0;34m[2025-08-27 17:30:12][0m Testing PDF generation with custom highlight colors...
+[0;34m[2025-08-27 17:30:12][0m Testing: Generate PDF - Professional Blue
+[0;32m✅ Generate PDF - Professional Blue[0m
+[0;34m[2025-08-27 17:30:12][0m Testing: Generate PDF - Professional Green
+[0;32m✅ Generate PDF - Professional Green[0m
+[0;34m[2025-08-27 17:30:13][0m Testing: Generate PDF - Minimalist Purple
+[0;32m✅ Generate PDF - Minimalist Purple[0m
+[0;34m[2025-08-27 17:30:13][0m Testing: Generate PDF - Default Template
+[0;32m✅ Generate PDF - Default Template[0m
+[0;34m[2025-08-27 17:30:13][0m Testing: List All Customers
+[0;32m✅ List All Customers[0m
+[0;34m[2025-08-27 17:30:13][0m Testing: List All Invoices
+[0;32m✅ List All Invoices[0m
+[0;34m[2025-08-27 17:30:13][0m Testing: Get All Settings
+[0;32m✅ Get All Settings[0m
+[0;34m[2025-08-27 17:30:13][0m Testing template operations...
+[0;34m[2025-08-27 17:30:13][0m Testing: List All Templates (Built-in)
+[0;32m✅ List All Templates (Built-in)[0m
+[0;34m[2025-08-27 17:30:13][0m Creating custom template...
+[0;32m✅ Create Custom Template[0m
+[0;34m[2025-08-27 17:30:13][0m Opening PDF downloads in browser...
+[0;34m[2025-08-27 17:30:14][0m 📊 Test Summary
+[0;34m[2025-08-27 17:30:14][0m ===============
+[0;32m✅ All enhanced tests completed successfully![0m
+[0;34m[2025-08-27 17:30:14][0m 📋 Detailed results saved to: test_results.log
+[0;34m[2025-08-27 17:30:14][0m 🔗 Public invoice link: http://localhost:3000/api/v1/public/invoices/d92fff5f-ac0f-4be8-a027-0a5dc8fc4247
+[0;34m[2025-08-27 17:30:14][0m 📄 PDF Downloads:
+[0;34m[2025-08-27 17:30:15][0m    Professional (Blue): http://localhost:3000/api/v1/public/invoices/d92fff5f-ac0f-4be8-a027-0a5dc8fc4247/pdf?template=professional&highlight=%232563eb
+[0;34m[2025-08-27 17:30:15][0m    Professional (Green): http://localhost:3000/api/v1/public/invoices/d92fff5f-ac0f-4be8-a027-0a5dc8fc4247/pdf?template=professional&highlight=%2316a34a
+[0;34m[2025-08-27 17:30:15][0m    Minimalist (Purple): http://localhost:3000/api/v1/public/invoices/d92fff5f-ac0f-4be8-a027-0a5dc8fc4247/pdf?template=minimalist&highlight=%237c3aed
+[0;34m[2025-08-27 17:30:15][0m    Default: http://localhost:3000/api/v1/public/invoices/d92fff5f-ac0f-4be8-a027-0a5dc8fc4247/pdf
+[0;34m[2025-08-27 17:30:15][0m 🆔 Test Resource IDs created:
+[0;34m[2025-08-27 17:30:15][0m    Customer ID: b4689dd1-d502-4716-80fd-b56beb68e75d
+[0;34m[2025-08-27 17:30:15][0m    Invoice ID: 00e3c01e-2540-445b-a1f4-7f8ae091cda5
+[0;34m[2025-08-27 17:30:15][0m    Share Token: d92fff5f-ac0f-4be8-a027-0a5dc8fc4247
+[0;32m✅ 🎉 Enhanced Invio API testing with templates completed![0m
+[0;34m[2025-08-27 17:30:15][0m 🧹 Test Cleanup Options
+[0;34m[2025-08-27 17:30:15][0m ======================
+[0;34m[2025-08-27 17:30:19][0m Test data preserved for inspection
+[0;34m[2025-08-27 17:30:19][0m ✨ Test session complete!

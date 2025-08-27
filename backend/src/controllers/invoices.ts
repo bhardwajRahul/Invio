@@ -1,125 +1,380 @@
-import { getDatabase } from "../database/init.ts";
-import { Invoice } from "../types/index.ts";
+import { getDatabase, getNextInvoiceNumber, calculateInvoiceTotals } from "../database/init.ts";
+import { CreateInvoiceRequest, UpdateInvoiceRequest, Invoice, InvoiceItem, InvoiceWithDetails } from "../types/index.ts";
 import { generateUUID } from "../utils/uuid.ts";
 
-interface CreateInvoiceData {
-  customerId: string;
-  issueDate?: string | Date;
-  dueDate?: string | Date;
-  status?: 'draft' | 'sent' | 'paid' | 'overdue';
-  notes?: string;
-  items: {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-  }[];
-}
-
-export const createInvoice = (data: CreateInvoiceData) => {
+export const createInvoice = (data: CreateInvoiceRequest): InvoiceWithDetails => {
   const db = getDatabase();
   const invoiceId = generateUUID();
   const shareToken = generateUUID();
+  // Prefer client-provided invoiceNumber when unique; otherwise auto-generate
+  let invoiceNumber = data.invoiceNumber;
+  if (invoiceNumber) {
+    const exists = db.query("SELECT 1 FROM invoices WHERE invoice_number = ? LIMIT 1", [invoiceNumber]);
+    if (exists.length > 0) {
+      // Fallback to auto-generated to avoid UNIQUE constraint violations
+      invoiceNumber = getNextInvoiceNumber();
+    }
+  } else {
+    invoiceNumber = getNextInvoiceNumber();
+  }
   
-  // Calculate total from items
-  const total = data.items.reduce((sum, item) => {
-    return sum + (item.quantity * item.unitPrice);
-  }, 0);
+  // Calculate totals from items and discount/tax info
+  const totals = calculateInvoiceTotals(
+    data.items,
+    data.discountPercentage || 0,
+    data.discountAmount || 0,
+    data.taxRate || 0
+  );
   
+  const now = new Date();
+  const issueDate = data.issueDate ? new Date(data.issueDate) : now;
+  const dueDate = data.dueDate ? new Date(data.dueDate) : undefined;
+  
+  // Get default settings for currency and payment terms
+  const settings = getSettings();
+  const currency = data.currency || settings.currency || 'USD';
+  const paymentTerms = data.paymentTerms || settings.paymentTerms || 'Due in 30 days';
+
   const invoice: Invoice = {
     id: invoiceId,
+  invoiceNumber: invoiceNumber!,
     customerId: data.customerId,
-    issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
-    dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+    issueDate,
+    dueDate,
+    currency,
     status: data.status || "draft",
+    
+    // Totals
+    subtotal: totals.subtotal,
+    discountAmount: totals.discountAmount,
+    discountPercentage: data.discountPercentage || 0,
+    taxRate: data.taxRate || 0,
+    taxAmount: totals.taxAmount,
+    total: totals.total,
+    
+    // Payment and notes
+    paymentTerms,
     notes: data.notes,
-    total: total,
-    shareToken: shareToken,
-    createdAt: new Date()
+    
+    // System fields
+    shareToken,
+    createdAt: now,
+    updatedAt: now
   };
 
   // Insert invoice
   db.query(
-    "INSERT INTO invoices (id, customer_id, issue_date, due_date, status, notes, total, share_token, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [invoice.id, invoice.customerId, invoice.issueDate, invoice.dueDate, invoice.status, invoice.notes, invoice.total, invoice.shareToken, invoice.createdAt]
+    `INSERT INTO invoices (
+      id, invoice_number, customer_id, issue_date, due_date, currency, status,
+      subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
+      payment_terms, notes, share_token, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      invoice.id, invoice.invoiceNumber, invoice.customerId, invoice.issueDate, invoice.dueDate, invoice.currency, invoice.status,
+      invoice.subtotal, invoice.discountAmount, invoice.discountPercentage, invoice.taxRate, invoice.taxAmount, invoice.total,
+      invoice.paymentTerms, invoice.notes, invoice.shareToken, invoice.createdAt, invoice.updatedAt
+    ]
   );
   
   // Insert invoice items
-  for (const item of data.items) {
+  const items: InvoiceItem[] = [];
+  for (let i = 0; i < data.items.length; i++) {
+    const item = data.items[i];
     const itemId = generateUUID();
+    const lineTotal = item.quantity * item.unitPrice;
+    
+    const invoiceItem: InvoiceItem = {
+      id: itemId,
+      invoiceId: invoiceId,
+      itemCode: item.itemCode,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal,
+      notes: item.notes,
+      sortOrder: i
+    };
+    
     db.query(
-      "INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_price) VALUES (?, ?, ?, ?, ?)",
-      [itemId, invoiceId, item.description, item.quantity, item.unitPrice]
+      `INSERT INTO invoice_items (
+        id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [itemId, invoiceId, item.itemCode, item.description, item.quantity, item.unitPrice, lineTotal, item.notes, i]
+    );
+    
+    items.push(invoiceItem);
+  }
+  
+  // Get customer info for response
+  const customer = getCustomerById(data.customerId);
+  if (!customer) {
+    throw new Error("Customer not found");
+  }
+  
+  return {
+    ...invoice,
+    customer,
+    items
+  };
+};
+
+export const getInvoices = (): Invoice[] => {
+  const db = getDatabase();
+  const results = db.query(`
+    SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
+           subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
+           payment_terms, notes, share_token, created_at, updated_at
+    FROM invoices 
+    ORDER BY created_at DESC
+  `);
+  
+  return results.map((row: unknown[]) => mapRowToInvoice(row));
+};
+
+export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
+  const db = getDatabase();
+  const result = db.query(`
+    SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
+           subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
+           payment_terms, notes, share_token, created_at, updated_at
+    FROM invoices 
+    WHERE id = ?
+  `, [id]);
+  
+  if (result.length === 0) return null;
+  
+  const invoice = mapRowToInvoice(result[0] as unknown[]);
+  
+  // Get customer
+  const customer = getCustomerById(invoice.customerId);
+  if (!customer) return null;
+  
+  // Get items
+  const itemsResult = db.query(`
+    SELECT id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
+    FROM invoice_items 
+    WHERE invoice_id = ? 
+    ORDER BY sort_order
+  `, [id]);
+  
+  const items = itemsResult.map((row: unknown[]) => ({
+    id: row[0] as string,
+    invoiceId: row[1] as string,
+    itemCode: row[2] as string,
+    description: row[3] as string,
+    quantity: row[4] as number,
+    unitPrice: row[5] as number,
+    lineTotal: row[6] as number,
+    notes: row[7] as string,
+    sortOrder: row[8] as number,
+  }));
+  
+  return {
+    ...invoice,
+    customer,
+    items
+  };
+};
+
+export const getInvoiceByShareToken = (shareToken: string): InvoiceWithDetails | null => {
+  const db = getDatabase();
+  const result = db.query(`
+    SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
+           subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
+           payment_terms, notes, share_token, created_at, updated_at
+    FROM invoices 
+    WHERE share_token = ?
+  `, [shareToken]);
+  
+  if (result.length === 0) return null;
+  
+  const invoice = mapRowToInvoice(result[0] as unknown[]);
+  
+  // Get customer
+  const customer = getCustomerById(invoice.customerId);
+  if (!customer) return null;
+  
+  // Get items
+  const itemsResult = db.query(`
+    SELECT id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
+    FROM invoice_items 
+    WHERE invoice_id = ? 
+    ORDER BY sort_order
+  `, [invoice.id]);
+  
+  const items = itemsResult.map((row: unknown[]) => ({
+    id: row[0] as string,
+    invoiceId: row[1] as string,
+    itemCode: row[2] as string,
+    description: row[3] as string,
+    quantity: row[4] as number,
+    unitPrice: row[5] as number,
+    lineTotal: row[6] as number,
+    notes: row[7] as string,
+    sortOrder: row[8] as number,
+  }));
+  
+  return {
+    ...invoice,
+    customer,
+    items
+  };
+};
+
+export const updateInvoice = async (id: string, data: Partial<UpdateInvoiceRequest>): Promise<InvoiceWithDetails | null> => {
+  const existing = await getInvoiceById(id);
+  if (!existing) return null;
+  
+  const db = getDatabase();
+  
+  // If items are being updated, recalculate totals
+  let totals = {
+    subtotal: existing.subtotal,
+    discountAmount: existing.discountAmount,
+    taxAmount: existing.taxAmount,
+    total: existing.total
+  };
+  
+  if (data.items) {
+    totals = calculateInvoiceTotals(
+      data.items,
+      data.discountPercentage ?? existing.discountPercentage,
+      data.discountAmount ?? existing.discountAmount,
+      data.taxRate ?? existing.taxRate
     );
   }
   
-  return { ...invoice, items: data.items.map((item) => ({
-    id: generateUUID(), // This would be from the actual insert
-    invoiceId: invoiceId,
-    ...item
-  })) };
-};
-
-export const getInvoices = () => {
-  const db = getDatabase();
-  return db.query("SELECT * FROM invoices");
-};
-
-export const getInvoiceById = (id: string) => {
-  const db = getDatabase();
-  const result = db.query("SELECT * FROM invoices WHERE id = ?", [id]);
-  if (result.length > 0) {
-    const row = result[0] as unknown[];
-    return {
-      id: row[0] as string,
-      customerId: row[1] as string,
-      issueDate: new Date(row[2] as string),
-      dueDate: row[3] ? new Date(row[3] as string) : undefined,
-      status: row[4] as "draft" | "sent" | "paid" | "overdue",
-      notes: row[5] as string,
-      total: row[6] as number,
-      shareToken: row[7] as string,
-      createdAt: new Date(row[8] as string),
-    };
+  const updatedAt = new Date();
+  
+  // Update invoice
+  db.query(`
+    UPDATE invoices SET 
+      customer_id = ?, issue_date = ?, due_date = ?, currency = ?, status = ?,
+      subtotal = ?, discount_amount = ?, discount_percentage = ?, tax_rate = ?, tax_amount = ?, total = ?,
+      payment_terms = ?, notes = ?, updated_at = ?
+    WHERE id = ?
+  `, [
+    data.customerId ?? existing.customerId,
+    data.issueDate ? new Date(data.issueDate) : existing.issueDate,
+    data.dueDate ? new Date(data.dueDate) : existing.dueDate,
+    data.currency ?? existing.currency,
+    data.status ?? existing.status,
+    totals.subtotal,
+    totals.discountAmount,
+    data.discountPercentage ?? existing.discountPercentage,
+    data.taxRate ?? existing.taxRate,
+    totals.taxAmount,
+    totals.total,
+    data.paymentTerms ?? existing.paymentTerms,
+    data.notes ?? existing.notes,
+    updatedAt,
+    id
+  ]);
+  
+  // Update items if provided
+  if (data.items) {
+    // Delete existing items
+    db.query("DELETE FROM invoice_items WHERE invoice_id = ?", [id]);
+    
+    // Insert new items
+    for (let i = 0; i < data.items.length; i++) {
+      const item = data.items[i];
+      const itemId = generateUUID();
+      const lineTotal = item.quantity * item.unitPrice;
+      
+      db.query(`
+        INSERT INTO invoice_items (
+          id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [itemId, id, item.itemCode, item.description, item.quantity, item.unitPrice, lineTotal, item.notes, i]);
+    }
   }
-  return null;
+  
+  return await getInvoiceById(id);
 };
 
-export const getInvoiceByShareToken = (shareToken: string) => {
+export const deleteInvoice = (id: string): boolean => {
   const db = getDatabase();
-  const result = db.query("SELECT * FROM invoices WHERE share_token = ?", [shareToken]);
-  if (result.length > 0) {
-    const row = result[0] as unknown[];
-    return {
-      id: row[0] as string,
-      customerId: row[1] as string,
-      issueDate: new Date(row[2] as string),
-      dueDate: row[3] ? new Date(row[3] as string) : undefined,
-      status: row[4] as "draft" | "sent" | "paid" | "overdue",
-      notes: row[5] as string,
-      total: row[6] as number,
-      shareToken: row[7] as string,
-      createdAt: new Date(row[8] as string),
-    };
-  }
-  return null;
-};
-
-export const updateInvoice = (id: string, data: Partial<Invoice>) => {
-  const db = getDatabase();
-  db.query("UPDATE invoices SET customer_id = ?, issue_date = ?, due_date = ?, status = ?, notes = ?, total = ? WHERE id = ?", 
-    [data.customerId, data.issueDate, data.dueDate, data.status, data.notes, data.total, id]);
-  return getInvoiceById(id);
-};
-
-export const deleteInvoice = (id: string) => {
-  const db = getDatabase();
+  
+  // Delete items first (CASCADE should handle this, but being explicit)
+  db.query("DELETE FROM invoice_items WHERE invoice_id = ?", [id]);
+  
+  // Delete invoice
   db.query("DELETE FROM invoices WHERE id = ?", [id]);
+  
   return true;
 };
 
-export const publishInvoice = (id: string) => {
-  const shareToken = generateUUID();
-  const db = getDatabase();
-  db.query("UPDATE invoices SET share_token = ?, status = 'sent' WHERE id = ?", [shareToken, id]);
-  return { shareToken };
+export const publishInvoice = async (id: string): Promise<{ shareToken: string; shareUrl: string }> => {
+  const invoice = await getInvoiceById(id);
+  if (!invoice) {
+    throw new Error("Invoice not found");
+  }
+  
+  // Update status to 'sent' if it's currently 'draft'
+  if (invoice.status === 'draft') {
+    const db = getDatabase();
+    db.query("UPDATE invoices SET status = 'sent', updated_at = ? WHERE id = ?", [new Date(), id]);
+  }
+  
+  const shareUrl = `${Deno.env.get("BASE_URL") || "http://localhost:3000"}/api/v1/public/invoices/${invoice.shareToken}`;
+  
+  return {
+    shareToken: invoice.shareToken,
+    shareUrl
+  };
 };
+
+// Helper functions
+function mapRowToInvoice(row: unknown[]): Invoice {
+  return {
+    id: row[0] as string,
+    invoiceNumber: row[1] as string,
+    customerId: row[2] as string,
+    issueDate: new Date(row[3] as string),
+    dueDate: row[4] ? new Date(row[4] as string) : undefined,
+    currency: row[5] as string,
+    status: row[6] as 'draft' | 'sent' | 'paid' | 'overdue',
+    subtotal: row[7] as number,
+    discountAmount: row[8] as number,
+    discountPercentage: row[9] as number,
+    taxRate: row[10] as number,
+    taxAmount: row[11] as number,
+    total: row[12] as number,
+    paymentTerms: row[13] as string,
+    notes: row[14] as string,
+    shareToken: row[15] as string,
+    createdAt: new Date(row[16] as string),
+    updatedAt: new Date(row[17] as string),
+  };
+}
+
+function getCustomerById(id: string) {
+  const db = getDatabase();
+  const result = db.query("SELECT * FROM customers WHERE id = ?", [id]);
+  if (result.length === 0) return null;
+  
+  const row = result[0] as unknown[];
+  return {
+    id: row[0] as string,
+    name: row[1] as string,
+    email: row[2] as string,
+    phone: row[3] as string,
+    address: row[4] as string,
+    taxId: row[5] as string,
+    createdAt: new Date(row[6] as string),
+  };
+}
+
+function getSettings() {
+  const db = getDatabase();
+  const results = db.query("SELECT key, value FROM settings");
+  const settings: Record<string, string> = {};
+  
+  for (const row of results) {
+    const [key, value] = row as [string, string];
+    settings[key] = value;
+  }
+  
+  return settings;
+}
