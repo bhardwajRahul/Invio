@@ -12,17 +12,31 @@ export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
   );
   const b64 = cookies[AUTH_COOKIE];
   if (!b64) return null;
+  // New format: cookie stores base64(username:password) without the "Basic " prefix
+  // Build Authorization header directly. Also support old double-encoded cookies.
+  // 1) Prefer single-encoded: Basic <b64>
+  let header = `Basic ${b64}`;
+  // 2) Back-compat: if cookie was double-encoded (btoa(btoa(user:pass))), decode once
   try {
-    const decoded = atob(b64);
-    if (!decoded.startsWith("Basic ")) return `Basic ${b64}`; // fallback
-    return decoded;
+    const once = atob(b64);
+    // If once-decoded looks like a base64 of user:pass (second decode contains a colon), use that
+    try {
+      const twice = atob(once);
+      if (twice.includes(":")) {
+        header = `Basic ${once}`;
+      }
+    } catch {
+      // not double-encoded, keep default
+    }
   } catch {
-    return `Basic ${b64}`;
+    // not valid base64 at all; keep default
   }
+  return header;
 }
 
 export function setAuthCookieHeaders(basic: string): HeadersInit {
-  const b64 = btoa(basic.startsWith("Basic ") ? basic.slice("Basic ".length) : basic.replace(/^Basic\s+/, ""));
+  // Store single-encoded credentials (no "Basic " prefix) to avoid double-encoding
+  const b64 = (basic.startsWith("Basic ") ? basic.slice("Basic ".length) : basic.replace(/^Basic\s+/, ""));
   const cookie = `${AUTH_COOKIE}=${encodeURIComponent(b64)}; HttpOnly; Path=/; SameSite=Lax`;
   return { "Set-Cookie": cookie };
 }

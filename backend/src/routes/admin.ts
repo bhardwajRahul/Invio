@@ -11,6 +11,7 @@ import {
 import { getTemplates, createTemplate, getTemplateById, renderTemplate, loadTemplateFromFile } from "../controllers/templates.ts";
 import { updateSettings, getSettings } from "../controllers/settings.ts";
 import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer } from "../controllers/customers.ts";
+import { generatePDF, buildInvoiceHTML } from "../utils/pdf.ts";
 
 const adminRoutes = new Hono();
 
@@ -194,7 +195,15 @@ adminRoutes.post("/templates/load-from-file", async (c) => {
 // Settings routes
 adminRoutes.get("/settings", async (c) => {
   const settings = await getSettings();
-  return c.json(settings);
+  const map = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+  // Provide normalized aliases expected by the frontend
+  if (map.companyEmail && !map.email) map.email = map.companyEmail;
+  if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
+  if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
+  return c.json(map);
 });
 
 adminRoutes.put("/settings", async (c) => {
@@ -213,7 +222,14 @@ adminRoutes.patch("/settings", async (c) => {
 // Optional admin-prefixed aliases for clarity/documentation parity
 adminRoutes.get("/admin/settings", async (c) => {
   const settings = await getSettings();
-  return c.json(settings);
+  const map = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+  if (map.companyEmail && !map.email) map.email = map.companyEmail;
+  if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
+  if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
+  return c.json(map);
 });
 
 adminRoutes.put("/admin/settings", async (c) => {
@@ -263,3 +279,94 @@ adminRoutes.delete("/customers/:id", async (c) => {
 });
 
 export { adminRoutes };
+
+// Authenticated HTML/PDF generation for invoices by ID (no share token required)
+adminRoutes.get("/invoices/:id/html", async (c) => {
+  const id = c.req.param("id");
+  const invoice = getInvoiceById(id);
+  if (!invoice) {
+    return c.json({ message: "Invoice not found" }, 404);
+  }
+
+  // Settings map
+  const settings = await getSettings();
+  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const businessSettings = {
+    companyName: settingsMap.companyName || "Your Company",
+    companyAddress: settingsMap.companyAddress || "",
+    companyEmail: settingsMap.companyEmail || "",
+    companyPhone: settingsMap.companyPhone || "",
+    companyTaxId: settingsMap.companyTaxId || "",
+    currency: settingsMap.currency || "USD",
+    logo: settingsMap.logo || settingsMap.logoUrl,
+    brandLayout: settingsMap.brandLayout,
+    paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
+    bankAccount: settingsMap.bankAccount || "",
+    paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
+    defaultNotes: settingsMap.defaultNotes || "",
+  };
+
+  // Template/highlight from query
+  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ?? undefined;
+  const highlight = c.req.query("highlight") ?? undefined;
+  let selectedTemplateId: string | undefined = queryTemplate?.toLowerCase();
+  if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") selectedTemplateId = "professional-modern";
+  else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") selectedTemplateId = "minimalist-clean";
+
+  const html = buildInvoiceHTML(invoice, businessSettings, selectedTemplateId, highlight);
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+});
+
+adminRoutes.get("/invoices/:id/pdf", async (c) => {
+  const id = c.req.param("id");
+  const invoice = getInvoiceById(id);
+  if (!invoice) {
+    return c.json({ message: "Invoice not found" }, 404);
+  }
+
+  // Settings map
+  const settings = await getSettings();
+  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const businessSettings = {
+    companyName: settingsMap.companyName || "Your Company",
+    companyAddress: settingsMap.companyAddress || "",
+    companyEmail: settingsMap.companyEmail || "",
+    companyPhone: settingsMap.companyPhone || "",
+    companyTaxId: settingsMap.companyTaxId || "",
+    currency: settingsMap.currency || "USD",
+    logo: settingsMap.logo || settingsMap.logoUrl,
+    brandLayout: settingsMap.brandLayout,
+    paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
+    bankAccount: settingsMap.bankAccount || "",
+    paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
+    defaultNotes: settingsMap.defaultNotes || "",
+  };
+
+  // Template/highlight from query
+  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ?? undefined;
+  const highlight = c.req.query("highlight") ?? undefined;
+  let selectedTemplateId: string | undefined = queryTemplate?.toLowerCase();
+  if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") selectedTemplateId = "professional-modern";
+  else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") selectedTemplateId = "minimalist-clean";
+
+  const pdfBuffer = await generatePDF(invoice, businessSettings, selectedTemplateId, highlight);
+  return new Response(pdfBuffer, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber || id}.pdf"`,
+    },
+  });
+});

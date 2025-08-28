@@ -8,6 +8,8 @@ import * as $customers_index from "./routes/customers/index.tsx";
 import * as $dashboard from "./routes/dashboard.tsx";
 import * as $index from "./routes/index.tsx";
 import * as $invoices_id_ from "./routes/invoices/[id].tsx";
+import * as $invoices_id_html from "./routes/invoices/[id]/html.ts";
+import * as $invoices_id_pdf from "./routes/invoices/[id]/pdf.ts";
 import * as $invoices_index from "./routes/invoices/index.tsx";
 import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
@@ -24,6 +26,8 @@ const manifest = {
     "./routes/dashboard.tsx": $dashboard,
     "./routes/index.tsx": $index,
     "./routes/invoices/[id].tsx": $invoices_id_,
+    "./routes/invoices/[id]/html.ts": $invoices_id_html,
+    "./routes/invoices/[id]/pdf.ts": $invoices_id_pdf,
     "./routes/invoices/index.tsx": $invoices_index,
     "./routes/login.tsx": $login,
     "./routes/logout.ts": $logout,
