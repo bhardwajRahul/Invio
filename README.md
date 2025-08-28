@@ -1,6 +1,7 @@
 <p align="center">
   <img src="./assets/banner-default.png" alt="Invio" width="100%" />
 </p>
+[IN DEVELOPMENT, NO  BETA YET]
 
 Open source minimalist invoice software
 
