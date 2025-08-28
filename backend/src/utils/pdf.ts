@@ -3,76 +3,13 @@ import { TemplateContext, InvoiceWithDetails, BusinessSettings } from "../types/
 import { getTemplateById, renderTemplate as renderTpl } from "../controllers/templates.ts";
 // pdf-lib fallback remains available for environments without wkhtmltopdf
 
-export async function generateInvoicePDF(
-  invoiceData: InvoiceWithDetails, 
-  businessSettings?: BusinessSettings,
-  templateId?: string,
-  customHighlightColor?: string
-): Promise<Uint8Array> {
-  // Try to inline remote logo to a data URL for robust wkhtmltopdf rendering
-  const inlined = await inlineLogoIfPossible(businessSettings);
-  // Prefer wkhtmltopdf using selected template; fallback to pdf-lib styles
-  const html = buildHTML(invoiceData, inlined, templateId, customHighlightColor);
-  const wk = await tryWkhtmlToPdf(html);
-  if (wk) return wk;
-  // Fallback
-  return await generateStyledPDF(invoiceData, inlined, customHighlightColor, templateId);
-}
-
-// Inline remote logo images into data URLs so external fetch/CAs don't block rendering
-type WithLogo = BusinessSettings & { logo?: string; logoUrl?: string };
-
-async function inlineLogoIfPossible<T extends BusinessSettings | undefined>(settings: T): Promise<T> {
-  try {
-    if (!settings) return settings;
-  const s = settings as unknown as WithLogo;
-    const src = s.logo || s.logoUrl;
-    if (!src || src.startsWith("data:")) return settings;
-    if (!(src.startsWith("http://") || src.startsWith("https://"))) return settings;
-    const res = await fetch(src);
-    if (!res.ok) return settings;
-    const ab = await res.arrayBuffer();
-    const mime = res.headers.get("content-type") || inferMimeFromUrl(src) || "image/png";
-    const b64 = arrayBufferToBase64(ab);
-    const dataUrl = `data:${mime};base64,${b64}`;
-  (settings as unknown as WithLogo).logo = dataUrl;
-    return settings;
-  } catch (_e) {
-    return settings;
-  }
-}
-
-function inferMimeFromUrl(url: string): string | undefined {
-  const u = url.toLowerCase();
-  if (u.endsWith('.png')) return 'image/png';
-  if (u.endsWith('.jpg') || u.endsWith('.jpeg')) return 'image/jpeg';
-  if (u.endsWith('.gif')) return 'image/gif';
-  if (u.endsWith('.svg')) return 'image/svg+xml';
-  return undefined;
-}
-
-function arrayBufferToBase64(ab: ArrayBuffer): string {
-  const bytes = new Uint8Array(ab);
-  const chunkSize = 0x8000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode.apply(null, Array.from(chunk) as unknown as number[]);
-  }
-  // btoa expects Latin-1; this is fine for binary constructed above
-  return btoa(binary);
-}
-
+// ---- Basic color helpers ----
 function hexToRgb(hex: string): ReturnType<typeof rgb> {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) {
-    return rgb(0.15, 0.39, 0.92); // Default blue
-  }
-  
+  if (!result) return rgb(0.15, 0.39, 0.92); // Default blue
   const r = parseInt(result[1], 16) / 255;
   const g = parseInt(result[2], 16) / 255;
   const b = parseInt(result[3], 16) / 255;
-  
   return rgb(r, g, b);
 }
 
@@ -96,103 +33,96 @@ function lighten(hex: string, amount = 0.85): string {
   return `#${rr}${gg}${bb}`;
 }
 
-async function generateStyledPDF(
-  invoiceData: InvoiceWithDetails, 
-  businessSettings?: BusinessSettings,
-  customHighlightColor?: string,
-  templateId?: string
-): Promise<Uint8Array> {
-  // Generate different PDF styles based on template ID
-  const highlightRgb = customHighlightColor ? hexToRgb(customHighlightColor) : rgb(0.15, 0.39, 0.92);
-  
-  console.log(`PDF Generation - Template ID: ${templateId}`);
-  
-  if (templateId === 'professional-modern' || templateId?.toLowerCase().includes('professional')) {
-    console.log('Generating Professional PDF');
-    return await generateProfessionalPDF(invoiceData, businessSettings, highlightRgb);
-  } else if (templateId === 'minimalist-clean' || templateId?.toLowerCase().includes('minimalist')) {
-    console.log('Generating Minimalist PDF');
-    return await generateMinimalistPDF(invoiceData, businessSettings, highlightRgb);
-  } else {
-    console.log('Generating Fallback PDF');
-    return await generateFallbackPDF(invoiceData, businessSettings, customHighlightColor);
-  }
+function formatDate(d?: Date) {
+  return d ? new Date(d).toLocaleDateString() : undefined;
 }
 
-// ---- Layout utilities for consistent styling and pagination ----
+function toMoney(n: number): string { return n.toFixed(2); }
+
+// Provide logoUrl for both inline HTML and DB templates; retain previous behavior
+type WithLogo = BusinessSettings & { logo?: string; logoUrl?: string; brandLayout?: string };
+
+// ---- pdf-lib helper primitives (used by fallback/professional/minimalist fallbacks) ----
+const A4 = { width: 595, height: 842 };
+
+type Margins = { left: number; right: number; top: number; bottom: number };
 type DrawContext = {
   pdfDoc: PDFDocument;
   page: PDFPage;
   regularFont: PDFFont;
   boldFont: PDFFont;
   highlight: ReturnType<typeof rgb>;
-  margins: { left: number; right: number; top: number; bottom: number };
+  margins: Margins;
   cursorY: number;
   contentWidth: number;
 };
 
-const A4 = { width: 595, height: 842 } as const;
-
-function createMargins() {
-  // 36pt = 0.5in; we aim for ~0.75in (54pt) all around by default
+function createMargins(): Margins {
   const left = 50;
   const right = A4.width - 50;
   const top = A4.height - 50;
-  const bottom = 60;
+  const bottom = 50;
   return { left, right, top, bottom };
 }
 
-function formatMoney(currency: string, amount: number) {
-  return `${currency} ${amount.toFixed(2)}`;
+function newPage(ctx: DrawContext) {
+  const page = ctx.pdfDoc.addPage([A4.width, A4.height]);
+  ctx.page = page;
+  ctx.cursorY = createMargins().top;
 }
 
-function measureWidth(text: string, font: PDFFont, size: number) {
-  return font.widthOfTextAtSize(text, size);
-}
-
-function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  if (!text) return [];
-  const words = text.split(/\s+/);
+function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
   const lines: string[] = [];
-  let current = "";
-  for (const w of words) {
-    const tentative = current ? `${current} ${w}` : w;
-    if (measureWidth(tentative, font, size) <= maxWidth) {
-      current = tentative;
-    } else {
-      if (current) lines.push(current);
-      // If a single word is too long, hard split
-      if (measureWidth(w, font, size) > maxWidth) {
-        let chunk = "";
-        for (const ch of w.split("")) {
-          const tent = chunk + ch;
-          if (measureWidth(tent, font, size) <= maxWidth) {
-            chunk = tent;
-          } else {
-            if (chunk) lines.push(chunk);
-            chunk = ch;
-          }
-        }
-        if (chunk) lines.push(chunk);
-        current = "";
+  const paragraphs = String(text ?? "").split(/\r?\n/);
+  for (const p of paragraphs) {
+    const words = p.split(/\s+/);
+    let line = "";
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      const width = font.widthOfTextAtSize(test, fontSize);
+      if (width > maxWidth && line) {
+        lines.push(line);
+        line = w;
       } else {
-        current = w;
+        line = test;
       }
     }
+    if (line) lines.push(line);
   }
-  if (current) lines.push(current);
-  return lines;
+  return lines.length ? lines : [""];
 }
 
-function newPage(ctx: DrawContext): void {
-  ctx.page = ctx.pdfDoc.addPage([A4.width, A4.height]);
-  ctx.cursorY = ctx.margins.top;
+function drawDivider(ctx: DrawContext) {
+  ctx.page.drawLine({
+    start: { x: ctx.margins.left, y: ctx.cursorY },
+    end: { x: ctx.margins.right, y: ctx.cursorY },
+    thickness: 0.5,
+    color: rgb(0.85, 0.85, 0.85),
+  });
+  ctx.cursorY -= 8;
 }
 
-function ensureSpace(ctx: DrawContext, needed: number): void {
-  if (ctx.cursorY - needed < ctx.margins.bottom) {
+function ensureSpace(ctx: DrawContext, neededHeight: number) {
+  if (ctx.cursorY - neededHeight < ctx.margins.bottom) {
     newPage(ctx);
+    ctx.cursorY -= 20;
   }
+}
+
+function drawTableHeader(
+  ctx: DrawContext,
+  cols: Array<{ title: string; x: number }>,
+  fill?: ReturnType<typeof rgb>,
+) {
+  const y = ctx.cursorY;
+  const h = 18;
+  if (fill) {
+    ctx.page.drawRectangle({ x: ctx.margins.left, y: y - 4, width: ctx.contentWidth, height: h, color: fill });
+  }
+  for (const c of cols) {
+    ctx.page.drawText(c.title, { x: c.x + 2, y, size: 10, font: ctx.boldFont, color: fill ? rgb(1, 1, 1) : rgb(0.3, 0.3, 0.3) });
+  }
+  ctx.cursorY -= h + 6;
 }
 
 function drawLabelValue(
@@ -200,58 +130,55 @@ function drawLabelValue(
   label: string,
   value: string,
   x: number,
-  size = 10,
-  gap = 60,
-  color: ReturnType<typeof rgb> = rgb(0.3, 0.3, 0.3)
+  size = 9,
+  labelWidth = 70,
+  color = rgb(0.4, 0.4, 0.4),
 ) {
-  ctx.page.drawText(label, { x, y: ctx.cursorY, size, font: ctx.boldFont, color: ctx.highlight });
-  ctx.page.drawText(value, { x: x + gap, y: ctx.cursorY, size, font: ctx.regularFont, color });
-  ctx.cursorY -= size + 4;
+  ensureSpace(ctx, 14);
+  ctx.page.drawText(label, { x, y: ctx.cursorY, size, font: ctx.regularFont, color });
+  ctx.page.drawText(value, { x: x + labelWidth, y: ctx.cursorY, size, font: ctx.regularFont, color: rgb(0.15, 0.15, 0.15) });
+  ctx.cursorY -= 14;
 }
 
-function drawTableHeader(ctx: DrawContext, columns: { title: string; x: number; align?: "left" | "right" }[], fill?: ReturnType<typeof rgb>) {
-  const h = 20;
-  ensureSpace(ctx, h + 8);
-  if (fill) {
-    ctx.page.drawRectangle({ x: ctx.margins.left, y: ctx.cursorY - 4, width: ctx.contentWidth, height: h, color: fill });
+function formatMoney(code: string, amount: number): string {
+  return `${code} ${amount.toFixed(2)}`;
+}
+
+async function inlineLogoIfPossible(settings?: BusinessSettings): Promise<BusinessSettings | undefined> {
+  if (!settings?.logo) return settings;
+  const url = settings.logo.trim();
+  if (url.startsWith("data:")) return { ...settings, logoUrl: url } as unknown as BusinessSettings;
+
+  const toDataUrl = (bytes: Uint8Array, mime = "image/png") => {
+    const base64 = btoa(String.fromCharCode(...bytes));
+    return `data:${mime};base64,${base64}`;
+  };
+
+  try {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      const res = await fetch(url);
+      if (!res.ok) return settings;
+      const buf = new Uint8Array(await res.arrayBuffer());
+      const mime = res.headers.get("content-type") ?? "image/png";
+      return { ...settings, logoUrl: toDataUrl(buf, mime) } as unknown as BusinessSettings;
+    }
+    // Attempt local file read
+    const file = await Deno.readFile(url);
+    let mime = "image/png";
+    if (url.endsWith(".jpg") || url.endsWith(".jpeg")) mime = "image/jpeg";
+    if (url.endsWith(".svg")) mime = "image/svg+xml";
+    return { ...settings, logoUrl: toDataUrl(file, mime) } as unknown as BusinessSettings;
+  } catch (_e) {
+    return settings; // keep original
   }
-  for (const col of columns) {
-    ctx.page.drawText(col.title.toUpperCase(), {
-      x: col.x,
-      y: ctx.cursorY + 2,
-      size: 9,
-      font: ctx.boldFont,
-      color: fill ? rgb(1, 1, 1) : ctx.highlight,
-    });
-  }
-  ctx.cursorY -= h + 6;
 }
 
-function _drawTableRow(ctx: DrawContext, cells: { text: string; x: number; size?: number; font?: PDFFont; color?: ReturnType<typeof rgb> }[], rowHeight = 18, altFill?: ReturnType<typeof rgb>) {
-  ensureSpace(ctx, rowHeight);
-  if (altFill) {
-    ctx.page.drawRectangle({ x: ctx.margins.left, y: ctx.cursorY - 3, width: ctx.contentWidth, height: rowHeight, color: altFill });
-  }
-  for (const c of cells) {
-    ctx.page.drawText(c.text, { x: c.x, y: ctx.cursorY, size: c.size ?? 9, font: c.font ?? ctx.regularFont, color: c.color ?? rgb(0.2, 0.2, 0.2) });
-  }
-  ctx.cursorY -= rowHeight;
-}
-
-function drawDivider(ctx: DrawContext, color = rgb(0.85, 0.85, 0.85)) {
-  ctx.page.drawLine({ start: { x: ctx.margins.left, y: ctx.cursorY }, end: { x: ctx.margins.right, y: ctx.cursorY }, thickness: 0.5, color });
-  ctx.cursorY -= 12;
-}
-
-// ---- HTML rendering using wkhtmltopdf ----
-
-function formatDate(d?: Date) {
-  return d ? new Date(d).toLocaleDateString() : undefined;
-}
-
-function buildContext(invoice: InvoiceWithDetails, settings?: BusinessSettings & { logoUrl?: string }, _highlight?: string): TemplateContext & { logoUrl?: string } {
+function buildContext(
+  invoice: InvoiceWithDetails,
+  settings?: BusinessSettings & { logoUrl?: string; brandLayout?: string },
+  _highlight?: string,
+): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
   const currency = invoice.currency || settings?.currency || "USD";
-  const toMoney = (n: number) => n.toFixed(2);
   return {
     // Company
     companyName: settings?.companyName || "Your Company",
@@ -275,7 +202,7 @@ function buildContext(invoice: InvoiceWithDetails, settings?: BusinessSettings &
     customerTaxId: invoice.customer.taxId,
 
     // Items
-    items: invoice.items.map(i => ({
+    items: invoice.items.map((i) => ({
       itemCode: i.itemCode,
       description: i.description,
       quantity: i.quantity,
@@ -295,7 +222,7 @@ function buildContext(invoice: InvoiceWithDetails, settings?: BusinessSettings &
     // Flags
     hasDiscount: invoice.discountAmount > 0,
     hasTax: invoice.taxAmount > 0,
-    showItemCode: invoice.items.some(i => !!i.itemCode),
+    showItemCode: invoice.items.some((i) => !!i.itemCode),
 
     // Payment
     paymentTerms: invoice.paymentTerms || settings?.paymentTerms || undefined,
@@ -305,16 +232,33 @@ function buildContext(invoice: InvoiceWithDetails, settings?: BusinessSettings &
     // Notes
     notes: invoice.notes || settings?.defaultNotes || undefined,
 
-    // Non-mustache extras
-  // Provide logoUrl for both inline HTML and DB templates that expect it
-  logoUrl: (settings as unknown as { logo?: string; logoUrl?: string })?.logo || (settings as unknown as { logo?: string; logoUrl?: string })?.logoUrl,
-    // Color
-    // Provide default highlight if not given
-    // We'll inject via CSS vars
-  } as TemplateContext & { logoUrl?: string };
+    // Non-mustache extras consumed by templates
+    logoUrl: (settings as WithLogo | undefined)?.logo || (settings as WithLogo | undefined)?.logoUrl,
+    brandLogoLeft: ((): boolean => {
+      const layout = ((settings as WithLogo | undefined)?.brandLayout || "").toLowerCase();
+      const hasLogo = !!((settings as WithLogo | undefined)?.logo || (settings as WithLogo | undefined)?.logoUrl);
+      if (layout === "logo-left") return true;
+      if (layout === "logo-right") return false;
+      return hasLogo; // default to left when a logo exists
+    })(),
+  } as TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean };
 }
 
-function buildHTML(invoice: InvoiceWithDetails, settings?: BusinessSettings, templateId?: string, highlight?: string): string {
+export async function generateInvoicePDF(
+  invoiceData: InvoiceWithDetails,
+  businessSettings?: BusinessSettings,
+  templateId?: string,
+  customHighlightColor?: string,
+): Promise<Uint8Array> {
+  // Inline remote logo when possible for robust wkhtmltopdf rendering
+  const inlined = await inlineLogoIfPossible(businessSettings);
+  const html = buildInvoiceHTML(invoiceData, inlined, templateId, customHighlightColor);
+  const wk = await tryWkhtmlToPdf(html);
+  if (wk) return wk;
+  return await generateStyledPDF(invoiceData, inlined, customHighlightColor, templateId);
+}
+
+export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: BusinessSettings, templateId?: string, highlight?: string): string {
   const ctx = buildContext(invoice, settings, highlight);
   const hl = normalizeHex(highlight) || "#2563eb";
   const hlLight = lighten(hl, 0.86);
@@ -324,7 +268,7 @@ function buildHTML(invoice: InvoiceWithDetails, settings?: BusinessSettings, tem
     try {
       const t = getTemplateById(templateId);
       if (t && t.html) {
-        const html = renderTpl(t.html, { ...ctx, highlightColor: hl, highlightColorLight: hlLight, showItemCode: ctx.showItemCode });
+  const html = renderTpl(t.html, { ...ctx, highlightColor: hl, highlightColorLight: hlLight, showItemCode: ctx.showItemCode });
         return html;
       }
     } catch (_e) {
@@ -442,10 +386,11 @@ function buildHTML(invoice: InvoiceWithDetails, settings?: BusinessSettings, tem
 async function tryWkhtmlToPdf(html: string): Promise<Uint8Array | null> {
   try {
     // Attempt to run wkhtmltopdf; if missing, this will throw
-    const cmd = new Deno.Command("wkhtmltopdf", {
+  const cmd = new Deno.Command("wkhtmltopdf", {
       args: [
         "-q",
-        "--enable-local-file-access",
+    "--enable-local-file-access",
+    "--disable-javascript",
         "-s", "A4",
         "--margin-top", "15mm",
         "--margin-bottom", "15mm",
@@ -475,450 +420,19 @@ async function tryWkhtmlToPdf(html: string): Promise<Uint8Array | null> {
   }
 }
 
-async function generateFallbackPDF(
-  invoiceData: InvoiceWithDetails, 
+// Select a pdf-lib fallback style when wkhtmltopdf is unavailable
+async function generateStyledPDF(
+  invoiceData: InvoiceWithDetails,
   businessSettings?: BusinessSettings,
-  customHighlightColor?: string
+  customHighlightColor?: string,
+  templateId?: string,
 ): Promise<Uint8Array> {
-  // Use the existing PDF generation logic with optional custom color
-  const highlightRgb = customHighlightColor ? hexToRgb(customHighlightColor) : rgb(0.15, 0.39, 0.92); // Default blue
-
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 size in points (8.27 × 11.69 inches)
-  
-  // Load fonts
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  
-  let yPosition = 800;
-  const leftMargin = 50;
-  const rightMargin = 545;
-  
-  // Header - Company Information with custom color
-  if (businessSettings?.companyName) {
-    page.drawText(businessSettings.companyName, {
-      x: leftMargin,
-      y: yPosition,
-      size: 20,
-      font: boldFont,
-      color: highlightRgb,
-    });
-    yPosition -= 25;
-    
-    if (businessSettings.companyAddress) {
-      page.drawText(businessSettings.companyAddress, {
-        x: leftMargin,
-        y: yPosition,
-        size: 10,
-        font: regularFont,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-      yPosition -= 15;
-    }
-    
-    if (businessSettings.companyEmail) {
-      page.drawText(businessSettings.companyEmail, {
-        x: leftMargin,
-        y: yPosition,
-        size: 10,
-        font: regularFont,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-      yPosition -= 15;
-    }
-    
-    if (businessSettings.companyPhone) {
-      page.drawText(businessSettings.companyPhone, {
-        x: leftMargin,
-        y: yPosition,
-        size: 10,
-        font: regularFont,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-      yPosition -= 15;
-    }
-    
-    if (businessSettings.companyTaxId) {
-      page.drawText(`Tax ID: ${businessSettings.companyTaxId}`, {
-        x: leftMargin,
-        y: yPosition,
-        size: 10,
-        font: regularFont,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-    }
+  const highlight = customHighlightColor ? hexToRgb(customHighlightColor) : undefined;
+  const id = (templateId ?? "professional-modern").toLowerCase();
+  if (id.includes("minimalist")) {
+    return await generateMinimalistPDF(invoiceData, businessSettings, highlight);
   }
-  
-  // Invoice Title and Number (Right side)
-  page.drawText("INVOICE", {
-    x: rightMargin - 100,
-    y: 800,
-    size: 24,
-    font: boldFont,
-    color: highlightRgb,
-  });
-  
-  page.drawText(`Invoice #: ${invoiceData.invoiceNumber}`, {
-    x: rightMargin - 150,
-    y: 770,
-    size: 12,
-    font: boldFont,
-    color: rgb(0, 0, 0),
-  });
-  
-  page.drawText(`Date: ${new Date(invoiceData.issueDate).toLocaleDateString()}`, {
-    x: rightMargin - 150,
-    y: 750,
-    size: 10,
-    font: regularFont,
-    color: rgb(0, 0, 0),
-  });
-  
-  if (invoiceData.dueDate) {
-    page.drawText(`Due Date: ${new Date(invoiceData.dueDate).toLocaleDateString()}`, {
-      x: rightMargin - 150,
-      y: 730,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-  }
-  
-  page.drawText(`Status: ${invoiceData.status.toUpperCase()}`, {
-    x: rightMargin - 150,
-    y: 710,
-    size: 10,
-    font: regularFont,
-    color: invoiceData.status === 'paid' ? rgb(0, 0.7, 0) : highlightRgb,
-  });
-  
-  // Bill To Section
-  yPosition = 650;
-  page.drawText("BILL TO:", {
-    x: leftMargin,
-    y: yPosition,
-    size: 12,
-    font: boldFont,
-    color: highlightRgb,
-  });
-  yPosition -= 20;
-  
-  page.drawText(invoiceData.customer.name, {
-    x: leftMargin,
-    y: yPosition,
-    size: 12,
-    font: boldFont,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= 15;
-  
-  if (invoiceData.customer.address) {
-    page.drawText(invoiceData.customer.address, {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 15;
-  }
-  
-  if (invoiceData.customer.email) {
-    page.drawText(invoiceData.customer.email, {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 15;
-  }
-  
-  if (invoiceData.customer.phone) {
-    page.drawText(invoiceData.customer.phone, {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 15;
-  }
-  
-  if (invoiceData.customer.taxId) {
-    page.drawText(`Tax ID: ${invoiceData.customer.taxId}`, {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-  }
-  
-  // Items Table
-  yPosition = 530;
-  
-  // Table Header with custom color
-  page.drawRectangle({
-    x: leftMargin,
-    y: yPosition - 5,
-    width: rightMargin - leftMargin,
-    height: 25,
-    color: highlightRgb,
-  });
-  
-  page.drawText("Description", {
-    x: leftMargin + 5,
-    y: yPosition + 5,
-    size: 10,
-    font: boldFont,
-    color: rgb(1, 1, 1),
-  });
-  
-  page.drawText("Qty", {
-    x: leftMargin + 250,
-    y: yPosition + 5,
-    size: 10,
-    font: boldFont,
-    color: rgb(1, 1, 1),
-  });
-  
-  page.drawText("Unit Price", {
-    x: leftMargin + 300,
-    y: yPosition + 5,
-    size: 10,
-    font: boldFont,
-    color: rgb(1, 1, 1),
-  });
-  
-  page.drawText("Total", {
-    x: leftMargin + 400,
-    y: yPosition + 5,
-    size: 10,
-    font: boldFont,
-    color: rgb(1, 1, 1),
-  });
-  
-  yPosition -= 30;
-  
-  // Table Items
-  for (const item of invoiceData.items) {
-    let description = item.description;
-    if (item.itemCode) {
-      description = `[${item.itemCode}] ${description}`;
-    }
-    
-    page.drawText(description, {
-      x: leftMargin + 5,
-      y: yPosition,
-      size: 9,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    if (item.notes) {
-      page.drawText(item.notes, {
-        x: leftMargin + 5,
-        y: yPosition - 12,
-        size: 8,
-        font: regularFont,
-        color: rgb(0.5, 0.5, 0.5),
-      });
-    }
-    
-    page.drawText(item.quantity.toString(), {
-      x: leftMargin + 250,
-      y: yPosition,
-      size: 9,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    page.drawText(`${invoiceData.currency} ${item.unitPrice.toFixed(2)}`, {
-      x: leftMargin + 300,
-      y: yPosition,
-      size: 9,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    page.drawText(`${invoiceData.currency} ${item.lineTotal.toFixed(2)}`, {
-      x: leftMargin + 400,
-      y: yPosition,
-      size: 9,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    yPosition -= item.notes ? 35 : 25;
-  }
-  
-  // Totals Section
-  yPosition -= 20;
-  const totalsX = leftMargin + 350;
-  
-  page.drawText("Subtotal:", {
-    x: totalsX,
-    y: yPosition,
-    size: 10,
-    font: regularFont,
-    color: rgb(0, 0, 0),
-  });
-  
-  page.drawText(`${invoiceData.currency} ${invoiceData.subtotal.toFixed(2)}`, {
-    x: totalsX + 80,
-    y: yPosition,
-    size: 10,
-    font: regularFont,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= 15;
-  
-  if (invoiceData.discountAmount > 0) {
-    const discountText = invoiceData.discountPercentage > 0 
-      ? `Discount (${invoiceData.discountPercentage}%):`
-      : "Discount:";
-    
-    page.drawText(discountText, {
-      x: totalsX,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    page.drawText(`-${invoiceData.currency} ${invoiceData.discountAmount.toFixed(2)}`, {
-      x: totalsX + 80,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0.7, 0, 0),
-    });
-    yPosition -= 15;
-  }
-  
-  if (invoiceData.taxAmount > 0) {
-    page.drawText(`Tax (${invoiceData.taxRate}%):`, {
-      x: totalsX,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    page.drawText(`${invoiceData.currency} ${invoiceData.taxAmount.toFixed(2)}`, {
-      x: totalsX + 80,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 20;
-  }
-  
-  // Total (highlighted with custom color)
-  page.drawRectangle({
-    x: totalsX - 5,
-    y: yPosition - 5,
-    width: 150,
-    height: 20,
-    color: highlightRgb,
-  });
-  
-  page.drawText("TOTAL:", {
-    x: totalsX,
-    y: yPosition,
-    size: 12,
-    font: boldFont,
-    color: rgb(1, 1, 1),
-  });
-  
-  page.drawText(`${invoiceData.currency} ${invoiceData.total.toFixed(2)}`, {
-    x: totalsX + 80,
-    y: yPosition,
-    size: 12,
-    font: boldFont,
-    color: rgb(1, 1, 1),
-  });
-  
-  // Payment Terms and Notes
-  yPosition -= 40;
-  
-  if (invoiceData.paymentTerms) {
-    page.drawText("Payment Terms:", {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: boldFont,
-      color: highlightRgb,
-    });
-    
-    page.drawText(invoiceData.paymentTerms, {
-      x: leftMargin + 100,
-      y: yPosition,
-      size: 10,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 15;
-  }
-  
-  if (invoiceData.notes) {
-    page.drawText("Notes:", {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: boldFont,
-      color: highlightRgb,
-    });
-    yPosition -= 15;
-    
-    page.drawText(invoiceData.notes, {
-      x: leftMargin,
-      y: yPosition,
-      size: 9,
-      font: regularFont,
-      color: rgb(0, 0, 0),
-    });
-  }
-  
-  // Footer with business info
-  if (businessSettings?.paymentMethods || businessSettings?.bankAccount) {
-    yPosition = 80;
-    
-    page.drawText("Payment Information:", {
-      x: leftMargin,
-      y: yPosition,
-      size: 10,
-      font: boldFont,
-      color: highlightRgb,
-    });
-    yPosition -= 15;
-    
-    if (businessSettings.paymentMethods) {
-      page.drawText(`Methods: ${businessSettings.paymentMethods}`, {
-        x: leftMargin,
-        y: yPosition,
-        size: 9,
-        font: regularFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 12;
-    }
-    
-    if (businessSettings.bankAccount) {
-      page.drawText(`Bank: ${businessSettings.bankAccount}`, {
-        x: leftMargin,
-        y: yPosition,
-        size: 9,
-        font: regularFont,
-        color: rgb(0, 0, 0),
-      });
-    }
-  }
-  
-  const pdfBytes = await pdfDoc.save();
-  return pdfBytes;
+  return await generateProfessionalPDF(invoiceData, businessSettings, highlight);
 }
 
 export async function renderTemplateToPDF(_templateHTML: string, _data: Record<string, unknown>): Promise<Uint8Array> {

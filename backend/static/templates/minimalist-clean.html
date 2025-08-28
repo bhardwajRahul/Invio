@@ -37,11 +37,12 @@
             /* float-based layout for wkhtmltopdf compatibility */
         }
 
-        .company-info { float: left; width: 62%; }
-        .brand { display: table; margin-bottom: 6px; }
-        .brand .logo { display: table-cell; vertical-align: middle; padding-right: 8px; }
-        .brand .name { display: table-cell; vertical-align: middle; }
-        img.brand-logo { height: 24px; width: auto; object-fit: contain; }
+    .company-info { float: left; width: 62%; }
+    /* Brand row with absolute-positioned logo ensures logo height follows info block height. */
+    .brand { position: relative; margin-right: 276px; padding-left: 148px; margin-bottom: 6px; }
+    .brand .logo-box { position: absolute; left: 0; top: 0; bottom: 0; width: 140px; padding-right: 8px; }
+    .brand .company-info { float: none; width: auto; }
+    .brand img.logo { height: 100%; width: auto; display:block; object-fit: contain; max-width: 220px; }
         .invoice-meta { float: right; text-align: left; max-width: 280px; }
         .invoice-meta {
             display: inline-block;
@@ -76,6 +77,10 @@
             text-align: right;
             letter-spacing: 2px;
         }
+
+        /* Top-of-page title variant */
+        .invoice-title--top { text-align: left; margin-bottom: 4px; }
+        .invoice-number--top { text-align: left; margin-top: 2px; font-size: 12px; color: var(--text-medium); }
 
         .invoice-number {
             text-align: right;
@@ -291,31 +296,63 @@
             .dates-section { flex-direction: column; gap: 16px; text-align: left; }
             .totals-section { width: 100%; }
         }
+
+    .header { position: relative; }
+    .invoice-meta { float: right; max-width: 260px; margin-left: 16px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="company-info">
-                <div class="brand">
-                    <div class="logo">{{#logoUrl}}<img class="brand-logo" src="{{logoUrl}}" alt="logo">{{/logoUrl}}</div>
-                    <div class="name"><h1>{{companyName}}</h1></div>
-                </div>
-            <div class="company-details">
-                {{#companyAddress}}<p>{{companyAddress}}</p>{{/companyAddress}}
-                {{#companyEmail}}<p>{{companyEmail}}</p>{{/companyEmail}}
-                {{#companyPhone}}<p>{{companyPhone}}</p>{{/companyPhone}}
-            </div>
-        </div>
-        <div class="invoice-meta">
-            <div><strong>Issue Date:</strong> {{issueDate}}</div>
-            {{#dueDate}}<div><strong>Due Date:</strong> {{dueDate}}</div>{{/dueDate}}
-            <div><strong>Status:</strong> <span class="status-badge">{{status}}</span></div>
-        </div>
-        <div class="invoice-title-block">
-            <div class="invoice-title">INVOICE</div>
-            <div class="invoice-number">#{{invoiceNumber}}</div>
-        </div>
+    <!-- Top title -->
+    <div class="title-top">
+        <h2 class="invoice-title invoice-title--top">INVOICE</h2>
+        {{#invoiceNumber}}<div class="invoice-number invoice-number--top">#{{invoiceNumber}}</div>{{/invoiceNumber}}
     </div>
+  <div class="header">
+    <div class="invoice-meta">
+      <div><strong>Issue Date:</strong> {{issueDate}}</div>
+      {{#dueDate}}<div><strong>Due Date:</strong> {{dueDate}}</div>{{/dueDate}}
+      <div><strong>Status:</strong> <span class="status-badge">{{status}}</span></div>
+    </div>
+
+    <div class="brand {{#brandLogoLeft}}brand--left{{/brandLogoLeft}}">
+            <div class="logo-box">
+                {{#logoUrl}}<img class="logo" src="{{logoUrl}}" alt="{{companyName}} logo"/>{{/logoUrl}}
+            </div>
+      <div class="company-info">
+        <h1>{{companyName}}</h1>
+        <div class="company-details">
+          {{#companyAddress}}<p>{{companyAddress}}</p>{{/companyAddress}}
+          {{#companyEmail}}<p>{{companyEmail}}</p>{{/companyEmail}}
+          {{#companyPhone}}<p>{{companyPhone}}</p>{{/companyPhone}}
+          {{#companyTaxId}}<p>{{companyTaxId}}</p>{{/companyTaxId}}
+        </div>
+      </div>
+    </div>
+
+        <script>
+            (function(){
+                try {
+                    var brand = document.querySelector('.brand');
+                    if(!brand) return;
+                    var logo = brand.querySelector('img.logo');
+                    var info = brand.querySelector('.company-info');
+                    if(!logo || !info) return;
+                    function fit(){
+                        try {
+                            logo.style.height = 'auto';
+                            var h = info.offsetHeight;
+                            if(h && h > 0){ logo.style.height = h + 'px'; logo.style.width = 'auto'; }
+                        } catch(e){}
+                    }
+                    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }
+                    window.addEventListener('load', fit);
+                    setTimeout(fit, 60);
+                } catch(e){}
+            })();
+        </script>
+    <!-- Clear floats below header content -->
+    <div style="clear: both;"></div>
+  </div>
 
     <div class="customer-section">
         <div class="section-label">Billed To</div>
