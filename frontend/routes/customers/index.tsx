@@ -22,7 +22,10 @@ export default function Customers(props: PageProps<Data>) {
   const list = props.data.customers ?? [];
   return (
     <Layout authed={props.data.authed}>
-      <h1 class="text-2xl font-semibold mb-4">Customers</h1>
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold">Customers</h1>
+        <a href="/customers/new" class="bg-black text-white px-3 py-2 rounded text-sm">New Customer</a>
+      </div>
       {props.data.error && <p class="text-red-600">{props.data.error}</p>}
       <ul class="space-y-2">
         {list.map((c) => (

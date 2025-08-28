@@ -4,13 +4,17 @@
 
 import * as $_app from "./routes/_app.tsx";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
+import * as $customers_id_edit from "./routes/customers/[id]/edit.tsx";
 import * as $customers_index from "./routes/customers/index.tsx";
+import * as $customers_new from "./routes/customers/new.tsx";
 import * as $dashboard from "./routes/dashboard.tsx";
 import * as $index from "./routes/index.tsx";
 import * as $invoices_id_ from "./routes/invoices/[id].tsx";
+import * as $invoices_id_edit from "./routes/invoices/[id]/edit.tsx";
 import * as $invoices_id_html from "./routes/invoices/[id]/html.ts";
 import * as $invoices_id_pdf from "./routes/invoices/[id]/pdf.ts";
 import * as $invoices_index from "./routes/invoices/index.tsx";
+import * as $invoices_new from "./routes/invoices/new.tsx";
 import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
 import * as $settings from "./routes/settings.tsx";
@@ -22,13 +26,17 @@ const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
     "./routes/customers/[id].tsx": $customers_id_,
+    "./routes/customers/[id]/edit.tsx": $customers_id_edit,
     "./routes/customers/index.tsx": $customers_index,
+    "./routes/customers/new.tsx": $customers_new,
     "./routes/dashboard.tsx": $dashboard,
     "./routes/index.tsx": $index,
     "./routes/invoices/[id].tsx": $invoices_id_,
+    "./routes/invoices/[id]/edit.tsx": $invoices_id_edit,
     "./routes/invoices/[id]/html.ts": $invoices_id_html,
     "./routes/invoices/[id]/pdf.ts": $invoices_id_pdf,
     "./routes/invoices/index.tsx": $invoices_index,
+    "./routes/invoices/new.tsx": $invoices_new,
     "./routes/login.tsx": $login,
     "./routes/logout.ts": $logout,
     "./routes/settings.tsx": $settings,

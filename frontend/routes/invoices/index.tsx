@@ -22,7 +22,10 @@ export default function Invoices(props: PageProps<Data>) {
   const list = props.data.invoices ?? [];
   return (
     <Layout authed={props.data.authed}>
-      <h1 class="text-2xl font-semibold mb-4">Invoices</h1>
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold">Invoices</h1>
+        <a href="/invoices/new" class="bg-black text-white px-3 py-2 rounded text-sm">New Invoice</a>
+      </div>
       {props.data.error && <p class="text-red-600">{props.data.error}</p>}
       <table class="min-w-full bg-white border">
         <thead>

@@ -23,7 +23,10 @@ export default function InvoiceDetail(props: PageProps<Data>) {
   const inv = props.data.invoice;
   return (
     <Layout authed={props.data.authed}>
-      <h1 class="text-2xl font-semibold mb-4">Invoice {inv?.id}</h1>
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold">Invoice {inv?.id}</h1>
+        {inv && <a href={`/invoices/${inv.id}/edit`} class="bg-black text-white px-3 py-2 rounded text-sm">Edit</a>}
+      </div>
       {props.data.error && <p class="text-red-600">{props.data.error}</p>}
       {inv && (
         <div class="space-y-2">

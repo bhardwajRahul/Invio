@@ -23,7 +23,10 @@ export default function CustomerDetail(props: PageProps<Data>) {
   const c = props.data.customer;
   return (
     <Layout authed={props.data.authed}>
-      <h1 class="text-2xl font-semibold mb-4">Customer {c?.name || c?.id}</h1>
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold">Customer {c?.name || c?.id}</h1>
+        {c && <a href={`/customers/${c.id}/edit`} class="bg-black text-white px-3 py-2 rounded text-sm">Edit</a>}
+      </div>
       {props.data.error && <p class="text-red-600">{props.data.error}</p>}
       {c && (
         <div class="space-y-2">

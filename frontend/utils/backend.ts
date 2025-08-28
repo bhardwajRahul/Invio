@@ -53,3 +53,48 @@ export async function backendGet(path: string, authHeader: string) {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return await res.json();
 }
+
+export async function backendPost(path: string, authHeader: string, body: unknown) {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return await res.json();
+  return await res.text();
+}
+
+export async function backendPut(path: string, authHeader: string, body: unknown) {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return await res.json();
+  return await res.text();
+}
+
+export async function backendPatch(path: string, authHeader: string, body: unknown) {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return await res.json();
+  return await res.text();
+}
