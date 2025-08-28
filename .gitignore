@@ -1,0 +1,5 @@
+# SQLite DB (any folder)
+**/invio.db
+**/invio.db-journal
+**/invio.db-wal
+**/invio.db-shm
