@@ -431,7 +431,6 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    {{#showItemCode}}<th>Code</th>{{/showItemCode}}
                     <th>Description</th>
                     <th>Qty</th>
                     <th>Unit Price</th>
@@ -441,7 +440,6 @@
             <tbody>
                 {{#items}}
                 <tr>
-                    {{#showItemCode}}<td>{{#itemCode}}<span class="item-code">{{itemCode}}</span>{{/itemCode}}</td>{{/showItemCode}}
                     <td>
                         <div class="item-description">{{description}}</div>
                         {{#notes}}<div class="item-notes">{{notes}}</div>{{/notes}}

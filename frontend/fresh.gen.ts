@@ -4,6 +4,7 @@
 
 import * as $_app from "./routes/_app.tsx";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
+import * as $customers_id_cannot_delete from "./routes/customers/[id]/cannot-delete.tsx";
 import * as $customers_id_edit from "./routes/customers/[id]/edit.tsx";
 import * as $customers_index from "./routes/customers/index.tsx";
 import * as $customers_new from "./routes/customers/new.tsx";
@@ -26,6 +27,7 @@ const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
     "./routes/customers/[id].tsx": $customers_id_,
+    "./routes/customers/[id]/cannot-delete.tsx": $customers_id_cannot_delete,
     "./routes/customers/[id]/edit.tsx": $customers_id_edit,
     "./routes/customers/index.tsx": $customers_index,
     "./routes/customers/new.tsx": $customers_new,

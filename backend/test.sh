@@ -258,28 +258,24 @@ INVOICE_RESPONSE=$(curl -s -u "$ADMIN_AUTH" -X POST "$BASE_URL/api/v1/invoices" 
         \"description\": \"Website Development & Design\",
         \"quantity\": 1,
         \"unitPrice\": 5000.00,
-        \"itemCode\": \"WEB-DEV-001\",
         \"notes\": \"Custom responsive website with CMS integration\"
       },
       {
         \"description\": \"SEO Optimization Package\",
         \"quantity\": 1,
         \"unitPrice\": 1500.00,
-        \"itemCode\": \"SEO-OPT-001\",
         \"notes\": \"3-month SEO campaign with keyword research\"
       },
       {
         \"description\": \"Monthly Maintenance\",
         \"quantity\": 12,
         \"unitPrice\": 200.00,
-        \"itemCode\": \"MAINT-001\",
         \"notes\": \"Technical support and content updates\"
       },
       {
         \"description\": \"Training Sessions\",
         \"quantity\": 4,
         \"unitPrice\": 150.00,
-        \"itemCode\": \"TRAIN-001\",
         \"notes\": \"1-hour training sessions for content management\"
       }
     ],
@@ -325,14 +321,12 @@ test_endpoint "Create Professional Invoice (Display)" "curl -s -u '$ADMIN_AUTH' 
         \"description\": \"Strategic Planning Consultation\",
         \"quantity\": 20,
         \"unitPrice\": 250.00,
-        \"itemCode\": \"CONSULT-001\",
         \"notes\": \"Executive-level strategic planning sessions\"
       },
       {
         \"description\": \"Market Analysis Report\",
         \"quantity\": 1,
         \"unitPrice\": 2000.00,
-        \"itemCode\": \"ANALYSIS-001\",
         \"notes\": \"Comprehensive market analysis with recommendations\"
       }
     ],

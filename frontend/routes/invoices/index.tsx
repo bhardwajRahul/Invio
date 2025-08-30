@@ -24,29 +24,31 @@ export default function Invoices(props: PageProps<Data>) {
     <Layout authed={props.data.authed}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Invoices</h1>
-        <a href="/invoices/new" class="bg-black text-white px-3 py-2 rounded text-sm">New Invoice</a>
+  <a href="/invoices/new" class="btn btn-primary btn-sm"><i data-lucide="plus" class="w-4 h-4"></i>New Invoice</a>
       </div>
-      {props.data.error && <p class="text-red-600">{props.data.error}</p>}
-      <table class="min-w-full bg-white border">
-        <thead>
-          <tr class="bg-gray-50 text-left text-sm">
-            <th class="p-2 border">ID</th>
-            <th class="p-2 border">Customer</th>
-            <th class="p-2 border">Issue Date</th>
-            <th class="p-2 border">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((inv) => (
-            <tr>
-              <td class="p-2 border"><a class="underline" href={`/invoices/${inv.id}`}>{inv.id}</a></td>
-              <td class="p-2 border">{inv.customer?.name}</td>
-              <td class="p-2 border">{inv.issue_date}</td>
-              <td class="p-2 border">{inv.total}</td>
+  {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+      <div class="overflow-x-auto rounded-box bg-base-100 border">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr class="text-sm">
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Issue Date</th>
+              <th>Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {list.map((inv) => (
+              <tr class="hover">
+                <td><a class="link" href={`/invoices/${inv.id}`}>{inv.id}</a></td>
+                <td>{inv.customer?.name}</td>
+                <td>{inv.issue_date}</td>
+                <td>{inv.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Layout>
   );
 }

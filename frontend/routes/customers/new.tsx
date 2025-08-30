@@ -35,32 +35,35 @@ export default function NewCustomerPage(props: PageProps<Data>) {
   return (
     <Layout authed={props.data.authed}>
       <h1 class="text-2xl font-semibold mb-4">Create Customer</h1>
-      {props.data.error && <p class="text-red-600 mb-2">{props.data.error}</p>}
-      <form method="post" class="space-y-3 max-w-xl bg-white border p-4 rounded">
-        <div>
-          <label class="block text-sm mb-1">Name</label>
-          <input name="name" class="border rounded px-3 py-2 w-full" required />
-        </div>
+      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+      <form method="post" class="space-y-3 max-w-xl bg-base-100 border p-4 rounded-box">
+        <label class="form-control">
+          <div class="label"><span class="label-text">Name</span></div>
+          <input name="name" class="input input-bordered w-full" required />
+        </label>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Email</label>
-            <input type="email" name="email" class="border rounded px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Phone</label>
-            <input name="phone" class="border rounded px-3 py-2 w-full" />
-          </div>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Email</span></div>
+            <input type="email" name="email" class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Phone</span></div>
+            <input name="phone" class="input input-bordered w-full" />
+          </label>
         </div>
-        <div>
-          <label class="block text-sm mb-1">Address</label>
-          <textarea name="address" class="border rounded px-3 py-2 w-full" rows={3} />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Tax ID</label>
-          <input name="taxId" class="border rounded px-3 py-2 w-full" />
-        </div>
+        <label class="form-control">
+          <div class="label"><span class="label-text">Address</span></div>
+          <textarea name="address" class="textarea textarea-bordered" rows={3} />
+        </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text">Tax ID</span></div>
+          <input name="taxId" class="input input-bordered w-full" />
+        </label>
         <div class="pt-2">
-          <button type="submit" class="bg-black text-white px-4 py-2 rounded">Create Customer</button>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            Create Customer
+          </button>
         </div>
       </form>
     </Layout>

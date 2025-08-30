@@ -38,7 +38,6 @@ export interface Invoice {
 export interface InvoiceItem {
   id: string;
   invoiceId: string;
-  itemCode?: string;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -104,7 +103,6 @@ export interface CreateInvoiceRequest {
   
   // Items
   items: {
-    itemCode?: string;
     description: string;
     quantity: number;
     unitPrice: number;
@@ -159,7 +157,6 @@ export interface TemplateContext {
   
   // Items
   items: Array<{
-    itemCode?: string;
     description: string;
     quantity: number;
     unitPrice: string;
@@ -178,7 +175,6 @@ export interface TemplateContext {
   // Flags
   hasDiscount: boolean;
   hasTax: boolean;
-  showItemCode: boolean;
   
   // Payment info
   paymentTerms?: string;

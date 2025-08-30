@@ -23,15 +23,25 @@ export default function Templates(props: PageProps<Data>) {
   return (
     <Layout authed={props.data.authed}>
       <h1 class="text-2xl font-semibold mb-4">Templates</h1>
-      {props.data.error && <p class="text-red-600">{props.data.error}</p>}
-      <ul class="space-y-2">
-        {list.map((t) => (
-          <li class="p-2 bg-white border rounded flex justify-between">
-            <span>{t.name || t.id}</span>
-            {t.isDefault && <span class="text-xs text-gray-500">default</span>}
-          </li>
-        ))}
-      </ul>
+      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+      <div class="overflow-x-auto rounded-box bg-base-100 border">
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((t) => (
+              <tr class="hover">
+                <td>{t.name || t.id}</td>
+                <td>{t.isDefault ? <span class="badge">default</span> : null}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Layout>
   );
 }

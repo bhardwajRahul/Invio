@@ -24,17 +24,27 @@ export default function Customers(props: PageProps<Data>) {
     <Layout authed={props.data.authed}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customers</h1>
-        <a href="/customers/new" class="bg-black text-white px-3 py-2 rounded text-sm">New Customer</a>
+  <a href="/customers/new" class="btn btn-primary btn-sm"><i data-lucide="user-plus" class="w-4 h-4"></i>New Customer</a>
       </div>
-      {props.data.error && <p class="text-red-600">{props.data.error}</p>}
-      <ul class="space-y-2">
-        {list.map((c) => (
-          <li class="p-2 bg-white border rounded">
-            <a class="underline" href={`/customers/${c.id}`}>{c.name || c.id}</a>
-            {c.email && <span class="text-gray-500 ml-2">{c.email}</span>}
-          </li>
-        ))}
-      </ul>
+      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+      <div class="overflow-x-auto rounded-box bg-base-100 border">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((c) => (
+              <tr class="hover">
+                <td><a class="link" href={`/customers/${c.id}`}>{c.name || c.id}</a></td>
+                <td class="opacity-70">{c.email}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Layout>
   );
 }

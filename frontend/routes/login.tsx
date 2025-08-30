@@ -29,17 +29,19 @@ export default function LoginPage(props: PageProps<{ error: string | null }>) {
   return (
     <Layout>
       <h1 class="text-2xl font-semibold mb-4">Admin Login</h1>
-      {props.data.error && <p class="text-red-600 mb-2">{props.data.error}</p>}
+      {props.data.error && (
+        <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
+      )}
       <form method="post" class="space-y-3 max-w-sm">
-        <div>
-          <label class="block text-sm mb-1">Username</label>
-          <input name="username" class="border rounded px-3 py-2 w-full" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Password</label>
-          <input name="password" type="password" class="border rounded px-3 py-2 w-full" />
-        </div>
-        <button type="submit" class="bg-black text-white px-4 py-2 rounded">Login</button>
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Username</span></div>
+          <input name="username" class="input input-bordered w-full" />
+        </label>
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Password</span></div>
+          <input name="password" type="password" class="input input-bordered w-full" />
+        </label>
+        <button type="submit" class="btn btn-primary">Login</button>
       </form>
     </Layout>
   );

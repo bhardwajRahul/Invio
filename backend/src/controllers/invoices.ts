@@ -86,7 +86,6 @@ export const createInvoice = (data: CreateInvoiceRequest): InvoiceWithDetails =>
     const invoiceItem: InvoiceItem = {
       id: itemId,
       invoiceId: invoiceId,
-      itemCode: item.itemCode,
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -97,9 +96,9 @@ export const createInvoice = (data: CreateInvoiceRequest): InvoiceWithDetails =>
     
     db.query(
       `INSERT INTO invoice_items (
-        id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [itemId, invoiceId, item.itemCode, item.description, item.quantity, item.unitPrice, lineTotal, item.notes, i]
+        id, invoice_id, description, quantity, unit_price, line_total, notes, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [itemId, invoiceId, item.description, item.quantity, item.unitPrice, lineTotal, item.notes, i]
     );
     
     items.push(invoiceItem);
@@ -151,7 +150,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
   
   // Get items
   const itemsResult = db.query(`
-    SELECT id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
+    SELECT id, invoice_id, description, quantity, unit_price, line_total, notes, sort_order
     FROM invoice_items 
     WHERE invoice_id = ? 
     ORDER BY sort_order
@@ -160,13 +159,12 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
   const items = itemsResult.map((row: unknown[]) => ({
     id: row[0] as string,
     invoiceId: row[1] as string,
-    itemCode: row[2] as string,
-    description: row[3] as string,
-    quantity: row[4] as number,
-    unitPrice: row[5] as number,
-    lineTotal: row[6] as number,
-    notes: row[7] as string,
-    sortOrder: row[8] as number,
+    description: row[2] as string,
+    quantity: row[3] as number,
+    unitPrice: row[4] as number,
+    lineTotal: row[5] as number,
+    notes: row[6] as string,
+    sortOrder: row[7] as number,
   }));
   
   return {
@@ -196,7 +194,7 @@ export const getInvoiceByShareToken = (shareToken: string): InvoiceWithDetails |
   
   // Get items
   const itemsResult = db.query(`
-    SELECT id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
+    SELECT id, invoice_id, description, quantity, unit_price, line_total, notes, sort_order
     FROM invoice_items 
     WHERE invoice_id = ? 
     ORDER BY sort_order
@@ -205,13 +203,12 @@ export const getInvoiceByShareToken = (shareToken: string): InvoiceWithDetails |
   const items = itemsResult.map((row: unknown[]) => ({
     id: row[0] as string,
     invoiceId: row[1] as string,
-    itemCode: row[2] as string,
-    description: row[3] as string,
-    quantity: row[4] as number,
-    unitPrice: row[5] as number,
-    lineTotal: row[6] as number,
-    notes: row[7] as string,
-    sortOrder: row[8] as number,
+    description: row[2] as string,
+    quantity: row[3] as number,
+    unitPrice: row[4] as number,
+    lineTotal: row[5] as number,
+    notes: row[6] as string,
+    sortOrder: row[7] as number,
   }));
   
   return {
@@ -284,9 +281,9 @@ export const updateInvoice = async (id: string, data: Partial<UpdateInvoiceReque
       
       db.query(`
         INSERT INTO invoice_items (
-          id, invoice_id, item_code, description, quantity, unit_price, line_total, notes, sort_order
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [itemId, id, item.itemCode, item.description, item.quantity, item.unitPrice, lineTotal, item.notes, i]);
+          id, invoice_id, description, quantity, unit_price, line_total, notes, sort_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [itemId, id, item.description, item.quantity, item.unitPrice, lineTotal, item.notes, i]);
     }
   }
   

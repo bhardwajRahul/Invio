@@ -122,7 +122,7 @@ Invoice payload (trimmed):
   "due_date":"2025-02-15",
   "currency":"USD",
   "items":[
-    {"description":"Service","quantity":1,"unit_price":500000,"item_code":"SVC-001"}
+  {"description":"Service","quantity":1,"unit_price":500000}
   ],
   "tax": {"rate_percent": 8.75},
   "discount": {"amount": 50000},

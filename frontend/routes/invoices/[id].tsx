@@ -1,8 +1,8 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
-import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
+import { backendGet, backendDelete, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
-type Invoice = { id: string; customer?: { name?: string; email?: string; address?: string }; items?: unknown[]; total?: number };
+type Invoice = { id: string; customer?: { name?: string; email?: string; address?: string }; items?: { description: string }[]; total?: number };
 type Data = { authed: boolean; invoice?: Invoice; error?: string };
 
 export const handler: Handlers<Data> = {
@@ -17,42 +17,77 @@ export const handler: Handlers<Data> = {
       return ctx.render({ authed: true, error: String(e) });
     }
   },
+  async POST(req, ctx) {
+    const auth = getAuthHeaderFromCookie(req.headers.get("cookie") || undefined);
+    if (!auth) return new Response(null, { status: 303, headers: { Location: "/login" } });
+    const { id } = ctx.params as { id: string };
+    const form = await req.formData();
+    const intent = String(form.get("intent") || "");
+    if (intent === "delete") {
+      try {
+        await backendDelete(`/api/v1/invoices/${id}`, auth);
+        return new Response(null, { status: 303, headers: { Location: "/invoices" } });
+      } catch (e) {
+        return new Response(String(e), { status: 500 });
+      }
+    }
+    return new Response("Unsupported action", { status: 400 });
+  }
 };
 
 export default function InvoiceDetail(props: PageProps<Data>) {
   const inv = props.data.invoice;
   return (
     <Layout authed={props.data.authed}>
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center justify-between mb-4 gap-2">
         <h1 class="text-2xl font-semibold">Invoice {inv?.id}</h1>
-        {inv && <a href={`/invoices/${inv.id}/edit`} class="bg-black text-white px-3 py-2 rounded text-sm">Edit</a>}
+        {inv && (
+          <div class="flex gap-2">
+            <a href={`/invoices/${inv.id}/edit`} class="btn btn-sm">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+              Edit
+            </a>
+            <form method="post" onSubmit={(e) => { if (!confirm('Delete this invoice? This cannot be undone.')) { e.preventDefault(); } }}>
+              <input type="hidden" name="intent" value="delete" />
+              <button type="submit" class="btn btn-sm btn-outline btn-error">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                Delete
+              </button>
+            </form>
+          </div>
+        )}
       </div>
-      {props.data.error && <p class="text-red-600">{props.data.error}</p>}
+      {props.data.error && (
+        <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
+      )}
       {inv && (
         <div class="space-y-2">
-          <div><span class="text-gray-600">Customer:</span> {inv.customer?.name}</div>
-          <div><span class="text-gray-600">Email:</span> {inv.customer?.email}</div>
-          <div><span class="text-gray-600">Address:</span> {inv.customer?.address}</div>
-          <div><span class="text-gray-600">Total:</span> {inv.total}</div>
+          <div><span class="opacity-70">Customer:</span> {inv.customer?.name}</div>
+          <div><span class="opacity-70">Email:</span> {inv.customer?.email}</div>
+          <div><span class="opacity-70">Address:</span> {inv.customer?.address}</div>
+          <div><span class="opacity-70">Total:</span> {inv.total}</div>
           <div class="pt-4 flex gap-2">
             <a
-              class="px-3 py-2 rounded border bg-white hover:bg-gray-50"
+              class="btn btn-sm btn-ghost"
               href={`/invoices/${inv.id}/html?template=professional-modern`}
               target="_blank"
             >
+              <i data-lucide="file-code-2" class="w-4 h-4"></i>
               View HTML (professional)
             </a>
             <a
-              class="px-3 py-2 rounded border bg-white hover:bg-gray-50"
+              class="btn btn-sm btn-ghost"
               href={`/invoices/${inv.id}/html?template=minimalist-clean`}
               target="_blank"
             >
+              <i data-lucide="file-code-2" class="w-4 h-4"></i>
               View HTML (minimalist)
             </a>
             <a
-              class="px-3 py-2 rounded border bg-black text-white"
+              class="btn btn-sm btn-primary"
               href={`/invoices/${inv.id}/pdf?template=professional-modern`}
             >
+              <i data-lucide="download" class="w-4 h-4"></i>
               Download PDF
             </a>
           </div>

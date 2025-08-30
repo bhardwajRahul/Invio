@@ -142,10 +142,9 @@ adminRoutes.post("/templates/:id/preview", async (c) => {
     total: 2441.25,
     hasDiscount: true,
     hasTax: true,
-    showItemCode: true,
+    
     items: [
       {
-        itemCode: "WEB-001",
         description: "Website Development",
         quantity: 1,
         unitPrice: 2500.00,

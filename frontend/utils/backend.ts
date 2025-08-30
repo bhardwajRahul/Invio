@@ -37,7 +37,7 @@ export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
 export function setAuthCookieHeaders(basic: string): HeadersInit {
   // Store single-encoded credentials (no "Basic " prefix) to avoid double-encoding
   const b64 = (basic.startsWith("Basic ") ? basic.slice("Basic ".length) : basic.replace(/^Basic\s+/, ""));
-  const cookie = `${AUTH_COOKIE}=${encodeURIComponent(b64)}; HttpOnly; Path=/; SameSite=Lax`;
+  const cookie = `${AUTH_COOKIE}=${encodeURIComponent(b64)}; HttpOnly; Path=/; SameSite=Lax`;2
   return { "Set-Cookie": cookie };
 }
 
@@ -92,6 +92,19 @@ export async function backendPatch(path: string, authHeader: string, body: unkno
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return await res.json();
+  return await res.text();
+}
+
+export async function backendDelete(path: string, authHeader: string) {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: authHeader,
+    },
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   const ct = res.headers.get("content-type") || "";

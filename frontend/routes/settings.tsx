@@ -48,97 +48,119 @@ export default function SettingsPage(props: PageProps<Data>) {
   return (
     <Layout authed={props.data.authed}>
       <h1 class="text-2xl font-semibold mb-4">Settings</h1>
-      {props.data.error && <p class="text-red-600">{props.data.error}</p>}
-      <form method="post" class="space-y-4 bg-white border rounded p-4">
+      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+      <div class="mb-4 card bg-base-100 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Theme</h2>
+          <div class="join">
+            <button type="button" class="btn join-item" id="theme-light">Light</button>
+            <button type="button" class="btn join-item" id="theme-dark">Dark</button>
+          </div>
+          <p class="text-sm opacity-70">Applies instantly and persists for your browser.</p>
+        </div>
+      </div>
+      <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Company Name</label>
-            <input name="companyName" value={(s.companyName as string) || ""} class="border rounded px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Currency</label>
-            <input name="currency" value={(s.currency as string) || "USD"} class="border rounded px-3 py-2 w-full" />
-          </div>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Company Name</span></div>
+            <input name="companyName" value={(s.companyName as string) || ""} class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Currency</span></div>
+            <input name="currency" value={(s.currency as string) || "USD"} class="input input-bordered w-full" />
+          </label>
         </div>
 
-        <div>
-          <label class="block text-sm mb-1">Company Address</label>
-          <textarea name="companyAddress" class="border rounded px-3 py-2 w-full" rows={2}>{(s.companyAddress as string) || ""}</textarea>
+        <label class="form-control">
+          <div class="label"><span class="label-text">Company Address</span></div>
+          <textarea name="companyAddress" class="textarea textarea-bordered" rows={2}>{(s.companyAddress as string) || ""}</textarea>
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Email</span></div>
+            <input name="email" value={(s.email as string) || (s.companyEmail as string) || ""} class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Phone</span></div>
+            <input name="phone" value={(s.phone as string) || (s.companyPhone as string) || ""} class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Tax ID</span></div>
+            <input name="taxId" value={(s.taxId as string) || (s.companyTaxId as string) || ""} class="input input-bordered w-full" />
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Logo (data URL)</span></div>
+            <input name="logo" value={(s.logo as string) || ""} class="input input-bordered w-full" placeholder="data:image/png;base64,..." />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Logo URL</span></div>
+            <input name="logoUrl" value={(s.logoUrl as string) || ""} class="input input-bordered w-full" placeholder="https://..." />
+          </label>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Email</label>
-            <input name="email" value={(s.email as string) || (s.companyEmail as string) || ""} class="border rounded px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Phone</label>
-            <input name="phone" value={(s.phone as string) || (s.companyPhone as string) || ""} class="border rounded px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Tax ID</label>
-            <input name="taxId" value={(s.taxId as string) || (s.companyTaxId as string) || ""} class="border rounded px-3 py-2 w-full" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Logo (data URL)</label>
-            <input name="logo" value={(s.logo as string) || ""} class="border rounded px-3 py-2 w-full" placeholder="data:image/png;base64,..." />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Logo URL</label>
-            <input name="logoUrl" value={(s.logoUrl as string) || ""} class="border rounded px-3 py-2 w-full" placeholder="https://..." />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Default Template</label>
-            <select name="templateId" class="border rounded px-3 py-2 w-full" value={(s.templateId as string) || "professional-modern"}>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Default Template</span></div>
+            <select name="templateId" class="select select-bordered w-full" value={(s.templateId as string) || "professional-modern"}>
               <option value="professional-modern">Professional Modern</option>
               <option value="minimalist-clean">Minimalist Clean</option>
             </select>
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Highlight Color</label>
-            <input name="highlight" value={(s.highlight as string) || "#6B4EFF"} class="border rounded px-3 py-2 w-full" placeholder="#6B4EFF" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Brand Layout</label>
-            <select name="brandLayout" class="border rounded px-3 py-2 w-full" value={(s.brandLayout as string) || "logo-left"}>
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Highlight Color</span></div>
+            <input name="highlight" value={(s.highlight as string) || "#6B4EFF"} class="input input-bordered w-full" placeholder="#6B4EFF" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Brand Layout</span></div>
+            <select name="brandLayout" class="select select-bordered w-full" value={(s.brandLayout as string) || "logo-left"}>
               <option value="logo-left">Logo Left</option>
               <option value="logo-right">Logo Right</option>
             </select>
-          </div>
+          </label>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Payment Methods</label>
-            <input name="paymentMethods" value={(s.paymentMethods as string) || "Bank Transfer"} class="border rounded px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Bank Account</label>
-            <input name="bankAccount" value={(s.bankAccount as string) || ""} class="border rounded px-3 py-2 w-full" />
-          </div>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Payment Methods</span></div>
+            <input name="paymentMethods" value={(s.paymentMethods as string) || "Bank Transfer"} class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Bank Account</span></div>
+            <input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" />
+          </label>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Payment Terms</label>
-            <input name="paymentTerms" value={(s.paymentTerms as string) || "Due in 30 days"} class="border rounded px-3 py-2 w-full" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Default Notes</label>
-            <input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="border rounded px-3 py-2 w-full" />
-          </div>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Payment Terms</span></div>
+            <input name="paymentTerms" value={(s.paymentTerms as string) || "Due in 30 days"} class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Default Notes</span></div>
+            <input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="input input-bordered w-full" />
+          </label>
         </div>
 
         <div class="pt-2">
-          <button type="submit" class="bg-black text-white px-4 py-2 rounded">Save Settings</button>
+          <button type="submit" class="btn btn-primary">Save Settings</button>
         </div>
       </form>
+      <script dangerouslySetInnerHTML={{ __html: `
+        (function(){
+          function setTheme(t){
+            localStorage.setItem('theme', t);
+            document.documentElement.setAttribute('data-theme', t);
+          }
+          var l = document.getElementById('theme-light');
+          var d = document.getElementById('theme-dark');
+          if(l) l.addEventListener('click', function(){ setTheme('light'); });
+          if(d) d.addEventListener('click', function(){ setTheme('dark'); });
+        })();
+      `}} />
     </Layout>
   );
 }

@@ -61,7 +61,6 @@ CREATE TABLE invoices (
 CREATE TABLE invoice_items (
   id TEXT PRIMARY KEY,
   invoice_id TEXT REFERENCES invoices(id) ON DELETE CASCADE,
-  item_code TEXT,
   description TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
   unit_price NUMERIC NOT NULL,

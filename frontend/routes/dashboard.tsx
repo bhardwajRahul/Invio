@@ -29,20 +29,30 @@ export default function Dashboard(props: PageProps<Data>) {
   return (
     <Layout authed={props.data.authed}>
       <h1 class="text-2xl font-semibold mb-4">Dashboard</h1>
-      {props.data.error && <p class="text-red-600">{props.data.error}</p>}
+      {props.data.error && (
+        <div class="alert alert-error mb-4">
+          <span>{props.data.error}</span>
+        </div>
+      )}
       {props.data.counts && (
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="p-4 bg-white border rounded">
-            <div class="text-sm text-gray-500">Invoices</div>
-            <div class="text-2xl font-bold">{props.data.counts.invoices}</div>
+          <div class="card bg-base-100 shadow">
+            <div class="card-body">
+              <div class="text-sm opacity-70">Invoices</div>
+              <div class="text-2xl font-bold">{props.data.counts.invoices}</div>
+            </div>
           </div>
-          <div class="p-4 bg-white border rounded">
-            <div class="text-sm text-gray-500">Customers</div>
-            <div class="text-2xl font-bold">{props.data.counts.customers}</div>
+          <div class="card bg-base-100 shadow">
+            <div class="card-body">
+              <div class="text-sm opacity-70">Customers</div>
+              <div class="text-2xl font-bold">{props.data.counts.customers}</div>
+            </div>
           </div>
-          <div class="p-4 bg-white border rounded">
-            <div class="text-sm text-gray-500">Templates</div>
-            <div class="text-2xl font-bold">{props.data.counts.templates}</div>
+          <div class="card bg-base-100 shadow">
+            <div class="card-body">
+              <div class="text-sm opacity-70">Templates</div>
+              <div class="text-2xl font-bold">{props.data.counts.templates}</div>
+            </div>
           </div>
         </div>
       )}

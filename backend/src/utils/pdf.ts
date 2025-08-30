@@ -202,8 +202,7 @@ function buildContext(
     customerTaxId: invoice.customer.taxId,
 
     // Items
-    items: invoice.items.map((i) => ({
-      itemCode: i.itemCode,
+  items: invoice.items.map((i) => ({
       description: i.description,
       quantity: i.quantity,
       unitPrice: toMoney(i.unitPrice),
@@ -219,10 +218,9 @@ function buildContext(
     taxAmount: invoice.taxAmount > 0 ? toMoney(invoice.taxAmount) : undefined,
     total: toMoney(invoice.total),
 
-    // Flags
-    hasDiscount: invoice.discountAmount > 0,
-    hasTax: invoice.taxAmount > 0,
-    showItemCode: invoice.items.some((i) => !!i.itemCode),
+  // Flags
+  hasDiscount: invoice.discountAmount > 0,
+  hasTax: invoice.taxAmount > 0,
 
     // Payment
     paymentTerms: invoice.paymentTerms || settings?.paymentTerms || undefined,
@@ -268,7 +266,7 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
     try {
       const t = getTemplateById(templateId);
       if (t && t.html) {
-  const html = renderTpl(t.html, { ...ctx, highlightColor: hl, highlightColorLight: hlLight, showItemCode: ctx.showItemCode });
+  const html = renderTpl(t.html, { ...ctx, highlightColor: hl, highlightColorLight: hlLight });
         return html;
       }
     } catch (_e) {
@@ -341,7 +339,7 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
       <table class="table">
         <thead>
           <tr>
-            ${ctx.showItemCode ? `<th style="width:90px;">Code</th>` : ""}
+            
             <th>Description</th>
             <th style="width:60px;">Qty</th>
             <th style="width:90px;">Rate</th>
@@ -351,7 +349,7 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
         <tbody>
           ${ctx.items.map(i => `
             <tr>
-              ${ctx.showItemCode ? `<td>${i.itemCode ?? ""}</td>` : ""}
+              
               <td>
                 <div class="desc">${i.description}</div>
                 ${i.notes ? `<div class="notes">${i.notes}</div>` : ""}
@@ -512,7 +510,7 @@ async function generateProfessionalPDF(
   let row = 0;
   for (const item of invoiceData.items) {
     const alt = row % 2 === 1 ? rgb(0.98, 0.98, 0.98) : undefined;
-    const desc = item.itemCode ? `[${item.itemCode}] ${item.description}` : item.description;
+  const desc = item.description;
     const descLines = wrapText(desc + (item.notes ? `\n${item.notes}` : ""), regularFont, 9, contentWidth * 0.55);
     const rowHeight = Math.max(18, 12 * descLines.length);
     ensureSpace(ctx, rowHeight + 6);
