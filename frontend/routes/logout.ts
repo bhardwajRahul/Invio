@@ -6,4 +6,8 @@ export const handler: Handlers = {
     const headers = new Headers({ ...clearAuthCookieHeaders(), Location: "/" });
     return new Response(null, { status: 303, headers });
   },
+  POST() {
+    const headers = new Headers({ ...clearAuthCookieHeaders(), Location: "/" });
+    return new Response(null, { status: 303, headers });
+  },
 };
