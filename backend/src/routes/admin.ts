@@ -1,17 +1,38 @@
 import { Hono } from "hono";
 import { basicAuth } from "hono/basic-auth";
-import { 
-  createInvoice, 
-  getInvoices, 
-  getInvoiceById, 
-  updateInvoice, 
-  deleteInvoice, 
-  publishInvoice 
+import {
+  createInvoice,
+  deleteInvoice,
+  getInvoiceById,
+  getInvoices,
+  publishInvoice,
+  unpublishInvoice,
+  updateInvoice,
 } from "../controllers/invoices.ts";
-import { getTemplates, createTemplate, getTemplateById, renderTemplate, loadTemplateFromFile } from "../controllers/templates.ts";
-import { updateSettings, getSettings } from "../controllers/settings.ts";
-import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer } from "../controllers/customers.ts";
-import { generatePDF, buildInvoiceHTML } from "../utils/pdf.ts";
+import {
+  createTemplate,
+  deleteTemplate,
+  getTemplateById,
+  getTemplates,
+  loadTemplateFromFile,
+  renderTemplate,
+  setDefaultTemplate,
+} from "../controllers/templates.ts";
+import {
+  deleteSetting,
+  getSetting,
+  getSettings,
+  setSetting,
+  updateSettings,
+} from "../controllers/settings.ts";
+import {
+  createCustomer,
+  deleteCustomer,
+  getCustomerById,
+  getCustomers,
+  updateCustomer,
+} from "../controllers/customers.ts";
+import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 
 const adminRoutes = new Hono();
 
@@ -19,31 +40,46 @@ const adminRoutes = new Hono();
 const ADMIN_USER = Deno.env.get("ADMIN_USER") || "admin";
 const ADMIN_PASS = Deno.env.get("ADMIN_PASS") || "supersecret";
 
-adminRoutes.use("/invoices/*", basicAuth({
-  username: ADMIN_USER,
-  password: ADMIN_PASS,
-}));
+adminRoutes.use(
+  "/invoices/*",
+  basicAuth({
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
+  }),
+);
 
-adminRoutes.use("/customers/*", basicAuth({
-  username: ADMIN_USER,
-  password: ADMIN_PASS,
-}));
+adminRoutes.use(
+  "/customers/*",
+  basicAuth({
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
+  }),
+);
 
-adminRoutes.use("/templates/*", basicAuth({
-  username: ADMIN_USER,
-  password: ADMIN_PASS,
-}));
+adminRoutes.use(
+  "/templates/*",
+  basicAuth({
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
+  }),
+);
 
-adminRoutes.use("/settings/*", basicAuth({
-  username: ADMIN_USER,
-  password: ADMIN_PASS,
-}));
+adminRoutes.use(
+  "/settings/*",
+  basicAuth({
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
+  }),
+);
 
 // Protect admin alias routes as well
-adminRoutes.use("/admin/*", basicAuth({
-  username: ADMIN_USER,
-  password: ADMIN_PASS,
-}));
+adminRoutes.use(
+  "/admin/*",
+  basicAuth({
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
+  }),
+);
 
 // Invoice routes
 adminRoutes.post("/invoices", async (c) => {
@@ -54,7 +90,23 @@ adminRoutes.post("/invoices", async (c) => {
 
 adminRoutes.get("/invoices", (c) => {
   const invoices = getInvoices();
-  return c.json(invoices);
+  // Enrich with customer name and snake_case issue_date for UI compatibility
+  const list = invoices.map((inv) => {
+    let customerName: string | undefined = undefined;
+    try {
+      const customer = getCustomerById(inv.customerId);
+      customerName = customer?.name;
+    } catch (_e) { /* ignore */ }
+    const issue_date = inv.issueDate
+      ? new Date(inv.issueDate).toISOString().slice(0, 10)
+      : undefined;
+    return {
+      ...inv,
+      customer: customerName ? { name: customerName } : undefined,
+      issue_date,
+    } as unknown;
+  });
+  return c.json(list);
 });
 
 adminRoutes.get("/invoices/:id", (c) => {
@@ -79,15 +131,33 @@ adminRoutes.delete("/invoices/:id", (c) => {
   return c.json({ success: true });
 });
 
-adminRoutes.post("/invoices/:id/publish", (c) => {
+adminRoutes.post("/invoices/:id/publish", async (c) => {
   const id = c.req.param("id");
-  const result = publishInvoice(id);
+  const result = await publishInvoice(id);
+  return c.json(result);
+});
+
+adminRoutes.post("/invoices/:id/unpublish", async (c) => {
+  const id = c.req.param("id");
+  const result = await unpublishInvoice(id);
   return c.json(result);
 });
 
 // Template routes
 adminRoutes.get("/templates", async (c) => {
-  const templates = await getTemplates();
+  let templates = await getTemplates();
+  // Overlay the default from settings if present to avoid stale display
+  try {
+    const settings = await getSettings();
+    const map = settings.reduce((acc: Record<string, string>, s) => {
+      acc[s.key] = s.value as string;
+      return acc;
+    }, {} as Record<string, string>);
+    const current = map.templateId;
+    if (current) {
+      templates = templates.map((t) => ({ ...t, isDefault: t.id === current }));
+    }
+  } catch { /* ignore */ }
   return c.json(templates);
 });
 
@@ -95,6 +165,33 @@ adminRoutes.post("/templates", async (c) => {
   const data = await c.req.json();
   const template = await createTemplate(data);
   return c.json(template);
+});
+
+// Delete a template (disallow removing built-in app templates)
+adminRoutes.delete("/templates/:id", async (c) => {
+  const id = c.req.param("id");
+  // Built-in templates are protected
+  const builtin = new Set(["professional-modern", "minimalist-clean"]);
+  if (builtin.has(id)) {
+    return c.json({ error: "Cannot delete built-in templates" }, 400);
+  }
+
+  // If this template is currently selected in settings, reset to minimalist-clean
+  try {
+    const current = await getSetting("templateId");
+    if (current === id) {
+      await setSetting("templateId", "minimalist-clean");
+    }
+  } catch (_e) {
+    // non-fatal
+  }
+
+  try {
+    await deleteTemplate(id);
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
 });
 
 // Get template by ID
@@ -111,12 +208,12 @@ adminRoutes.get("/templates/:id", (c) => {
 adminRoutes.post("/templates/:id/preview", async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
-  
+
   const template = getTemplateById(id);
   if (!template) {
     return c.json({ error: "Template not found" }, 404);
   }
-  
+
   // Add sample data if not provided
   const sampleData = {
     companyName: "Sample Company Inc",
@@ -142,30 +239,33 @@ adminRoutes.post("/templates/:id/preview", async (c) => {
     total: 2441.25,
     hasDiscount: true,
     hasTax: true,
-    
+
     items: [
       {
         description: "Website Development",
         quantity: 1,
         unitPrice: 2500.00,
         lineTotal: 2500.00,
-        notes: "Custom responsive website with modern design"
-      }
+        notes: "Custom responsive website with modern design",
+      },
     ],
     notes: "Thank you for your business! Payment is due within 30 days.",
     paymentTerms: "Net 30 days",
     paymentMethods: "Bank Transfer, Credit Card",
     bankAccount: "Account: 123-456-789, Routing: 987-654-321",
-    ...data
+    ...data,
   };
-  
+
   try {
     const renderedHtml = renderTemplate(template.html, sampleData);
     return new Response(renderedHtml, {
-      headers: { "Content-Type": "text/html" }
+      headers: { "Content-Type": "text/html" },
     });
   } catch (error) {
-    return c.json({ error: "Failed to render template", details: String(error) }, 500);
+    return c.json({
+      error: "Failed to render template",
+      details: String(error),
+    }, 500);
   }
 });
 
@@ -173,21 +273,24 @@ adminRoutes.post("/templates/:id/preview", async (c) => {
 adminRoutes.post("/templates/load-from-file", async (c) => {
   try {
     const { filePath, name, isDefault, highlightColor } = await c.req.json();
-    
+
     const html = await loadTemplateFromFile(filePath);
     const template = await createTemplate({
       name,
       html,
-      isDefault: isDefault || false
+      isDefault: isDefault || false,
     });
-    
-    return c.json({ 
-      ...template, 
+
+    return c.json({
+      ...template,
       highlightColor: highlightColor || "#2563eb",
-      message: "Template loaded successfully from file" 
+      message: "Template loaded successfully from file",
     });
   } catch (error) {
-    return c.json({ error: "Failed to load template from file", details: String(error) }, 500);
+    return c.json({
+      error: "Failed to load template from file",
+      details: String(error),
+    }, 500);
   }
 });
 
@@ -202,19 +305,49 @@ adminRoutes.get("/settings", async (c) => {
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
+  // Unify logo fields: prefer single 'logo'; hide legacy 'logoUrl'
+  if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
+  if (map.logoUrl) delete map.logoUrl;
   return c.json(map);
 });
 
 adminRoutes.put("/settings", async (c) => {
   const data = await c.req.json();
+  // Normalize legacy logoUrl to logo
+  if (typeof data.logoUrl === "string" && !data.logo) {
+    data.logo = data.logoUrl;
+    delete data.logoUrl;
+  }
   const settings = await updateSettings(data);
+  try {
+    if ("logoUrl" in data) deleteSetting("logoUrl");
+  } catch (_e) { /* ignore legacy cleanup errors */ }
+  // If default template changed, reflect in templates table
+  if (typeof data.templateId === "string" && data.templateId) {
+    try {
+      setDefaultTemplate(String(data.templateId));
+    } catch { /* ignore */ }
+  }
   return c.json(settings);
 });
 
 // Partial update (PATCH) to merge provided keys only
 adminRoutes.patch("/settings", async (c) => {
   const data = await c.req.json();
+  // Normalize legacy logoUrl to logo
+  if (typeof data.logoUrl === "string" && !data.logo) {
+    data.logo = data.logoUrl;
+    delete data.logoUrl;
+  }
   const settings = await updateSettings(data);
+  if (typeof data.templateId === "string" && data.templateId) {
+    try {
+      setDefaultTemplate(String(data.templateId));
+    } catch { /* ignore */ }
+  }
+  try {
+    if ("logoUrl" in data) deleteSetting("logoUrl");
+  } catch (_e) { /* ignore legacy cleanup errors */ }
   return c.json(settings);
 });
 
@@ -228,18 +361,34 @@ adminRoutes.get("/admin/settings", async (c) => {
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
+  if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
+  if (map.logoUrl) delete map.logoUrl;
   return c.json(map);
 });
 
 adminRoutes.put("/admin/settings", async (c) => {
   const data = await c.req.json();
+  if (typeof data.logoUrl === "string" && !data.logo) {
+    data.logo = data.logoUrl;
+    delete data.logoUrl;
+  }
   const settings = await updateSettings(data);
+  try {
+    if ("logoUrl" in data) deleteSetting("logoUrl");
+  } catch (_e) { /* ignore legacy cleanup errors */ }
   return c.json(settings);
 });
 
 adminRoutes.patch("/admin/settings", async (c) => {
   const data = await c.req.json();
+  if (typeof data.logoUrl === "string" && !data.logo) {
+    data.logo = data.logoUrl;
+    delete data.logoUrl;
+  }
   const settings = await updateSettings(data);
+  try {
+    if ("logoUrl" in data) deleteSetting("logoUrl");
+  } catch (_e) { /* ignore legacy cleanup errors */ }
   return c.json(settings);
 });
 
@@ -293,6 +442,9 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     acc[s.key] = s.value as string;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.logo && settingsMap.logoUrl) {
+    settingsMap.logo = settingsMap.logoUrl;
+  }
 
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
@@ -301,7 +453,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
-    logo: settingsMap.logo || settingsMap.logoUrl,
+    logo: settingsMap.logo,
     brandLayout: settingsMap.brandLayout,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
@@ -310,13 +462,27 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
   };
 
   // Template/highlight from query
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ?? undefined;
-  const highlight = c.req.query("highlight") ?? undefined;
-  let selectedTemplateId: string | undefined = queryTemplate?.toLowerCase();
-  if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") selectedTemplateId = "professional-modern";
-  else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") selectedTemplateId = "minimalist-clean";
+  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
+    undefined;
+  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
+    undefined;
+  let selectedTemplateId: string | undefined =
+    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  if (
+    selectedTemplateId === "professional" ||
+    selectedTemplateId === "professional-modern"
+  ) selectedTemplateId = "professional-modern";
+  else if (
+    selectedTemplateId === "minimalist" ||
+    selectedTemplateId === "minimalist-clean"
+  ) selectedTemplateId = "minimalist-clean";
 
-  const html = buildInvoiceHTML(invoice, businessSettings, selectedTemplateId, highlight);
+  const html = buildInvoiceHTML(
+    invoice,
+    businessSettings,
+    selectedTemplateId,
+    highlight,
+  );
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
@@ -338,6 +504,9 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     acc[s.key] = s.value as string;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.logo && settingsMap.logoUrl) {
+    settingsMap.logo = settingsMap.logoUrl;
+  }
 
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
@@ -346,7 +515,7 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
-    logo: settingsMap.logo || settingsMap.logoUrl,
+    logo: settingsMap.logo,
     brandLayout: settingsMap.brandLayout,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
@@ -355,17 +524,33 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
   };
 
   // Template/highlight from query
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ?? undefined;
-  const highlight = c.req.query("highlight") ?? undefined;
-  let selectedTemplateId: string | undefined = queryTemplate?.toLowerCase();
-  if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") selectedTemplateId = "professional-modern";
-  else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") selectedTemplateId = "minimalist-clean";
+  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
+    undefined;
+  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
+    undefined;
+  let selectedTemplateId: string | undefined =
+    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  if (
+    selectedTemplateId === "professional" ||
+    selectedTemplateId === "professional-modern"
+  ) selectedTemplateId = "professional-modern";
+  else if (
+    selectedTemplateId === "minimalist" ||
+    selectedTemplateId === "minimalist-clean"
+  ) selectedTemplateId = "minimalist-clean";
 
-  const pdfBuffer = await generatePDF(invoice, businessSettings, selectedTemplateId, highlight);
+  const pdfBuffer = await generatePDF(
+    invoice,
+    businessSettings,
+    selectedTemplateId,
+    highlight,
+  );
   return new Response(pdfBuffer, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber || id}.pdf"`,
+      "Content-Disposition": `attachment; filename="invoice-${
+        invoice.invoiceNumber || id
+      }.pdf"`,
     },
   });
 });

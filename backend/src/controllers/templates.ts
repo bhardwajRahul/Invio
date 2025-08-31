@@ -117,6 +117,11 @@ export const createTemplate = (data: Partial<Template>) => {
     createdAt: new Date()
   };
 
+  // If this new template is marked as default, unset default on all others first
+  if (template.isDefault) {
+    db.query("UPDATE templates SET is_default = 0");
+  }
+
   db.query(
     "INSERT INTO templates (id, name, html, is_default, created_at) VALUES (?, ?, ?, ?, ?)",
     [template.id, template.name, template.html, template.isDefault, template.createdAt]
@@ -127,6 +132,11 @@ export const createTemplate = (data: Partial<Template>) => {
 
 export const updateTemplate = (id: string, data: Partial<Template>) => {
   const db = getDatabase();
+  // Enforce a single default when toggling isDefault to true
+  if (data.isDefault === true) {
+    db.query("UPDATE templates SET is_default = 0 WHERE id != ?", [id]);
+  }
+
   db.query(
     "UPDATE templates SET name = ?, html = ?, is_default = ? WHERE id = ?",
     [data.name, data.html, data.isDefault, id]
@@ -149,5 +159,15 @@ export const updateTemplate = (id: string, data: Partial<Template>) => {
 export const deleteTemplate = (id: string) => {
   const db = getDatabase();
   db.query("DELETE FROM templates WHERE id = ?", [id]);
+  return true;
+};
+
+// Set the active default template by id, unsetting all others
+export const setDefaultTemplate = (id: string) => {
+  const db = getDatabase();
+  // Reset all
+  db.query("UPDATE templates SET is_default = 0");
+  // Set requested id; ignore if not found (no rows updated)
+  db.query("UPDATE templates SET is_default = 1 WHERE id = ?", [id]);
   return true;
 };

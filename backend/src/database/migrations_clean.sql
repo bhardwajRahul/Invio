@@ -14,10 +14,8 @@ CREATE TABLE settings (
 
 -- Enhanced customers table
 CREATE TABLE customers (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
+-- No seed rows here; built-in templates are inserted during app startup.
   email TEXT,
-  phone TEXT,
   address TEXT,
   tax_id TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

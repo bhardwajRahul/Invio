@@ -322,6 +322,19 @@ export const publishInvoice = async (id: string): Promise<{ shareToken: string; 
   };
 };
 
+export const unpublishInvoice = async (id: string): Promise<{ shareToken: string }> => {
+  const existing = await getInvoiceById(id);
+  if (!existing) throw new Error("Invoice not found");
+
+  const db = getDatabase();
+  const newToken = generateUUID();
+  const now = new Date();
+  // Rotate share token and set status back to 'draft' to reflect unpublished state
+  db.query("UPDATE invoices SET share_token = ?, status = 'draft', updated_at = ? WHERE id = ?", [newToken, now, id]);
+
+  return { shareToken: newToken };
+};
+
 // Helper functions
 function mapRowToInvoice(row: unknown[]): Invoice {
   return {

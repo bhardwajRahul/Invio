@@ -89,9 +89,7 @@ CREATE TABLE templates (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert a default template
-INSERT OR IGNORE INTO templates (id, name, html, is_default) VALUES 
-('default-template', 'Default Invoice Template', '<html><body><h1>Invoice {{invoiceNumber}}</h1><p>Customer: {{customerName}}</p><p>Total: {{currency}} {{total}}</p></body></html>', TRUE);
+-- No built-in default template is seeded here; startup code installs maintained templates.
 
 -- Index for performance
 CREATE INDEX idx_invoices_number ON invoices(invoice_number);

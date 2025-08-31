@@ -32,8 +32,9 @@ export function initDatabase(): void {
     }
   }
 
-  // Insert built-in templates
+  // Insert built-in templates and clean up legacy/default conflicts
   insertBuiltinTemplates(db);
+  ensureTemplateDefaults(db);
 
   console.log("Database initialized successfully");
 }
@@ -60,10 +61,10 @@ function insertBuiltinTemplates(database: DB) {
         }
     };
 
-    const templates = [
-        { id: "professional-modern", name: "Professional Modern", html: loadHtml("professional-modern"), isDefault: true },
-        { id: "minimalist-clean", name: "Minimalist Clean", html: loadHtml("minimalist-clean"), isDefault: false },
-    ];
+  const templates = [
+    { id: "professional-modern", name: "Professional Modern", html: loadHtml("professional-modern"), isDefault: false },
+    { id: "minimalist-clean", name: "Minimalist Clean", html: loadHtml("minimalist-clean"), isDefault: true },
+  ];
 
     for (const t of templates) {
         try {
@@ -88,6 +89,31 @@ function insertBuiltinTemplates(database: DB) {
             console.error(`Failed to upsert template ${t.name}:`, error);
         }
     }
+}
+
+function ensureTemplateDefaults(database: DB) {
+  try {
+    // Remove legacy default row if present
+    database.query("DELETE FROM templates WHERE id = ?", ["default-template"]);
+
+    // Ensure only one default: prefer minimalist-clean
+    const rows = database.query("SELECT id, is_default FROM templates");
+    const ids = rows.map((r) => String((r as unknown[])[0]));
+    const hasMinimalist = ids.includes("minimalist-clean");
+
+    // Reset all defaults
+    database.query("UPDATE templates SET is_default = 0");
+
+    // Set preferred default if present; otherwise set any one template as default for safety
+    if (hasMinimalist) {
+      database.query("UPDATE templates SET is_default = 1 WHERE id = ?", ["minimalist-clean"]);
+    } else if (ids.length) {
+      const first = ids[0];
+      database.query("UPDATE templates SET is_default = 1 WHERE id = ?", [first]);
+    }
+  } catch (e) {
+    console.error("Failed to ensure template defaults:", e);
+  }
 }
 
 export function getDatabase(): DB {

@@ -1,6 +1,7 @@
 import { ComponentChildren } from "preact";
+import { Breadcrumbs } from "./Breadcrumbs.tsx";
 
-export function Layout(props: { children: ComponentChildren; authed?: boolean }) {
+export function Layout(props: { children: ComponentChildren; authed?: boolean; path?: string }) {
   return (
   <div class="min-h-screen bg-base-200">
       <div class="navbar bg-base-100 border-b">
@@ -52,6 +53,7 @@ export function Layout(props: { children: ComponentChildren; authed?: boolean })
         </div>
       </div>
       <main class="container mx-auto p-4">
+        <Breadcrumbs path={props.path} />
         {props.children}
       </main>
     </div>

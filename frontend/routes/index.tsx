@@ -10,7 +10,7 @@ export const handler: Handlers = {
 
 export default function Home(props: PageProps<{ authed: boolean }>) {
   return (
-    <Layout authed={props.data.authed}>
+  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="card bg-base-100 shadow">
         <div class="card-body">
           <h1 class="card-title">Welcome to Invio</h1>

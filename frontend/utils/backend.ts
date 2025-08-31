@@ -6,38 +6,22 @@ export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
   const cookies = Object.fromEntries(
     cookieHeader.split(/;\s*/).map((p) => {
       const i = p.indexOf("=");
-      if (i === -1) return [p, ""]; 
+      if (i === -1) return [p, ""];
       return [decodeURIComponent(p.slice(0, i)), decodeURIComponent(p.slice(i + 1))];
     }),
   );
   const b64 = cookies[AUTH_COOKIE];
   if (!b64) return null;
-  // New format: cookie stores base64(username:password) without the "Basic " prefix
-  // Build Authorization header directly. Also support old double-encoded cookies.
-  // 1) Prefer single-encoded: Basic <b64>
-  let header = `Basic ${b64}`;
-  // 2) Back-compat: if cookie was double-encoded (btoa(btoa(user:pass))), decode once
-  try {
-    const once = atob(b64);
-    // If once-decoded looks like a base64 of user:pass (second decode contains a colon), use that
-    try {
-      const twice = atob(once);
-      if (twice.includes(":")) {
-        header = `Basic ${once}`;
-      }
-    } catch {
-      // not double-encoded, keep default
-    }
-  } catch {
-    // not valid base64 at all; keep default
-  }
-  return header;
+  return `Basic ${b64}`;
 }
 
 export function setAuthCookieHeaders(basic: string): HeadersInit {
-  // Store single-encoded credentials (no "Basic " prefix) to avoid double-encoding
-  const b64 = (basic.startsWith("Basic ") ? basic.slice("Basic ".length) : basic.replace(/^Basic\s+/, ""));
-  const cookie = `${AUTH_COOKIE}=${encodeURIComponent(b64)}; HttpOnly; Path=/; SameSite=Lax`;2
+  // Expect 'basic' to be 'Basic <base64>' or just base64
+  let b64 = basic;
+  if (basic.startsWith("Basic ")) {
+    b64 = basic.slice("Basic ".length);
+  }
+  const cookie = `${AUTH_COOKIE}=${encodeURIComponent(b64)}; HttpOnly; Path=/; SameSite=Lax`;
   return { "Set-Cookie": cookie };
 }
 
@@ -61,12 +45,10 @@ export async function backendPost(path: string, authHeader: string, body: unknow
       Authorization: authHeader,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body ?? {}),
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) return await res.json();
-  return await res.text();
+  return await res.json();
 }
 
 export async function backendPut(path: string, authHeader: string, body: unknown) {
@@ -76,12 +58,10 @@ export async function backendPut(path: string, authHeader: string, body: unknown
       Authorization: authHeader,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body ?? {}),
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) return await res.json();
-  return await res.text();
+  return await res.json();
 }
 
 export async function backendPatch(path: string, authHeader: string, body: unknown) {
@@ -91,23 +71,20 @@ export async function backendPatch(path: string, authHeader: string, body: unkno
       Authorization: authHeader,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body ?? {}),
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) return await res.json();
-  return await res.text();
+  return await res.json();
 }
 
 export async function backendDelete(path: string, authHeader: string) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     method: "DELETE",
-    headers: {
-      Authorization: authHeader,
-    },
+    headers: { Authorization: authHeader },
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) return await res.json();
-  return await res.text();
+  // Some DELETEs may return 204 No Content
+  const contentType = res.headers.get("content-type") || "";
+  if (res.status === 204 || !contentType.includes("application/json")) return undefined;
+  return await res.json();
 }

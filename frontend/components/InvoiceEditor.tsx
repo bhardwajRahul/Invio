@@ -68,25 +68,25 @@ export function InvoiceEditor(props: {
         </div>
         <div id="items-container" class="space-y-3">
           {items.map((it) => (
-            <div class="grid grid-cols-1 sm:grid-cols-8 gap-2 items-end item-row">
+            <div class="grid grid-cols-1 sm:grid-cols-8 gap-2 items-center item-row">
               <input name="item_description" value={it.description} placeholder="Description" class="input input-bordered sm:col-span-4 min-w-0" />
               <input type="number" step="1" min="1" name="item_quantity" value={String(it.quantity)} class="input input-bordered sm:col-span-1 min-w-0" />
               <input type="number" step="0.01" min="0" name="item_unitPrice" value={String(it.unitPrice)} class="input input-bordered sm:col-span-1 min-w-0" />
               <input name="item_notes" value={it.notes || ""} placeholder="Notes" class="input input-bordered sm:col-span-1 min-w-0" />
-              <div class="sm:col-span-1 flex justify-center">
-                <button type="button" class="remove-item btn btn-ghost btn-sm" aria-label="Remove item">×</button>
+              <div class="sm:col-span-1 flex items-center justify-center">
+                <button type="button" class="remove-item btn btn-ghost btn-sm leading-none" aria-label="Remove item">×</button>
               </div>
             </div>
           ))}
         </div>
         <template id="item-template">
-          <div class="grid grid-cols-1 sm:grid-cols-8 gap-2 items-end item-row">
+          <div class="grid grid-cols-1 sm:grid-cols-8 gap-2 items-center item-row">
             <input name="item_description" placeholder="Description" class="input input-bordered sm:col-span-4 min-w-0" />
             <input type="number" step="1" min="1" name="item_quantity" value="1" class="input input-bordered sm:col-span-1 min-w-0" />
             <input type="number" step="0.01" min="0" name="item_unitPrice" value="0" class="input input-bordered sm:col-span-1 min-w-0" />
             <input name="item_notes" placeholder="Notes" class="input input-bordered sm:col-span-1 min-w-0" />
-            <div class="sm:col-span-1 flex justify-center">
-              <button type="button" class="remove-item btn btn-ghost btn-sm" aria-label="Remove item">×</button>
+            <div class="sm:col-span-1 flex items-center justify-center">
+              <button type="button" class="remove-item btn btn-ghost btn-sm leading-none" aria-label="Remove item">×</button>
             </div>
           </div>
         </template>

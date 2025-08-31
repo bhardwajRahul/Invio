@@ -21,7 +21,7 @@ export const handler: Handlers<Data> = {
 export default function Invoices(props: PageProps<Data>) {
   const list = props.data.invoices ?? [];
   return (
-    <Layout authed={props.data.authed}>
+  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Invoices</h1>
   <a href="/invoices/new" class="btn btn-primary btn-sm"><i data-lucide="plus" class="w-4 h-4"></i>New Invoice</a>

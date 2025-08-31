@@ -235,7 +235,7 @@ test_endpoint "Configure Business Settings" "curl -s -u '$ADMIN_AUTH' -X PUT '$B
     \"businessTaxId\": \"EIN: 12-3456789\",
     \"currency\": \"USD\",
     \"defaultPaymentTerms\": \"Net 30 days\",
-    \"logoUrl\": \"https://files.catbox.moe/y25fk1.png\"
+  \"logo\": \"https://files.catbox.moe/y25fk1.png\"
   }'"
 
 # 6. Create Enhanced Invoice with Multiple Items

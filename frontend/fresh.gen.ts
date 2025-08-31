@@ -18,9 +18,12 @@ import * as $invoices_index from "./routes/invoices/index.tsx";
 import * as $invoices_new from "./routes/invoices/new.tsx";
 import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
+import * as $public_invoices_share_token_html from "./routes/public/invoices/[share_token]/html.ts";
+import * as $public_invoices_share_token_index from "./routes/public/invoices/[share_token]/index.tsx";
+import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[share_token]/pdf.ts";
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
-
+import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
 import { type Manifest } from "$fresh/server.ts";
 
 const manifest = {
@@ -41,10 +44,18 @@ const manifest = {
     "./routes/invoices/new.tsx": $invoices_new,
     "./routes/login.tsx": $login,
     "./routes/logout.ts": $logout,
+    "./routes/public/invoices/[share_token]/html.ts":
+      $public_invoices_share_token_html,
+    "./routes/public/invoices/[share_token]/index.tsx":
+      $public_invoices_share_token_index,
+    "./routes/public/invoices/[share_token]/pdf.ts":
+      $public_invoices_share_token_pdf,
     "./routes/settings.tsx": $settings,
     "./routes/templates/index.tsx": $templates_index,
   },
-  islands: {},
+  islands: {
+    "./islands/Breadcrumbs.tsx": $Breadcrumbs,
+  },
   baseUrl: import.meta.url,
 } satisfies Manifest;
 

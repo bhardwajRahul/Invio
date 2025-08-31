@@ -27,7 +27,7 @@ export const handler: Handlers = {
 
 export default function LoginPage(props: PageProps<{ error: string | null }>) {
   return (
-    <Layout>
+  <Layout path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Admin Login</h1>
       {props.data.error && (
         <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>

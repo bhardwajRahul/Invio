@@ -94,7 +94,7 @@ Principles
 - PATCH `/api/v1/settings`
   - Supported keys (minimal and practical):
     - `companyName`, `address`, `email`, `phone`, `taxId`
-    - `logo` (data URL or URL), `logoUrl` (URL)
+    - `logo` (data URL or URL)
     - `templateId` (`professional-modern` | `minimalist-clean`)
     - `highlight` (hex color like `#6B4EFF`)
     - `brandLayout` (`logo-left` | `logo-right`, default behaves as left when a logo exists)
@@ -103,7 +103,7 @@ Example:
 ```bash
 curl -u admin:supersecret -H "Content-Type: application/json" \
   -X PATCH http://localhost:3000/api/v1/settings \
-  -d '{"companyName":"Your Company","logoUrl":"https://example.com/logo.png","brandLayout":"logo-left","templateId":"professional-modern","highlight":"#6B4EFF"}'
+  -d '{"companyName":"Your Company","logo":"https://example.com/logo.png","brandLayout":"logo-left","templateId":"professional-modern","highlight":"#6B4EFF"}'
 ```
 
 ### Invoices (admin)

@@ -1,6 +1,13 @@
-import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont } from "pdf-lib";
-import { TemplateContext, InvoiceWithDetails, BusinessSettings } from "../types/index.ts";
-import { getTemplateById, renderTemplate as renderTpl } from "../controllers/templates.ts";
+import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
+import {
+  BusinessSettings,
+  InvoiceWithDetails,
+  TemplateContext,
+} from "../types/index.ts";
+import {
+  getTemplateById,
+  renderTemplate as renderTpl,
+} from "../controllers/templates.ts";
 // pdf-lib fallback remains available for environments without wkhtmltopdf
 
 // ---- Basic color helpers ----
@@ -16,20 +23,20 @@ function hexToRgb(hex: string): ReturnType<typeof rgb> {
 function normalizeHex(hex?: string): string | undefined {
   if (!hex) return undefined;
   const h = hex.trim();
-  if (/^#?[0-9a-fA-F]{6}$/.test(h)) return h.startsWith('#') ? h : `#${h}`;
+  if (/^#?[0-9a-fA-F]{6}$/.test(h)) return h.startsWith("#") ? h : `#${h}`;
   return undefined;
 }
 
 function lighten(hex: string, amount = 0.85): string {
   const n = normalizeHex(hex) ?? "#2563eb";
-  const m = n.replace('#', '');
-  const r = parseInt(m.slice(0,2), 16);
-  const g = parseInt(m.slice(2,4), 16);
-  const b = parseInt(m.slice(4,6), 16);
+  const m = n.replace("#", "");
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
   const mix = (c: number) => Math.round(c + (255 - c) * amount);
-  const rr = mix(r).toString(16).padStart(2, '0');
-  const gg = mix(g).toString(16).padStart(2, '0');
-  const bb = mix(b).toString(16).padStart(2, '0');
+  const rr = mix(r).toString(16).padStart(2, "0");
+  const gg = mix(g).toString(16).padStart(2, "0");
+  const bb = mix(b).toString(16).padStart(2, "0");
   return `#${rr}${gg}${bb}`;
 }
 
@@ -37,10 +44,16 @@ function formatDate(d?: Date) {
   return d ? new Date(d).toLocaleDateString() : undefined;
 }
 
-function toMoney(n: number): string { return n.toFixed(2); }
+function toMoney(n: number): string {
+  return n.toFixed(2);
+}
 
-// Provide logoUrl for both inline HTML and DB templates; retain previous behavior
-type WithLogo = BusinessSettings & { logo?: string; logoUrl?: string; brandLayout?: string };
+// Support a single stored 'logo' setting; 'logoUrl' here is a derived, inlined data URL for rendering robustness
+type WithLogo = BusinessSettings & {
+  logo?: string;
+  logoUrl?: string;
+  brandLayout?: string;
+};
 
 // ---- pdf-lib helper primitives (used by fallback/professional/minimalist fallbacks) ----
 const A4 = { width: 595, height: 842 };
@@ -71,7 +84,12 @@ function newPage(ctx: DrawContext) {
   ctx.cursorY = createMargins().top;
 }
 
-function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
+function wrapText(
+  text: string,
+  font: PDFFont,
+  fontSize: number,
+  maxWidth: number,
+): string[] {
   const lines: string[] = [];
   const paragraphs = String(text ?? "").split(/\r?\n/);
   for (const p of paragraphs) {
@@ -117,10 +135,22 @@ function drawTableHeader(
   const y = ctx.cursorY;
   const h = 18;
   if (fill) {
-    ctx.page.drawRectangle({ x: ctx.margins.left, y: y - 4, width: ctx.contentWidth, height: h, color: fill });
+    ctx.page.drawRectangle({
+      x: ctx.margins.left,
+      y: y - 4,
+      width: ctx.contentWidth,
+      height: h,
+      color: fill,
+    });
   }
   for (const c of cols) {
-    ctx.page.drawText(c.title, { x: c.x + 2, y, size: 10, font: ctx.boldFont, color: fill ? rgb(1, 1, 1) : rgb(0.3, 0.3, 0.3) });
+    ctx.page.drawText(c.title, {
+      x: c.x + 2,
+      y,
+      size: 10,
+      font: ctx.boldFont,
+      color: fill ? rgb(1, 1, 1) : rgb(0.3, 0.3, 0.3),
+    });
   }
   ctx.cursorY -= h + 6;
 }
@@ -135,8 +165,20 @@ function drawLabelValue(
   color = rgb(0.4, 0.4, 0.4),
 ) {
   ensureSpace(ctx, 14);
-  ctx.page.drawText(label, { x, y: ctx.cursorY, size, font: ctx.regularFont, color });
-  ctx.page.drawText(value, { x: x + labelWidth, y: ctx.cursorY, size, font: ctx.regularFont, color: rgb(0.15, 0.15, 0.15) });
+  ctx.page.drawText(label, {
+    x,
+    y: ctx.cursorY,
+    size,
+    font: ctx.regularFont,
+    color,
+  });
+  ctx.page.drawText(value, {
+    x: x + labelWidth,
+    y: ctx.cursorY,
+    size,
+    font: ctx.regularFont,
+    color: rgb(0.15, 0.15, 0.15),
+  });
   ctx.cursorY -= 14;
 }
 
@@ -144,10 +186,14 @@ function formatMoney(code: string, amount: number): string {
   return `${code} ${amount.toFixed(2)}`;
 }
 
-async function inlineLogoIfPossible(settings?: BusinessSettings): Promise<BusinessSettings | undefined> {
+async function inlineLogoIfPossible(
+  settings?: BusinessSettings,
+): Promise<BusinessSettings | undefined> {
   if (!settings?.logo) return settings;
   const url = settings.logo.trim();
-  if (url.startsWith("data:")) return { ...settings, logoUrl: url } as unknown as BusinessSettings;
+  if (url.startsWith("data:")) {
+    return { ...settings, logoUrl: url } as unknown as BusinessSettings;
+  }
 
   const toDataUrl = (bytes: Uint8Array, mime = "image/png") => {
     const base64 = btoa(String.fromCharCode(...bytes));
@@ -160,14 +206,20 @@ async function inlineLogoIfPossible(settings?: BusinessSettings): Promise<Busine
       if (!res.ok) return settings;
       const buf = new Uint8Array(await res.arrayBuffer());
       const mime = res.headers.get("content-type") ?? "image/png";
-      return { ...settings, logoUrl: toDataUrl(buf, mime) } as unknown as BusinessSettings;
+      return {
+        ...settings,
+        logoUrl: toDataUrl(buf, mime),
+      } as unknown as BusinessSettings;
     }
     // Attempt local file read
     const file = await Deno.readFile(url);
     let mime = "image/png";
     if (url.endsWith(".jpg") || url.endsWith(".jpeg")) mime = "image/jpeg";
     if (url.endsWith(".svg")) mime = "image/svg+xml";
-    return { ...settings, logoUrl: toDataUrl(file, mime) } as unknown as BusinessSettings;
+    return {
+      ...settings,
+      logoUrl: toDataUrl(file, mime),
+    } as unknown as BusinessSettings;
   } catch (_e) {
     return settings; // keep original
   }
@@ -202,7 +254,7 @@ function buildContext(
     customerTaxId: invoice.customer.taxId,
 
     // Items
-  items: invoice.items.map((i) => ({
+    items: invoice.items.map((i) => ({
       description: i.description,
       quantity: i.quantity,
       unitPrice: toMoney(i.unitPrice),
@@ -212,15 +264,17 @@ function buildContext(
 
     // Totals
     subtotal: toMoney(invoice.subtotal),
-    discountAmount: invoice.discountAmount > 0 ? toMoney(invoice.discountAmount) : undefined,
+    discountAmount: invoice.discountAmount > 0
+      ? toMoney(invoice.discountAmount)
+      : undefined,
     discountPercentage: invoice.discountPercentage || undefined,
     taxRate: invoice.taxRate || undefined,
     taxAmount: invoice.taxAmount > 0 ? toMoney(invoice.taxAmount) : undefined,
     total: toMoney(invoice.total),
 
-  // Flags
-  hasDiscount: invoice.discountAmount > 0,
-  hasTax: invoice.taxAmount > 0,
+    // Flags
+    hasDiscount: invoice.discountAmount > 0,
+    hasTax: invoice.taxAmount > 0,
 
     // Payment
     paymentTerms: invoice.paymentTerms || settings?.paymentTerms || undefined,
@@ -231,10 +285,14 @@ function buildContext(
     notes: invoice.notes || settings?.defaultNotes || undefined,
 
     // Non-mustache extras consumed by templates
-    logoUrl: (settings as WithLogo | undefined)?.logo || (settings as WithLogo | undefined)?.logoUrl,
+    // Prefer inlined data URL if available; otherwise pass through the provided logo value
+    logoUrl: (settings as WithLogo | undefined)?.logoUrl ||
+      (settings as WithLogo | undefined)?.logo,
     brandLogoLeft: ((): boolean => {
-      const layout = ((settings as WithLogo | undefined)?.brandLayout || "").toLowerCase();
-      const hasLogo = !!((settings as WithLogo | undefined)?.logo || (settings as WithLogo | undefined)?.logoUrl);
+      const layout = ((settings as WithLogo | undefined)?.brandLayout || "")
+        .toLowerCase();
+      const hasLogo = !!((settings as WithLogo | undefined)?.logoUrl ||
+        (settings as WithLogo | undefined)?.logo);
       if (layout === "logo-left") return true;
       if (layout === "logo-right") return false;
       return hasLogo; // default to left when a logo exists
@@ -250,13 +308,28 @@ export async function generateInvoicePDF(
 ): Promise<Uint8Array> {
   // Inline remote logo when possible for robust wkhtmltopdf rendering
   const inlined = await inlineLogoIfPossible(businessSettings);
-  const html = buildInvoiceHTML(invoiceData, inlined, templateId, customHighlightColor);
+  const html = buildInvoiceHTML(
+    invoiceData,
+    inlined,
+    templateId,
+    customHighlightColor,
+  );
   const wk = await tryWkhtmlToPdf(html);
   if (wk) return wk;
-  return await generateStyledPDF(invoiceData, inlined, customHighlightColor, templateId);
+  return await generateStyledPDF(
+    invoiceData,
+    inlined,
+    customHighlightColor,
+    templateId,
+  );
 }
 
-export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: BusinessSettings, templateId?: string, highlight?: string): string {
+export function buildInvoiceHTML(
+  invoice: InvoiceWithDetails,
+  settings?: BusinessSettings,
+  templateId?: string,
+  highlight?: string,
+): string {
   const ctx = buildContext(invoice, settings, highlight);
   const hl = normalizeHex(highlight) || "#2563eb";
   const hlLight = lighten(hl, 0.86);
@@ -266,7 +339,11 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
     try {
       const t = getTemplateById(templateId);
       if (t && t.html) {
-  const html = renderTpl(t.html, { ...ctx, highlightColor: hl, highlightColorLight: hlLight });
+        const html = renderTpl(t.html, {
+          ...ctx,
+          highlightColor: hl,
+          highlightColorLight: hlLight,
+        });
         return html;
       }
     } catch (_e) {
@@ -347,7 +424,8 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
           </tr>
         </thead>
         <tbody>
-          ${ctx.items.map(i => `
+          ${
+    ctx.items.map((i) => `
             <tr>
               
               <td>
@@ -358,20 +436,39 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
               <td>${ctx.currency} ${i.unitPrice}</td>
               <td><strong>${ctx.currency} ${i.lineTotal}</strong></td>
             </tr>
-          `).join("")}
+          `).join("")
+  }
         </tbody>
       </table>
       <div class="totals">
         <div class="row"><div>Subtotal:</div><div>${ctx.currency} ${ctx.subtotal}</div></div>
-        ${ctx.hasDiscount ? `<div class="row"><div>Discount${ctx.discountPercentage ? ` (${ctx.discountPercentage}%)` : ''}:</div><div>-${ctx.currency} ${ctx.discountAmount}</div></div>` : ''}
-        ${ctx.hasTax ? `<div class="row"><div>Tax (${ctx.taxRate}%):</div><div>${ctx.currency} ${ctx.taxAmount}</div></div>` : ''}
+        ${
+    ctx.hasDiscount
+      ? `<div class="row"><div>Discount${
+        ctx.discountPercentage ? ` (${ctx.discountPercentage}%)` : ""
+      }:</div><div>-${ctx.currency} ${ctx.discountAmount}</div></div>`
+      : ""
+  }
+        ${
+    ctx.hasTax
+      ? `<div class="row"><div>Tax (${ctx.taxRate}%):</div><div>${ctx.currency} ${ctx.taxAmount}</div></div>`
+      : ""
+  }
         <div class="row total"><div>Total:</div><div>${ctx.currency} ${ctx.total}</div></div>
       </div>
       <div class="payinfo">
         <h4>Payment Information</h4>
-        ${ctx.paymentTerms ? `<p><strong>Terms:</strong> ${ctx.paymentTerms}</p>` : ''}
-        ${ctx.paymentMethods ? `<p><strong>Methods:</strong> ${ctx.paymentMethods}</p>` : ''}
-        ${ctx.bankAccount ? `<p><strong>Bank:</strong> ${ctx.bankAccount}</p>` : ''}
+        ${
+    ctx.paymentTerms ? `<p><strong>Terms:</strong> ${ctx.paymentTerms}</p>` : ""
+  }
+        ${
+    ctx.paymentMethods
+      ? `<p><strong>Methods:</strong> ${ctx.paymentMethods}</p>`
+      : ""
+  }
+        ${
+    ctx.bankAccount ? `<p><strong>Bank:</strong> ${ctx.bankAccount}</p>` : ""
+  }
       </div>
     </div>
   </body>
@@ -384,17 +481,23 @@ export function buildInvoiceHTML(invoice: InvoiceWithDetails, settings?: Busines
 async function tryWkhtmlToPdf(html: string): Promise<Uint8Array | null> {
   try {
     // Attempt to run wkhtmltopdf; if missing, this will throw
-  const cmd = new Deno.Command("wkhtmltopdf", {
+    const cmd = new Deno.Command("wkhtmltopdf", {
       args: [
         "-q",
-    "--enable-local-file-access",
-    "--disable-javascript",
-        "-s", "A4",
-        "--margin-top", "15mm",
-        "--margin-bottom", "15mm",
-        "--margin-left", "15mm",
-        "--margin-right", "15mm",
-        "-", "-",
+        "--enable-local-file-access",
+        "--disable-javascript",
+        "-s",
+        "A4",
+        "--margin-top",
+        "15mm",
+        "--margin-bottom",
+        "15mm",
+        "--margin-left",
+        "15mm",
+        "--margin-right",
+        "15mm",
+        "-",
+        "-",
       ],
       stdin: "piped",
       stdout: "piped",
@@ -425,15 +528,28 @@ async function generateStyledPDF(
   customHighlightColor?: string,
   templateId?: string,
 ): Promise<Uint8Array> {
-  const highlight = customHighlightColor ? hexToRgb(customHighlightColor) : undefined;
-  const id = (templateId ?? "professional-modern").toLowerCase();
+  const highlight = customHighlightColor
+    ? hexToRgb(customHighlightColor)
+    : undefined;
+  const id = (templateId ?? "minimalist-clean").toLowerCase();
   if (id.includes("minimalist")) {
-    return await generateMinimalistPDF(invoiceData, businessSettings, highlight);
+    return await generateMinimalistPDF(
+      invoiceData,
+      businessSettings,
+      highlight,
+    );
   }
-  return await generateProfessionalPDF(invoiceData, businessSettings, highlight);
+  return await generateProfessionalPDF(
+    invoiceData,
+    businessSettings,
+    highlight,
+  );
 }
 
-export async function renderTemplateToPDF(_templateHTML: string, _data: Record<string, unknown>): Promise<Uint8Array> {
+export async function renderTemplateToPDF(
+  _templateHTML: string,
+  _data: Record<string, unknown>,
+): Promise<Uint8Array> {
   // This function can be expanded to render HTML templates to PDF
   // For now, it will just return an empty PDF document
   const pdfDoc = await PDFDocument.create();
@@ -451,9 +567,9 @@ export async function renderTemplateToPDF(_templateHTML: string, _data: Record<s
 }
 
 async function generateProfessionalPDF(
-  invoiceData: InvoiceWithDetails, 
+  invoiceData: InvoiceWithDetails,
   businessSettings?: BusinessSettings,
-  highlightRgb?: ReturnType<typeof rgb>
+  highlightRgb?: ReturnType<typeof rgb>,
 ): Promise<Uint8Array> {
   const highlight = highlightRgb || rgb(0.15, 0.39, 0.92);
 
@@ -464,35 +580,123 @@ async function generateProfessionalPDF(
   const margins = createMargins();
   const contentWidth = margins.right - margins.left;
   // Placeholder page will be created by newPage(ctx) immediately after
-  const ctx: DrawContext = { pdfDoc, page: undefined as unknown as PDFPage, regularFont, boldFont, highlight, margins, cursorY: 0, contentWidth };
+  const ctx: DrawContext = {
+    pdfDoc,
+    page: undefined as unknown as PDFPage,
+    regularFont,
+    boldFont,
+    highlight,
+    margins,
+    cursorY: 0,
+    contentWidth,
+  };
   newPage(ctx);
 
   // Header band
   const headerHeight = 48;
-  ctx.page.drawRectangle({ x: 0, y: A4.height - headerHeight, width: A4.width, height: headerHeight, color: highlight });
-  ctx.page.drawText(businessSettings?.companyName ?? "", { x: margins.left, y: A4.height - headerHeight + 16, size: 18, font: boldFont, color: rgb(1, 1, 1) });
-  ctx.page.drawText("INVOICE", { x: margins.right - 100, y: A4.height - headerHeight + 16, size: 20, font: boldFont, color: rgb(1, 1, 1) });
+  ctx.page.drawRectangle({
+    x: 0,
+    y: A4.height - headerHeight,
+    width: A4.width,
+    height: headerHeight,
+    color: highlight,
+  });
+  ctx.page.drawText(businessSettings?.companyName ?? "", {
+    x: margins.left,
+    y: A4.height - headerHeight + 16,
+    size: 18,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
+  ctx.page.drawText("INVOICE", {
+    x: margins.right - 100,
+    y: A4.height - headerHeight + 16,
+    size: 20,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
 
   ctx.cursorY = margins.top - 24;
 
   // Meta box (right)
-  const boxW = 180, boxH = 70, boxX = margins.right - boxW, boxY = ctx.cursorY - boxH + 16;
-  ctx.page.drawRectangle({ x: boxX, y: boxY, width: boxW, height: boxH, color: rgb(0.95, 0.95, 0.95), borderColor: highlight, borderWidth: 2 });
-  ctx.page.drawText(`Invoice #: ${invoiceData.invoiceNumber}`, { x: boxX + 10, y: boxY + boxH - 18, size: 10, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
-  ctx.page.drawText(`Date: ${new Date(invoiceData.issueDate).toLocaleDateString()}`, { x: boxX + 10, y: boxY + boxH - 34, size: 9, font: regularFont, color: rgb(0.1, 0.1, 0.1) });
+  const boxW = 180,
+    boxH = 70,
+    boxX = margins.right - boxW,
+    boxY = ctx.cursorY - boxH + 16;
+  ctx.page.drawRectangle({
+    x: boxX,
+    y: boxY,
+    width: boxW,
+    height: boxH,
+    color: rgb(0.95, 0.95, 0.95),
+    borderColor: highlight,
+    borderWidth: 2,
+  });
+  ctx.page.drawText(`Invoice #: ${invoiceData.invoiceNumber}`, {
+    x: boxX + 10,
+    y: boxY + boxH - 18,
+    size: 10,
+    font: boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  ctx.page.drawText(
+    `Date: ${new Date(invoiceData.issueDate).toLocaleDateString()}`,
+    {
+      x: boxX + 10,
+      y: boxY + boxH - 34,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.1, 0.1, 0.1),
+    },
+  );
   if (invoiceData.dueDate) {
-    ctx.page.drawText(`Due: ${new Date(invoiceData.dueDate).toLocaleDateString()}`, { x: boxX + 10, y: boxY + boxH - 50, size: 9, font: regularFont, color: rgb(0.1, 0.1, 0.1) });
+    ctx.page.drawText(
+      `Due: ${new Date(invoiceData.dueDate).toLocaleDateString()}`,
+      {
+        x: boxX + 10,
+        y: boxY + boxH - 50,
+        size: 9,
+        font: regularFont,
+        color: rgb(0.1, 0.1, 0.1),
+      },
+    );
   }
 
   // Bill to
   ctx.cursorY -= 20;
-  ctx.page.drawText("BILL TO:", { x: margins.left, y: ctx.cursorY, size: 11, font: boldFont, color: highlight });
+  ctx.page.drawText("BILL TO:", {
+    x: margins.left,
+    y: ctx.cursorY,
+    size: 11,
+    font: boldFont,
+    color: highlight,
+  });
   ctx.cursorY -= 16;
-  ctx.page.drawText(invoiceData.customer.name, { x: margins.left, y: ctx.cursorY, size: 12, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+  ctx.page.drawText(invoiceData.customer.name, {
+    x: margins.left,
+    y: ctx.cursorY,
+    size: 12,
+    font: boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
   ctx.cursorY -= 14;
   if (invoiceData.customer.address) {
-    const lines = wrapText(invoiceData.customer.address, regularFont, 9, contentWidth * 0.45);
-    for (const line of lines) { ctx.page.drawText(line, { x: margins.left, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) }); ctx.cursorY -= 12; }
+    const lines = wrapText(
+      invoiceData.customer.address,
+      regularFont,
+      9,
+      contentWidth * 0.45,
+    );
+    for (const line of lines) {
+      ctx.page.drawText(line, {
+        x: margins.left,
+        y: ctx.cursorY,
+        size: 9,
+        font: regularFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      ctx.cursorY -= 12;
+    }
   }
 
   ctx.cursorY -= 10;
@@ -510,21 +714,58 @@ async function generateProfessionalPDF(
   let row = 0;
   for (const item of invoiceData.items) {
     const alt = row % 2 === 1 ? rgb(0.98, 0.98, 0.98) : undefined;
-  const desc = item.description;
-    const descLines = wrapText(desc + (item.notes ? `\n${item.notes}` : ""), regularFont, 9, contentWidth * 0.55);
+    const desc = item.description;
+    const descLines = wrapText(
+      desc + (item.notes ? `\n${item.notes}` : ""),
+      regularFont,
+      9,
+      contentWidth * 0.55,
+    );
     const rowHeight = Math.max(18, 12 * descLines.length);
     ensureSpace(ctx, rowHeight + 6);
-    if (alt) ctx.page.drawRectangle({ x: margins.left, y: ctx.cursorY - 3, width: contentWidth, height: rowHeight, color: alt });
+    if (alt) {
+      ctx.page.drawRectangle({
+        x: margins.left,
+        y: ctx.cursorY - 3,
+        width: contentWidth,
+        height: rowHeight,
+        color: alt,
+      });
+    }
     // Draw multi-line description
     let dy = 0;
     for (const line of descLines) {
-      ctx.page.drawText(line, { x: margins.left + 6, y: ctx.cursorY - dy, size: 9, font: regularFont, color: rgb(0.1,0.1,0.1) });
+      ctx.page.drawText(line, {
+        x: margins.left + 6,
+        y: ctx.cursorY - dy,
+        size: 9,
+        font: regularFont,
+        color: rgb(0.1, 0.1, 0.1),
+      });
       dy += 12;
     }
     // Other cells
-    ctx.page.drawText(String(item.quantity), { x: margins.left + contentWidth * 0.60, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.unitPrice), { x: margins.left + contentWidth * 0.70, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.lineTotal), { x: margins.left + contentWidth * 0.83, y: ctx.cursorY, size: 9, font: boldFont, color: rgb(0.1,0.1,0.1) });
+    ctx.page.drawText(String(item.quantity), {
+      x: margins.left + contentWidth * 0.60,
+      y: ctx.cursorY,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    ctx.page.drawText(formatMoney(invoiceData.currency, item.unitPrice), {
+      x: margins.left + contentWidth * 0.70,
+      y: ctx.cursorY,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    ctx.page.drawText(formatMoney(invoiceData.currency, item.lineTotal), {
+      x: margins.left + contentWidth * 0.83,
+      y: ctx.cursorY,
+      size: 9,
+      font: boldFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
     ctx.cursorY -= rowHeight;
     row++;
   }
@@ -536,33 +777,107 @@ async function generateProfessionalPDF(
   const totalsX = margins.left + contentWidth * 0.62;
   const line = (label: string, value: string, bold = false) => {
     ensureSpace(ctx, 14);
-    ctx.page.drawText(label, { x: totalsX, y: ctx.cursorY, size: 10, font: bold ? boldFont : regularFont, color: rgb(0.15,0.15,0.15) });
-    ctx.page.drawText(value, { x: totalsX + 120, y: ctx.cursorY, size: 10, font: bold ? boldFont : regularFont, color: rgb(0.15,0.15,0.15) });
+    ctx.page.drawText(label, {
+      x: totalsX,
+      y: ctx.cursorY,
+      size: 10,
+      font: bold ? boldFont : regularFont,
+      color: rgb(0.15, 0.15, 0.15),
+    });
+    ctx.page.drawText(value, {
+      x: totalsX + 120,
+      y: ctx.cursorY,
+      size: 10,
+      font: bold ? boldFont : regularFont,
+      color: rgb(0.15, 0.15, 0.15),
+    });
     ctx.cursorY -= 14;
   };
   line("Subtotal:", formatMoney(invoiceData.currency, invoiceData.subtotal));
-  if (invoiceData.discountAmount > 0) line("Discount:", `-${formatMoney(invoiceData.currency, invoiceData.discountAmount)}`);
-  if (invoiceData.taxAmount > 0) line(`Tax (${invoiceData.taxRate}%):`, formatMoney(invoiceData.currency, invoiceData.taxAmount));
+  if (invoiceData.discountAmount > 0) {
+    line(
+      "Discount:",
+      `-${formatMoney(invoiceData.currency, invoiceData.discountAmount)}`,
+    );
+  }
+  if (invoiceData.taxAmount > 0) {
+    line(
+      `Tax (${invoiceData.taxRate}%):`,
+      formatMoney(invoiceData.currency, invoiceData.taxAmount),
+    );
+  }
 
   ensureSpace(ctx, 26);
   // Total band
-  ctx.page.drawRectangle({ x: totalsX - 8, y: ctx.cursorY - 4, width: 170, height: 22, color: highlight });
-  ctx.page.drawText("TOTAL:", { x: totalsX - 2, y: ctx.cursorY, size: 12, font: boldFont, color: rgb(1,1,1) });
-  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.total), { x: totalsX + 85, y: ctx.cursorY, size: 12, font: boldFont, color: rgb(1,1,1) });
+  ctx.page.drawRectangle({
+    x: totalsX - 8,
+    y: ctx.cursorY - 4,
+    width: 170,
+    height: 22,
+    color: highlight,
+  });
+  ctx.page.drawText("TOTAL:", {
+    x: totalsX - 2,
+    y: ctx.cursorY,
+    size: 12,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
+  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.total), {
+    x: totalsX + 85,
+    y: ctx.cursorY,
+    size: 12,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
   ctx.cursorY -= 30;
 
   // Footer payment details
   if (businessSettings?.paymentMethods || businessSettings?.bankAccount) {
     ensureSpace(ctx, 40);
-    ctx.page.drawText("Payment Information", { x: margins.left, y: ctx.cursorY, size: 10, font: boldFont, color: highlight });
+    ctx.page.drawText("Payment Information", {
+      x: margins.left,
+      y: ctx.cursorY,
+      size: 10,
+      font: boldFont,
+      color: highlight,
+    });
     ctx.cursorY -= 14;
     if (businessSettings.paymentMethods) {
-      const lines = wrapText(`Methods: ${businessSettings.paymentMethods}`, regularFont, 9, contentWidth);
-      for (const l of lines) { ctx.page.drawText(l, { x: margins.left, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) }); ctx.cursorY -= 12; }
+      const lines = wrapText(
+        `Methods: ${businessSettings.paymentMethods}`,
+        regularFont,
+        9,
+        contentWidth,
+      );
+      for (const l of lines) {
+        ctx.page.drawText(l, {
+          x: margins.left,
+          y: ctx.cursorY,
+          size: 9,
+          font: regularFont,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        ctx.cursorY -= 12;
+      }
     }
     if (businessSettings.bankAccount) {
-      const lines = wrapText(`Bank: ${businessSettings.bankAccount}`, regularFont, 9, contentWidth);
-      for (const l of lines) { ctx.page.drawText(l, { x: margins.left, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) }); ctx.cursorY -= 12; }
+      const lines = wrapText(
+        `Bank: ${businessSettings.bankAccount}`,
+        regularFont,
+        9,
+        contentWidth,
+      );
+      for (const l of lines) {
+        ctx.page.drawText(l, {
+          x: margins.left,
+          y: ctx.cursorY,
+          size: 9,
+          font: regularFont,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        ctx.cursorY -= 12;
+      }
     }
   }
 
@@ -570,9 +885,9 @@ async function generateProfessionalPDF(
 }
 
 async function generateMinimalistPDF(
-  invoiceData: InvoiceWithDetails, 
+  invoiceData: InvoiceWithDetails,
   businessSettings?: BusinessSettings,
-  highlightRgb?: ReturnType<typeof rgb>
+  highlightRgb?: ReturnType<typeof rgb>,
 ): Promise<Uint8Array> {
   const highlight = highlightRgb || rgb(0.05, 0.59, 0.41);
 
@@ -582,37 +897,106 @@ async function generateMinimalistPDF(
 
   const margins = createMargins();
   const contentWidth = margins.right - margins.left;
-  const ctx: DrawContext = { pdfDoc, page: undefined as unknown as PDFPage, regularFont, boldFont, highlight, margins, cursorY: 0, contentWidth };
+  const ctx: DrawContext = {
+    pdfDoc,
+    page: undefined as unknown as PDFPage,
+    regularFont,
+    boldFont,
+    highlight,
+    margins,
+    cursorY: 0,
+    contentWidth,
+  };
   newPage(ctx);
 
   // Minimal header: company on left, title on right
   if (businessSettings?.companyName) {
-    ctx.page.drawText(businessSettings.companyName, { x: margins.left, y: ctx.cursorY, size: 16, font: regularFont, color: highlight });
+    ctx.page.drawText(businessSettings.companyName, {
+      x: margins.left,
+      y: ctx.cursorY,
+      size: 16,
+      font: regularFont,
+      color: highlight,
+    });
   }
-  ctx.page.drawText("INVOICE", { x: margins.right - 140, y: ctx.cursorY, size: 28, font: regularFont, color: rgb(0.2,0.2,0.2) });
+  ctx.page.drawText("INVOICE", {
+    x: margins.right - 140,
+    y: ctx.cursorY,
+    size: 28,
+    font: regularFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
   ctx.cursorY -= 28;
 
   // Invoice number and dates
-  ctx.page.drawText(`#${invoiceData.invoiceNumber}`, { x: margins.right - 140, y: ctx.cursorY, size: 12, font: regularFont, color: rgb(0.45,0.45,0.45) });
+  ctx.page.drawText(`#${invoiceData.invoiceNumber}`, {
+    x: margins.right - 140,
+    y: ctx.cursorY,
+    size: 12,
+    font: regularFont,
+    color: rgb(0.45, 0.45, 0.45),
+  });
   ctx.cursorY -= 18;
   drawDivider(ctx);
-  drawLabelValue(ctx, "Issue Date:", new Date(invoiceData.issueDate).toLocaleDateString(), margins.left, 9, 70, rgb(0.4,0.4,0.4));
+  drawLabelValue(
+    ctx,
+    "Issue Date:",
+    new Date(invoiceData.issueDate).toLocaleDateString(),
+    margins.left,
+    9,
+    70,
+    rgb(0.4, 0.4, 0.4),
+  );
   if (invoiceData.dueDate) {
-    drawLabelValue(ctx, "Due Date:", new Date(invoiceData.dueDate).toLocaleDateString(), margins.left, 9, 70, rgb(0.4,0.4,0.4));
+    drawLabelValue(
+      ctx,
+      "Due Date:",
+      new Date(invoiceData.dueDate).toLocaleDateString(),
+      margins.left,
+      9,
+      70,
+      rgb(0.4, 0.4, 0.4),
+    );
   }
 
   // Customer
   ctx.cursorY -= 4;
-  ctx.page.drawText("BILLED TO", { x: margins.left, y: ctx.cursorY, size: 9, font: regularFont, color: highlight });
+  ctx.page.drawText("BILLED TO", {
+    x: margins.left,
+    y: ctx.cursorY,
+    size: 9,
+    font: regularFont,
+    color: highlight,
+  });
   ctx.cursorY -= 14;
-  ctx.page.drawText(invoiceData.customer.name, { x: margins.left, y: ctx.cursorY, size: 12, font: regularFont, color: rgb(0.2,0.2,0.2) });
+  ctx.page.drawText(invoiceData.customer.name, {
+    x: margins.left,
+    y: ctx.cursorY,
+    size: 12,
+    font: regularFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
   ctx.cursorY -= 14;
   const details: string[] = [];
   if (invoiceData.customer.email) details.push(invoiceData.customer.email);
   if (invoiceData.customer.phone) details.push(invoiceData.customer.phone);
   if (invoiceData.customer.address) details.push(invoiceData.customer.address);
-  const dLines = wrapText(details.join(" • "), regularFont, 9, contentWidth * 0.7);
-  for (const l of dLines) { ctx.page.drawText(l, { x: margins.left, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.45,0.45,0.45) }); ctx.cursorY -= 12; }
+  const dLines = wrapText(
+    details.join(" • "),
+    regularFont,
+    9,
+    contentWidth * 0.7,
+  );
+  for (const l of dLines) {
+    ctx.page.drawText(l, {
+      x: margins.left,
+      y: ctx.cursorY,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.45, 0.45, 0.45),
+    });
+    ctx.cursorY -= 12;
+  }
 
   ctx.cursorY -= 6;
   drawDivider(ctx);
@@ -633,31 +1017,104 @@ async function generateMinimalistPDF(
     // Description multi-line
     let dy = 0;
     for (const line of descLines) {
-      ctx.page.drawText(line, { x: margins.left, y: ctx.cursorY - dy, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) });
+      ctx.page.drawText(line, {
+        x: margins.left,
+        y: ctx.cursorY - dy,
+        size: 9,
+        font: regularFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
       dy += 12;
     }
     // Numbers
-    ctx.page.drawText(String(item.quantity), { x: margins.left + contentWidth * 0.62, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.4,0.4,0.4) });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.unitPrice), { x: margins.left + contentWidth * 0.72, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.4,0.4,0.4) });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.lineTotal), { x: margins.left + contentWidth * 0.85, y: ctx.cursorY, size: 9, font: regularFont, color: rgb(0.2,0.2,0.2) });
+    ctx.page.drawText(String(item.quantity), {
+      x: margins.left + contentWidth * 0.62,
+      y: ctx.cursorY,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    ctx.page.drawText(formatMoney(invoiceData.currency, item.unitPrice), {
+      x: margins.left + contentWidth * 0.72,
+      y: ctx.cursorY,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    ctx.page.drawText(formatMoney(invoiceData.currency, item.lineTotal), {
+      x: margins.left + contentWidth * 0.85,
+      y: ctx.cursorY,
+      size: 9,
+      font: regularFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
     ctx.cursorY -= rowHeight + 6;
   }
 
   // Totals
   ctx.cursorY -= 4;
   const totalsX = margins.left + contentWidth * 0.68;
-  ctx.page.drawLine({ start: { x: totalsX, y: ctx.cursorY + 10 }, end: { x: margins.right, y: ctx.cursorY + 10 }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
-  ctx.page.drawText("Subtotal", { x: totalsX, y: ctx.cursorY, size: 10, font: regularFont, color: rgb(0.45,0.45,0.45) });
-  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.subtotal), { x: totalsX + 90, y: ctx.cursorY, size: 10, font: regularFont, color: rgb(0.45,0.45,0.45) });
+  ctx.page.drawLine({
+    start: { x: totalsX, y: ctx.cursorY + 10 },
+    end: { x: margins.right, y: ctx.cursorY + 10 },
+    thickness: 0.5,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+  ctx.page.drawText("Subtotal", {
+    x: totalsX,
+    y: ctx.cursorY,
+    size: 10,
+    font: regularFont,
+    color: rgb(0.45, 0.45, 0.45),
+  });
+  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.subtotal), {
+    x: totalsX + 90,
+    y: ctx.cursorY,
+    size: 10,
+    font: regularFont,
+    color: rgb(0.45, 0.45, 0.45),
+  });
   ctx.cursorY -= 16;
   if (invoiceData.taxAmount > 0) {
-    ctx.page.drawText(`Tax (${invoiceData.taxRate}%)`, { x: totalsX, y: ctx.cursorY, size: 10, font: regularFont, color: rgb(0.45,0.45,0.45) });
-    ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.taxAmount), { x: totalsX + 90, y: ctx.cursorY, size: 10, font: regularFont, color: rgb(0.45,0.45,0.45) });
+    ctx.page.drawText(`Tax (${invoiceData.taxRate}%)`, {
+      x: totalsX,
+      y: ctx.cursorY,
+      size: 10,
+      font: regularFont,
+      color: rgb(0.45, 0.45, 0.45),
+    });
+    ctx.page.drawText(
+      formatMoney(invoiceData.currency, invoiceData.taxAmount),
+      {
+        x: totalsX + 90,
+        y: ctx.cursorY,
+        size: 10,
+        font: regularFont,
+        color: rgb(0.45, 0.45, 0.45),
+      },
+    );
     ctx.cursorY -= 18;
   }
-  ctx.page.drawLine({ start: { x: totalsX, y: ctx.cursorY + 10 }, end: { x: margins.right, y: ctx.cursorY + 10 }, thickness: 1, color: highlight });
-  ctx.page.drawText("Total", { x: totalsX, y: ctx.cursorY, size: 14, font: regularFont, color: highlight });
-  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.total), { x: totalsX + 90, y: ctx.cursorY, size: 14, font: regularFont, color: highlight });
+  ctx.page.drawLine({
+    start: { x: totalsX, y: ctx.cursorY + 10 },
+    end: { x: margins.right, y: ctx.cursorY + 10 },
+    thickness: 1,
+    color: highlight,
+  });
+  ctx.page.drawText("Total", {
+    x: totalsX,
+    y: ctx.cursorY,
+    size: 14,
+    font: regularFont,
+    color: highlight,
+  });
+  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.total), {
+    x: totalsX + 90,
+    y: ctx.cursorY,
+    size: 14,
+    font: regularFont,
+    color: highlight,
+  });
   ctx.cursorY -= 26;
 
   return await pdfDoc.save();

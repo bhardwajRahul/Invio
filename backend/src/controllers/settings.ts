@@ -13,7 +13,7 @@ export const getSettings = () => {
 export const updateSettings = (data: Record<string, string>) => {
   const db = getDatabase();
   const results: Setting[] = [];
-  
+
   for (const [key, value] of Object.entries(data)) {
     // Upsert the setting
     const existing = db.query("SELECT * FROM settings WHERE key = ?", [key]);
@@ -24,7 +24,7 @@ export const updateSettings = (data: Record<string, string>) => {
     }
     results.push({ key, value });
   }
-  
+
   return results;
 };
 
@@ -37,12 +37,18 @@ export const getSetting = (key: string) => {
 export const setSetting = (key: string, value: string) => {
   const db = getDatabase();
   const existing = db.query("SELECT * FROM settings WHERE key = ?", [key]);
-  
+
   if (existing.length > 0) {
     db.query("UPDATE settings SET value = ? WHERE key = ?", [value, key]);
   } else {
     db.query("INSERT INTO settings (key, value) VALUES (?, ?)", [key, value]);
   }
-  
+
   return { key, value };
+};
+
+export const deleteSetting = (key: string) => {
+  const db = getDatabase();
+  db.query("DELETE FROM settings WHERE key = ?", [key]);
+  return { key } as Pick<Setting, "key">;
 };

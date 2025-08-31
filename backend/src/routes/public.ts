@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { getInvoiceByShareToken } from "../controllers/invoices.ts";
 import { getSettings } from "../controllers/settings.ts";
-import { generatePDF, buildInvoiceHTML } from "../utils/pdf.ts";
+import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 
 const publicRoutes = new Hono();
 
 publicRoutes.get("/public/invoices/:share_token", async (c) => {
   const shareToken = c.req.param("share_token");
   const invoice = await getInvoiceByShareToken(shareToken);
-  
+
   if (!invoice) {
     return c.json({ message: "Invoice not found" }, 404);
   }
@@ -29,8 +29,11 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     acc[s.key] = s.value;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.logo && settingsMap.logoUrl) {
+    settingsMap.logo = settingsMap.logoUrl as string;
+  }
 
-  // Construct BusinessSettings with sane defaults; support logoUrl fallback
+  // Construct BusinessSettings with sane defaults; unified single 'logo' field
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
     companyAddress: settingsMap.companyAddress || "",
@@ -38,9 +41,9 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
-    logo: settingsMap.logo || settingsMap.logoUrl,
-  // pass-through layout controls
-  brandLayout: settingsMap.brandLayout,
+    logo: settingsMap.logo,
+    // pass-through layout controls
+    brandLayout: settingsMap.brandLayout,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
@@ -48,20 +51,36 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
   };
 
   // Template/highlight from query
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ?? undefined;
-  const highlight = c.req.query("highlight") ?? undefined;
-  let selectedTemplateId: string | undefined = queryTemplate?.toLowerCase();
-  if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") {
+  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
+    undefined;
+  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
+    undefined;
+  let selectedTemplateId: string | undefined =
+    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  if (
+    selectedTemplateId === "professional" ||
+    selectedTemplateId === "professional-modern"
+  ) {
     selectedTemplateId = "professional-modern";
-  } else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") {
+  } else if (
+    selectedTemplateId === "minimalist" ||
+    selectedTemplateId === "minimalist-clean"
+  ) {
     selectedTemplateId = "minimalist-clean";
   }
 
-  const pdfBuffer = await generatePDF(invoice, businessSettings, selectedTemplateId, highlight);
+  const pdfBuffer = await generatePDF(
+    invoice,
+    businessSettings,
+    selectedTemplateId,
+    highlight,
+  );
   return new Response(pdfBuffer, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber || shareToken}.pdf"`,
+      "Content-Disposition": `attachment; filename="invoice-${
+        invoice.invoiceNumber || shareToken
+      }.pdf"`,
     },
   });
 });
@@ -75,7 +94,13 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
   }
 
   const settings = getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => { acc[s.key] = s.value; return acc; }, {} as Record<string, string>);
+  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value;
+    return acc;
+  }, {} as Record<string, string>);
+  if (!settingsMap.logo && settingsMap.logoUrl) {
+    settingsMap.logo = settingsMap.logoUrl as string;
+  }
 
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
@@ -84,7 +109,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
-    logo: settingsMap.logo || settingsMap.logoUrl,
+    logo: settingsMap.logo,
     brandLayout: settingsMap.brandLayout,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
@@ -92,13 +117,27 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     defaultNotes: settingsMap.defaultNotes || "",
   };
 
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ?? undefined;
-  const highlight = c.req.query("highlight") ?? undefined;
-  let selectedTemplateId: string | undefined = queryTemplate?.toLowerCase();
-  if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") selectedTemplateId = "professional-modern";
-  else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") selectedTemplateId = "minimalist-clean";
+  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
+    undefined;
+  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
+    undefined;
+  let selectedTemplateId: string | undefined =
+    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  if (
+    selectedTemplateId === "professional" ||
+    selectedTemplateId === "professional-modern"
+  ) selectedTemplateId = "professional-modern";
+  else if (
+    selectedTemplateId === "minimalist" ||
+    selectedTemplateId === "minimalist-clean"
+  ) selectedTemplateId = "minimalist-clean";
 
-  const html = buildInvoiceHTML(invoice, businessSettings, selectedTemplateId, highlight);
+  const html = buildInvoiceHTML(
+    invoice,
+    businessSettings,
+    selectedTemplateId,
+    highlight,
+  );
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
