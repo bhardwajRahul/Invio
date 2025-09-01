@@ -1,9 +1,9 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
-import { backendGet, backendDelete, backendPost, getAuthHeaderFromCookie } from "../../utils/backend.ts";
+import { backendGet, backendDelete, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
-type Invoice = { id: string; customer?: { name?: string; email?: string; address?: string }; items?: { description: string }[]; total?: number; status?: 'draft' | 'sent' | 'paid' | 'overdue' };
-type Data = { authed: boolean; invoice?: Invoice; error?: string; published?: { shareToken: string; shareUrl: string } };
+type Invoice = { id: string; customer?: { name?: string; email?: string; address?: string }; items?: { description: string }[]; total?: number };
+type Data = { authed: boolean; invoice?: Invoice; error?: string };
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
@@ -31,25 +31,6 @@ export const handler: Handlers<Data> = {
         return new Response(String(e), { status: 500 });
       }
     }
-    if (intent === "publish") {
-      try {
-  const result = await backendPost(`/api/v1/invoices/${id}/publish`, auth, {}) as { shareToken: string; shareUrl: string };
-        // Re-fetch invoice to render page state after publish
-        const invoice = await backendGet(`/api/v1/invoices/${id}`, auth) as Invoice;
-        return ctx.render({ authed: true, invoice, published: result });
-      } catch (e) {
-        return ctx.render({ authed: true, error: String(e) });
-      }
-    }
-    if (intent === "unpublish") {
-      try {
-        await backendPost(`/api/v1/invoices/${id}/unpublish`, auth, {});
-        const invoice = await backendGet(`/api/v1/invoices/${id}`, auth) as Invoice;
-        return ctx.render({ authed: true, invoice });
-      } catch (e) {
-        return ctx.render({ authed: true, error: String(e) });
-      }
-    }
     return new Response("Unsupported action", { status: 400 });
   }
 };
@@ -66,22 +47,6 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               <i data-lucide="pencil" class="w-4 h-4"></i>
               Edit
             </a>
-            <form method="post">
-              <input type="hidden" name="intent" value="publish" />
-              <button type="submit" class="btn btn-sm btn-outline">
-                <i data-lucide="share-2" class="w-4 h-4"></i>
-                Publish
-              </button>
-            </form>
-            {inv.status && inv.status !== 'draft' && (
-              <form method="post">
-                <input type="hidden" name="intent" value="unpublish" />
-                <button type="submit" class="btn btn-sm btn-outline">
-                  <i data-lucide="unlink-2" class="w-4 h-4"></i>
-                  Unpublish
-                </button>
-              </form>
-            )}
             <form method="post" onSubmit={(e) => { if (!confirm('Delete this invoice? This cannot be undone.')) { e.preventDefault(); } }}>
               <input type="hidden" name="intent" value="delete" />
               <button type="submit" class="btn btn-sm btn-outline btn-error">
@@ -94,19 +59,6 @@ export default function InvoiceDetail(props: PageProps<Data>) {
       </div>
       {props.data.error && (
         <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
-      )}
-      {props.data.published && (
-        <div class="alert alert-info mb-4 items-center">
-          <div class="flex-1">
-            <strong>Published!</strong> Share this link with your customer:
-            <div class="mt-1">
-              {(() => { const shareToken = props.data.published!.shareToken; const base = new URL(props.url).origin; const href = `/public/invoices/${shareToken}`; return (
-                <a class="link" href={href} target="_blank">{`${base}${href}`}</a>
-              ); })()}
-            </div>
-          </div>
-          <button type="button" class="btn btn-sm" id="copy-share">Copy</button>
-        </div>
       )}
       {inv && (
         <div class="space-y-2">
@@ -140,16 +92,6 @@ export default function InvoiceDetail(props: PageProps<Data>) {
             </a>
           </div>
         </div>
-      )}
-      {props.data.published && (
-        <script dangerouslySetInnerHTML={{ __html: `(() => {
-          const btn = document.getElementById('copy-share');
-          if (!btn) return;
-          const url = '${`${new URL(props.url).origin}/public/invoices/${props.data.published!.shareToken}`}'.replace(/'/g, "\\'");
-          btn.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(url); btn.textContent = 'Copied'; setTimeout(()=>btn.textContent='Copy', 1500); } catch {}
-          });
-        })();` }} />
       )}
     </Layout>
   );

@@ -21,7 +21,7 @@ export const handler: Handlers<Data> = {
 export default function Customers(props: PageProps<Data>) {
   const list = props.data.customers ?? [];
   return (
-  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customers</h1>
   <a href="/customers/new" class="btn btn-primary btn-sm"><i data-lucide="user-plus" class="w-4 h-4"></i>New Customer</a>

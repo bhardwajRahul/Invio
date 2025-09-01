@@ -84,7 +84,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
   const customers = props.data.customers ?? [];
   const currency = props.data.currency || "USD";
   return (
-  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Create Invoice</h1>
   {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
   <form method="post" class="space-y-4 w-full bg-base-100 border p-4 rounded-box">

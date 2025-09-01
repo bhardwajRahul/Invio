@@ -39,7 +39,7 @@ export const handler: Handlers<Data> = {
 export default function CustomerDetail(props: PageProps<Data>) {
   const c = props.data.customer;
   return (
-  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customer {c?.name || c?.id}</h1>
         {c && (

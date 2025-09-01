@@ -1,22 +1,14 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
-import { Layout } from "../components/Layout.tsx";
+import { getAuthHeaderFromCookie } from "../utils/backend.ts";
 
 export const handler: Handlers = {
-  GET(_req, ctx) {
-    const authed = Boolean(_req.headers.get("cookie"));
-    return ctx.render({ authed });
+  GET(req) {
+    const auth = getAuthHeaderFromCookie(req.headers.get("cookie") || undefined);
+    const Location = auth ? "/dashboard" : "/login";
+    return new Response(null, { status: 303, headers: { Location } });
   },
 };
 
-export default function Home(props: PageProps<{ authed: boolean }>) {
-  return (
-  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
-      <div class="card bg-base-100 shadow">
-        <div class="card-body">
-          <h1 class="card-title">Welcome to Invio</h1>
-          <p class="text-base-content/70">Login to browse invoices, customers, templates, and settings.</p>
-        </div>
-      </div>
-    </Layout>
-  );
+export default function RedirectPage(_props: PageProps) {
+  return null;
 }

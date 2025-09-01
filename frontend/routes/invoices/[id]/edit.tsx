@@ -58,7 +58,7 @@ export const handler: Handlers<Data> = {
 export default function EditInvoicePage(props: PageProps<Data>) {
   const inv = props.data.invoice;
   return (
-  <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
   <h1 class="text-2xl font-semibold mb-4">Edit Invoice</h1>
   {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
       {inv && (

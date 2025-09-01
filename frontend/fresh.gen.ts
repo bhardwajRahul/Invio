@@ -24,7 +24,7 @@ import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[sha
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
-import { type Manifest } from "$fresh/server.ts";
+import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {

@@ -23,8 +23,10 @@ const LABEL_MAP: Record<string, string> = {
 export function Breadcrumbs(props: { path?: string }) {
   const path = props.path || "/";
   const segments = path.replace(/(^\/+|\/+?$)/g, "").split("/").filter(Boolean);
-  const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
+  // Only show breadcrumbs on subpages (e.g., /section/subpage), not on top-level pages like /dashboard or /invoices
+  if (segments.length < 2) return null as unknown as never;
 
+  const crumbs: Crumb[] = [];
   let hrefAcc = "";
   segments.forEach((seg, idx) => {
     hrefAcc += "/" + seg;
@@ -32,8 +34,6 @@ export function Breadcrumbs(props: { path?: string }) {
     const label = LABEL_MAP[seg] || titleize(seg);
     crumbs.push({ label, href: isLast ? undefined : hrefAcc });
   });
-
-  if (!crumbs.length) return null as any;
 
   return (
     <div class="breadcrumbs text-sm mb-4">
