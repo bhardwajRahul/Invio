@@ -4,7 +4,7 @@ import { InvoiceEditor } from "../../../components/InvoiceEditor.tsx";
 import { backendGet, backendPut, getAuthHeaderFromCookie } from "../../../utils/backend.ts";
 
 type Item = { description: string; quantity: number; unitPrice: number; notes?: string };
-type Invoice = { id: string; customer?: { name?: string }; issue_date?: string; items?: Item[]; currency?: string; notes?: string; status?: 'draft' | 'sent' | 'paid' | 'overdue' };
+type Invoice = { id: string; customer?: { name?: string }; issue_date?: string; items?: Item[]; currency?: string; notes?: string; paymentTerms?: string; status?: 'draft' | 'sent' | 'paid' | 'overdue' };
 type Data = { authed: boolean; invoice?: Invoice; error?: string };
 
 export const handler: Handlers<Data> = {
@@ -25,7 +25,8 @@ export const handler: Handlers<Data> = {
     const { id } = ctx.params as { id: string };
     const form = await req.formData();
   const currency = String(form.get("currency") || "USD");
-    const notes = String(form.get("notes") || "");
+  const notes = String(form.get("notes") || "");
+  const paymentTerms = String(form.get("paymentTerms") || "");
   const status = String(form.get("status") || "draft") as 'draft' | 'sent' | 'paid' | 'overdue';
 
     // Collect items from repeated fields item_description[], item_quantity[], item_unitPrice[]
@@ -47,7 +48,8 @@ export const handler: Handlers<Data> = {
     if (items.length === 0) return new Response("At least one item required", { status: 400 });
 
     try {
-      await backendPut(`/api/v1/invoices/${id}`, auth, { currency, status, notes: notes || undefined, items });
+  // Send notes as-is, including empty string, so existing notes get cleared when user deletes them
+  await backendPut(`/api/v1/invoices/${id}`, auth, { currency, status, notes, paymentTerms, items });
       return new Response(null, { status: 303, headers: { Location: `/invoices/${id}` } });
     } catch (e) {
       return new Response(String(e), { status: 500 });
@@ -58,25 +60,30 @@ export const handler: Handlers<Data> = {
 export default function EditInvoicePage(props: PageProps<Data>) {
   const inv = props.data.invoice;
   return (
-    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
-  <h1 class="text-2xl font-semibold mb-4">Edit Invoice</h1>
-  {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+  <Layout authed={props.data.authed} path={new URL(props.url).pathname} wide>
+      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
       {inv && (
-  <form method="post" class="space-y-4 w-full bg-base-100 border p-4 rounded-box">
+        <form method="post" class="space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <h1 class="text-2xl font-semibold">Edit Invoice</h1>
+            <div class="flex items-center gap-2">
+              <a href={`/invoices/${inv.id}`} class="btn btn-ghost btn-sm">Cancel</a>
+              <button type="submit" class="btn btn-primary">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                Save
+              </button>
+            </div>
+          </div>
+
           <InvoiceEditor
             mode="edit"
             customerName={inv.customer?.name}
             currency={inv.currency}
             status={inv.status}
             notes={inv.notes}
+            paymentTerms={inv.paymentTerms}
             items={inv.items || [{ description: "", quantity: 1, unitPrice: 0 }]}
           />
-          <div class="pt-2">
-            <button type="submit" class="btn btn-primary">
-              <i data-lucide="save" class="w-4 h-4"></i>
-              Save
-            </button>
-          </div>
         </form>
       )}
     </Layout>

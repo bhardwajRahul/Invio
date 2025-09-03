@@ -121,7 +121,7 @@ adminRoutes.get("/invoices/:id", (c) => {
 adminRoutes.put("/invoices/:id", async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
-  const invoice = updateInvoice(id, data);
+  const invoice = await updateInvoice(id, data);
   return c.json(invoice);
 });
 
@@ -454,7 +454,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
-    brandLayout: settingsMap.brandLayout,
+  // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
@@ -516,7 +516,7 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
-    brandLayout: settingsMap.brandLayout,
+  // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",

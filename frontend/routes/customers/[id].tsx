@@ -48,7 +48,7 @@ export default function CustomerDetail(props: PageProps<Data>) {
               <i data-lucide="pencil" class="w-4 h-4"></i>
               Edit
             </a>
-            <form method="post" onSubmit={(e) => { if (!confirm('Delete this customer? This cannot be undone.')) { e.preventDefault(); } }}>
+            <form method="post" data-confirm="Delete this customer? This cannot be undone.">
               <input type="hidden" name="intent" value="delete" />
               <button type="submit" class="btn btn-sm btn-outline btn-error">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -65,6 +65,15 @@ export default function CustomerDetail(props: PageProps<Data>) {
           <div><span class="opacity-70">Address:</span> {c.address}</div>
         </div>
       )}
+      <script>{`(function(){
+        document.addEventListener('submit', function(e){
+          var t = e.target;
+          if (t && t.matches && t.matches('form[data-confirm]')) {
+            var msg = t.getAttribute('data-confirm') || 'Are you sure?';
+            if(!confirm(msg)) e.preventDefault();
+          }
+        }, true);
+      })();`}</script>
     </Layout>
   );
 }

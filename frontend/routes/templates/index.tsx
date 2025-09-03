@@ -43,7 +43,7 @@ export default function Templates(props: PageProps<Data>) {
       <h1 class="text-2xl font-semibold mb-4">Templates</h1>
       {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
       <div class="overflow-x-auto rounded-box bg-base-100 border">
-        <table class="table w-full">
+        <table class="table w-full text-sm">
           <thead>
             <tr>
               <th>Name</th>
@@ -60,7 +60,7 @@ export default function Templates(props: PageProps<Data>) {
                   <td>{t.isDefault ? <span class="badge">default</span> : null}</td>
                   <td class="text-right">
                     {!isBuiltin && (
-                      <form method="post" class="inline" onSubmit={(e) => { if (!confirm('Delete this template?')) e.preventDefault(); }}>
+                      <form method="post" class="inline" data-confirm="Delete this template?">
                         <input type="hidden" name="intent" value="delete-template" />
                         <input type="hidden" name="id" value={t.id} />
                         <button type="submit" class="btn btn-sm btn-outline btn-error">
@@ -76,6 +76,15 @@ export default function Templates(props: PageProps<Data>) {
           </tbody>
         </table>
       </div>
+      <script>{`(function(){
+        document.addEventListener('submit', function(e){
+          var t = e.target;
+          if (t && t.matches && t.matches('form[data-confirm]')) {
+            var msg = t.getAttribute('data-confirm') || 'Are you sure?';
+            if(!confirm(msg)) e.preventDefault();
+          }
+        }, true);
+      })();`}</script>
     </Layout>
   );
 }

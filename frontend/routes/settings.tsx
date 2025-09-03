@@ -57,7 +57,6 @@ export const handler: Handlers<Data> = {
       "defaultNotes",
       "templateId",
       "highlight",
-      "brandLayout",
       "logo",
     ];
     for (const f of fields) {
@@ -96,7 +95,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           <span>{props.data.error}</span>
         </div>
       )}
-      <div class="mb-4 card bg-base-100 shadow">
+  <div class="mb-4 card bg-base-100 border rounded-box">
         <div class="card-body">
           <h2 class="card-title">Theme</h2>
           <div class="join">
@@ -112,7 +111,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           </p>
         </div>
       </div>
-      <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4">
+  <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="form-control">
             <div class="label">
@@ -188,15 +187,19 @@ export default function SettingsPage(props: PageProps<Data>) {
               <span class="label-text">Logo</span>
             </div>
             <input
+              id="logo-input"
               name="logo"
               value={(s.logo as string) || (s.logoUrl as string) || ""}
               class="input input-bordered w-full"
               placeholder="https://example.com/logo.png or data:image/png;base64,..."
             />
           </label>
+          <div class="flex items-center gap-3">
+            <span id="logo-error" class="text-error text-sm hidden">Invalid logo URL or data URI</span>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label class="form-control">
             <div class="label">
               <span class="label-text">Default Template</span>
@@ -214,25 +217,16 @@ export default function SettingsPage(props: PageProps<Data>) {
             <div class="label">
               <span class="label-text">Highlight Color</span>
             </div>
-            <input
-              name="highlight"
-              value={(s.highlight as string) || "#6B4EFF"}
-              class="input input-bordered w-full"
-              placeholder="#6B4EFF"
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Brand Layout</span>
+            <div class="flex items-center gap-2">
+              <input
+                id="highlight-input"
+                name="highlight"
+                value={(s.highlight as string) || "#6B4EFF"}
+                class="input input-bordered w-full"
+                placeholder="#6B4EFF"
+              />
+              <span id="highlight-swatch" class="inline-block w-6 h-6 rounded" style={`background: ${(s.highlight as string) || "#6B4EFF"}`}></span>
             </div>
-            <select
-              name="brandLayout"
-              class="select select-bordered w-full"
-              value={(s.brandLayout as string) || "logo-left"}
-            >
-              <option value="logo-left">Logo Left</option>
-              <option value="logo-right">Logo Right</option>
-            </select>
           </label>
         </div>
 
@@ -286,22 +280,64 @@ export default function SettingsPage(props: PageProps<Data>) {
           <button type="submit" class="btn btn-primary">Save Settings</button>
         </div>
       </form>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-        (function(){
-          function setTheme(t){
-            localStorage.setItem('theme', t);
-            document.documentElement.setAttribute('data-theme', t);
-          }
+      <script>{`(function(){
+        function setTheme(t){
+          try { localStorage.setItem('theme', t); } catch(_err) {}
+          document.documentElement.setAttribute('data-theme', t);
+        }
+        function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }
+        onReady(function(){
           var l = document.getElementById('theme-light');
           var d = document.getElementById('theme-dark');
           if(l) l.addEventListener('click', function(){ setTheme('light'); });
           if(d) d.addEventListener('click', function(){ setTheme('dark'); });
-        })();
-      `,
-        }}
-      />
+
+          // Highlight color sync
+          var input = document.getElementById('highlight-input');
+          var swatch = document.getElementById('highlight-swatch');
+          function applyColor(val){
+            if (!val) return;
+            if (swatch) swatch.style.background = val;
+          }
+          if (input) {
+            input.addEventListener('input', function(){
+              var val = input.value || '';
+              if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+                applyColor(val);
+              }
+            });
+          }
+
+          // Logo URL validation and preview
+          var logoInput = document.getElementById('logo-input');
+          var logoErr = document.getElementById('logo-error');
+          function isValidLogo(v){
+            if (!v) return false;
+            if (v.startsWith('data:image/')) return true;
+            try {
+              var u = new URL(v);
+              return u.protocol === 'http:' || u.protocol === 'https:';
+            } catch(_e) { return false; }
+          }
+          function updateLogo(){
+            var v = (logoInput && logoInput.value) ? logoInput.value.trim() : '';
+            if (!isValidLogo(v)) {
+              if (logoErr) logoErr.classList.remove('hidden');
+              return;
+            }
+            if (logoErr) logoErr.classList.add('hidden');
+          }
+          if (logoInput) {
+            logoInput.addEventListener('change', updateLogo);
+            logoInput.addEventListener('input', function(){
+              // hide error while typing until next check
+              if (logoErr) logoErr.classList.add('hidden');
+            });
+            // Run once on load if there is an initial value
+            if (logoInput.value) updateLogo();
+          }
+        });
+      })();`}</script>
     </Layout>
   );
 }

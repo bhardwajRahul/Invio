@@ -288,15 +288,8 @@ function buildContext(
     // Prefer inlined data URL if available; otherwise pass through the provided logo value
     logoUrl: (settings as WithLogo | undefined)?.logoUrl ||
       (settings as WithLogo | undefined)?.logo,
-    brandLogoLeft: ((): boolean => {
-      const layout = ((settings as WithLogo | undefined)?.brandLayout || "")
-        .toLowerCase();
-      const hasLogo = !!((settings as WithLogo | undefined)?.logoUrl ||
-        (settings as WithLogo | undefined)?.logo);
-      if (layout === "logo-left") return true;
-      if (layout === "logo-right") return false;
-      return hasLogo; // default to left when a logo exists
-    })(),
+    // Permanently use logo-left layout
+    brandLogoLeft: true,
   } as TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean };
 }
 

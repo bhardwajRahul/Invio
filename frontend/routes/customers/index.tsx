@@ -24,11 +24,11 @@ export default function Customers(props: PageProps<Data>) {
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customers</h1>
-  <a href="/customers/new" class="btn btn-primary btn-sm"><i data-lucide="user-plus" class="w-4 h-4"></i>New Customer</a>
+        <a href="/customers/new" class="btn btn-sm btn-primary"><i data-lucide="user-plus" class="w-4 h-4"></i>New Customer</a>
       </div>
       {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
       <div class="overflow-x-auto rounded-box bg-base-100 border">
-        <table class="table table-zebra w-full">
+        <table class="table table-zebra w-full text-sm">
           <thead>
             <tr>
               <th>Name</th>

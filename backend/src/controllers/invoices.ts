@@ -1,11 +1,11 @@
 import { getDatabase, getNextInvoiceNumber, calculateInvoiceTotals } from "../database/init.ts";
 import { CreateInvoiceRequest, UpdateInvoiceRequest, Invoice, InvoiceItem, InvoiceWithDetails } from "../types/index.ts";
-import { generateUUID } from "../utils/uuid.ts";
+import { generateUUID, generateShareToken } from "../utils/uuid.ts";
 
 export const createInvoice = (data: CreateInvoiceRequest): InvoiceWithDetails => {
   const db = getDatabase();
   const invoiceId = generateUUID();
-  const shareToken = generateUUID();
+  const shareToken = generateShareToken();
   // Prefer client-provided invoiceNumber when unique; otherwise auto-generate
   let invoiceNumber = data.invoiceNumber;
   if (invoiceNumber) {
@@ -243,6 +243,13 @@ export const updateInvoice = async (id: string, data: Partial<UpdateInvoiceReque
   
   const updatedAt = new Date();
   
+  // Normalize notes: treat whitespace-only as empty string so it clears stored notes
+  const normalizedNotes = ((): string | undefined => {
+    if (data.notes === undefined) return undefined; // not provided
+    const v = String(data.notes);
+    return v.trim().length === 0 ? "" : v;
+  })();
+
   // Update invoice
   db.query(`
     UPDATE invoices SET 
@@ -263,7 +270,7 @@ export const updateInvoice = async (id: string, data: Partial<UpdateInvoiceReque
     totals.taxAmount,
     totals.total,
     data.paymentTerms ?? existing.paymentTerms,
-    data.notes ?? existing.notes,
+    normalizedNotes !== undefined ? normalizedNotes : existing.notes,
     updatedAt,
     id
   ]);
@@ -327,7 +334,7 @@ export const unpublishInvoice = async (id: string): Promise<{ shareToken: string
   if (!existing) throw new Error("Invoice not found");
 
   const db = getDatabase();
-  const newToken = generateUUID();
+  const newToken = generateShareToken();
   const now = new Date();
   // Rotate share token and set status back to 'draft' to reflect unpublished state
   db.query("UPDATE invoices SET share_token = ?, status = 'draft', updated_at = ? WHERE id = ?", [newToken, now, id]);

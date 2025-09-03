@@ -43,7 +43,7 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
     // pass-through layout controls
-    brandLayout: settingsMap.brandLayout,
+  // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
@@ -81,6 +81,7 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
       "Content-Disposition": `attachment; filename="invoice-${
         invoice.invoiceNumber || shareToken
       }.pdf"`,
+      "X-Robots-Tag": "noindex",
     },
   });
 });
@@ -110,7 +111,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
-    brandLayout: settingsMap.brandLayout,
+  // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
@@ -142,6 +143,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex",
     },
   });
 });

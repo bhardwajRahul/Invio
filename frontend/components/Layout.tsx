@@ -1,7 +1,7 @@
 import { ComponentChildren } from "preact";
 import { Breadcrumbs } from "./Breadcrumbs.tsx";
 
-export function Layout(props: { children: ComponentChildren; authed?: boolean; path?: string }) {
+export function Layout(props: { children: ComponentChildren; authed?: boolean; path?: string; wide?: boolean }) {
   return (
   <div class="min-h-screen bg-base-200">
       <div class="navbar bg-base-100 border-b">
@@ -44,7 +44,7 @@ export function Layout(props: { children: ComponentChildren; authed?: boolean; p
           </div>
         </div>
       </div>
-      <main class="container mx-auto p-4">
+  <main class={"container mx-auto p-4 " + (props.wide ? "max-w-screen-2xl" : "")}>
         {props.authed && props.path && <Breadcrumbs path={props.path} />}
         {props.children}
       </main>

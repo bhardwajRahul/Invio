@@ -10,6 +10,8 @@ export default function App({ Component }: AppProps) {
         <title>Invio Admin</title>
         {/* Tailwind CDN for utilities */}
         <script src="https://cdn.tailwindcss.com"></script>
+        {/* App init (theme + icons) */}
+        <script src="/app-init.js"></script>
         {/* daisyUI precompiled CSS */}
         <link
           rel="stylesheet"
@@ -20,34 +22,8 @@ export default function App({ Component }: AppProps) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>{`html{font-family:Inter,ui-sans-serif,system-ui,-apple-system,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,\"Noto Sans\",\"Liberation Sans\",sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\",\"Segoe UI Symbol\",\"Noto Color Emoji\"}`}</style>
-        {/* lucide icons */}
-        <script src="https://unpkg.com/lucide@latest"></script>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  (function(){
-                    var t = localStorage.getItem('theme') || 'light';
-                    document.documentElement.setAttribute('data-theme', t);
-                  })();
-                `,
-              }}
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  (function(){
-                    function init(){
-                      if (window.lucide && window.lucide.createIcons) {
-                        window.lucide.createIcons();
-                      }
-                    }
-                    if (document.readyState === 'loading') {
-                      document.addEventListener('DOMContentLoaded', init);
-                    } else { init(); }
-                  })();
-                `,
-              }}
-            />
+  {/* lucide icons */}
+  <script src="https://unpkg.com/lucide@latest"></script>
       </Head>
       <body class="min-h-screen bg-base-200 text-base-content">
         <Component />

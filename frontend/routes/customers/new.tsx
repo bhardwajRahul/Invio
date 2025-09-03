@@ -34,9 +34,9 @@ export const handler: Handlers<Data> = {
 export default function NewCustomerPage(props: PageProps<Data>) {
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
-      <h1 class="text-2xl font-semibold mb-4">Create Customer</h1>
+  <h1 class="text-2xl font-semibold mb-4">Create Customer</h1>
       {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
-      <form method="post" class="space-y-3 max-w-xl bg-base-100 border p-4 rounded-box">
+  <form method="post" class="space-y-3 max-w-xl bg-base-100 border p-4 rounded-box">
         <label class="form-control">
           <div class="label"><span class="label-text">Name</span></div>
           <input name="name" class="input input-bordered w-full" required />

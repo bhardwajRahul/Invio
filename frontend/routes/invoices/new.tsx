@@ -4,7 +4,7 @@ import { InvoiceEditor } from "../../components/InvoiceEditor.tsx";
 import { backendGet, backendPost, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
 type Customer = { id: string; name: string };
-type Data = { authed: boolean; customers?: Customer[]; currency?: string; error?: string };
+type Data = { authed: boolean; customers?: Customer[]; currency?: string; paymentTerms?: string; defaultNotes?: string; error?: string };
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
@@ -12,12 +12,14 @@ export const handler: Handlers<Data> = {
     if (!auth) return new Response(null, { status: 303, headers: { Location: "/login" } });
     try {
       // Load customers and settings in parallel to get default currency
-      const [customers, settings] = await Promise.all([
+  const [customers, settings] = await Promise.all([
         backendGet("/api/v1/customers", auth) as Promise<Customer[]>,
         backendGet("/api/v1/settings", auth) as Promise<Record<string, string>>,
       ]);
-      const currency = (settings && settings.currency) ? settings.currency : "USD";
-      return ctx.render({ authed: true, customers, currency });
+  const currency = (settings && settings.currency) ? settings.currency : "USD";
+  const paymentTerms = settings?.paymentTerms || "Due in 30 days";
+  const defaultNotes = settings?.defaultNotes || "";
+  return ctx.render({ authed: true, customers, currency, paymentTerms, defaultNotes });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
     }
@@ -31,7 +33,8 @@ export const handler: Handlers<Data> = {
     const status = String(form.get("status") || "draft") as 'draft' | 'sent' | 'paid' | 'overdue';
     const issueDate = String(form.get("issueDate") || new Date().toISOString().slice(0,10));
     const dueDate = String(form.get("dueDate") || "");
-    const notes = String(form.get("notes") || "");
+  const notes = String(form.get("notes") || "");
+  const paymentTerms = String(form.get("paymentTerms") || "");
 
     // Repeated items
     const descriptions = form.getAll("item_description") as string[];
@@ -67,7 +70,8 @@ export const handler: Handlers<Data> = {
       status,
       issueDate,
       dueDate: dueDate || undefined,
-      notes: notes || undefined,
+  notes: notes || undefined,
+  paymentTerms: paymentTerms || undefined,
       items,
     };
 
@@ -83,6 +87,8 @@ export const handler: Handlers<Data> = {
 export default function NewInvoicePage(props: PageProps<Data>) {
   const customers = props.data.customers ?? [];
   const currency = props.data.currency || "USD";
+  const paymentTerms = props.data.paymentTerms || "Due in 30 days";
+  const defaultNotes = props.data.defaultNotes || "";
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Create Invoice</h1>
@@ -93,6 +99,8 @@ export default function NewInvoicePage(props: PageProps<Data>) {
           customers={customers}
           currency={currency}
           status="draft"
+          paymentTerms={paymentTerms}
+          notes={defaultNotes}
           items={[{ description: "", quantity: 1, unitPrice: 0 }]}
           showDates
         />

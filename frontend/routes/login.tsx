@@ -2,7 +2,9 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
 import { setAuthCookieHeaders, backendGet } from "../utils/backend.ts";
 
-export const handler: Handlers = {
+type Data = { error: string | null; username?: string };
+
+export const handler: Handlers<Data> = {
   GET(_req, ctx) {
     return ctx.render({ error: null });
   },
@@ -11,38 +13,64 @@ export const handler: Handlers = {
     const username = String(form.get("username") || "");
     const password = String(form.get("password") || "");
     if (!username || !password) {
-      return ctx.render({ error: "Missing credentials" });
+      return ctx.render({ error: "Missing credentials", username });
     }
     const basic = `Basic ${btoa(`${username}:${password}`)}`;
     // Validate credentials by hitting a protected GET
     try {
       await backendGet("/api/v1/invoices", basic);
     } catch (_e) {
-      return ctx.render({ error: "Invalid credentials" });
+      return ctx.render({ error: "Invalid credentials", username });
     }
     const headers = new Headers({ ...setAuthCookieHeaders(basic), Location: "/dashboard" });
     return new Response(null, { status: 303, headers });
   },
 };
 
-export default function LoginPage(props: PageProps<{ error: string | null }>) {
+export default function LoginPage(props: PageProps<Data>) {
+  const username = props.data.username || "";
   return (
-  <Layout path={new URL(props.url).pathname}>
-      <h1 class="text-2xl font-semibold mb-4">Admin Login</h1>
-      {props.data.error && (
-        <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
-      )}
-      <form method="post" class="space-y-3 max-w-sm">
-        <label class="form-control w-full">
-          <div class="label"><span class="label-text">Username</span></div>
-          <input name="username" class="input input-bordered w-full" />
-        </label>
-        <label class="form-control w-full">
-          <div class="label"><span class="label-text">Password</span></div>
-          <input name="password" type="password" class="input input-bordered w-full" />
-        </label>
-        <button type="submit" class="btn btn-primary">Login</button>
-      </form>
+    <Layout path={new URL(props.url).pathname}>
+      <div class="min-h-[65vh] flex items-center justify-center">
+        <div class="w-full max-w-sm">
+          <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+              <h1 class="text-2xl font-semibold text-center mb-2">Sign in</h1>
+
+              {props.data.error && (
+                <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
+              )}
+
+              <form method="post" class="space-y-3">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Username</span></label>
+                  <input
+                    class="input input-bordered w-full"
+                    name="username"
+                    value={username}
+                    placeholder="Username"
+                    autocomplete="username"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Password</span></label>
+                  <input
+                    class="input input-bordered w-full"
+                    name="password"
+                    type="password"
+                    placeholder="Password"
+                    autocomplete="current-password"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-primary w-full">Login</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 }
