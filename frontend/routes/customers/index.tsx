@@ -7,10 +7,20 @@ type Data = { authed: boolean; customers?: Customer[]; error?: string };
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
-    const auth = getAuthHeaderFromCookie(req.headers.get("cookie") || undefined);
-    if (!auth) return new Response(null, { status: 303, headers: { Location: "/login" } });
+    const auth = getAuthHeaderFromCookie(
+      req.headers.get("cookie") || undefined,
+    );
+    if (!auth) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/login" },
+      });
+    }
     try {
-      const customers = await backendGet("/api/v1/customers", auth) as Customer[];
+      const customers = await backendGet(
+        "/api/v1/customers",
+        auth,
+      ) as Customer[];
       return ctx.render({ authed: true, customers });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -24,13 +34,19 @@ export default function Customers(props: PageProps<Data>) {
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customers</h1>
-        <a href="/customers/new" class="btn btn-sm btn-primary"><i data-lucide="user-plus" class="w-4 h-4"></i>New Customer</a>
+        <a href="/customers/new" class="btn btn-sm btn-primary">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>New Customer
+        </a>
       </div>
-      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
+      {props.data.error && (
+        <div class="alert alert-error mb-3">
+          <span>{props.data.error}</span>
+        </div>
+      )}
       <div class="overflow-x-auto rounded-box bg-base-100 border">
         <table class="table table-zebra w-full text-sm">
-          <thead>
-            <tr>
+          <thead class="bg-base-200 text-base-content">
+            <tr class="font-medium">
               <th>Name</th>
               <th>Email</th>
             </tr>
@@ -38,8 +54,12 @@ export default function Customers(props: PageProps<Data>) {
           <tbody>
             {list.map((c) => (
               <tr class="hover">
-                <td><a class="link" href={`/customers/${c.id}`}>{c.name || c.id}</a></td>
-                <td class="opacity-70">{c.email || ''}</td>
+                <td>
+                  <a class="link" href={`/customers/${c.id}`}>
+                    {c.name || c.id}
+                  </a>
+                </td>
+                <td class="opacity-70">{c.email || ""}</td>
               </tr>
             ))}
           </tbody>

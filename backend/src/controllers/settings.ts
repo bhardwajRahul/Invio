@@ -23,7 +23,9 @@ export const updateSettings = (data: Record<string, string>) => {
 
     if (shouldClear) {
       // delete the setting row if present
-      db.query("DELETE FROM settings WHERE key = ?", [key === "taxId" ? "companyTaxId" : key]);
+      db.query("DELETE FROM settings WHERE key = ?", [
+        key === "taxId" ? "companyTaxId" : key,
+      ]);
       results.push({ key: key === "taxId" ? "companyTaxId" : key, value: "" });
       continue;
     }

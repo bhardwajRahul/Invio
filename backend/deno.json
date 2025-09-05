@@ -6,11 +6,11 @@
   },
   "tasks": {
     "dev": {
-  "command": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run=wkhtmltopdf --watch src/app.ts",
+      "command": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run=wkhtmltopdf --watch src/app.ts",
       "desc": "Run the application in development mode"
     },
     "start": {
-  "command": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run=wkhtmltopdf src/app.ts",
+      "command": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run=wkhtmltopdf src/app.ts",
       "desc": "Run the application"
     }
   },

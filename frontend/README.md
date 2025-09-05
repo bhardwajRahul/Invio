@@ -1,23 +1,25 @@
 # Invio Frontend (Deno Fresh)
 
-Read-only admin UI for Invio backend.
+Modern, minimalist admin UI for Invio backend.
 
-- Framework: Fresh
-- Auth: Basic Auth against backend ADMIN_USER/ADMIN_PASS
-- Features (read-only):
-  - Login (store credentials in HTTP-only cookie as base64 basic auth header)
+- Framework: Fresh (SSR + islands)
+- Auth: Basic Auth (stored as HTTP-only cookie; proxied to backend)
+- Features:
+  - Login/logout
   - Dashboard summary
-  - List invoices, view invoice detail
-  - List customers, view customer detail
-  - Settings (company, theme, templates)
+  - Invoices: list, filter (server-rendered), view, edit, duplicate,
+    publish/unpublish, status updates, download PDF, public link
+  - Customers: list, view, create, edit, delete
+  - Settings: company details, logo, default template, highlight color
+  - Templates UI integrated into Settings
 
 ## Dev
 
 Requires Deno 1.42+.
 
-Set environment to point to backend (default http://localhost:3000):
+Environment:
 
-- BACKEND_URL
+- `BACKEND_URL` — backend base URL (default http://localhost:3000)
 
 Run:
 
@@ -27,4 +29,7 @@ deno task start
 
 ## Notes
 
-This UI only performs GET requests to backend admin endpoints. No mutations.
+- PDF/HTML generation links no longer take query parameters; output uses the
+  saved Settings template and highlight.
+- UI uses DaisyUI components and aims for good accessibility (contrast, lang
+  attribute, no client-side JS for exports).

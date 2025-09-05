@@ -13,18 +13,30 @@ export interface Customer {
 export class CustomerModel {
   constructor(private db: DB) {}
 
-  async create(customer: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
+  async create(
+    customer: Omit<Customer, "id" | "createdAt">,
+  ): Promise<Customer> {
     const id = crypto.randomUUID();
     const createdAt = new Date();
     await this.db.query(
-      "INSERT INTO customers (id, name, email, phone, address, tax_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-      [id, customer.name, customer.email, customer.phone, customer.address, customer.taxId, createdAt]
+      "INSERT INTO customers (id, name, email, phone, address, tax_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [
+        id,
+        customer.name,
+        customer.email,
+        customer.phone,
+        customer.address,
+        customer.taxId,
+        createdAt,
+      ],
     );
     return { id, createdAt, ...customer };
   }
 
   async findAll(): Promise<Customer[]> {
-    const results = await this.db.query("SELECT * FROM customers ORDER BY created_at DESC");
+    const results = await this.db.query(
+      "SELECT * FROM customers ORDER BY created_at DESC",
+    );
     return results.map((row: unknown[]) => ({
       id: row[0] as string,
       name: row[1] as string,
@@ -37,7 +49,9 @@ export class CustomerModel {
   }
 
   async findById(id: string): Promise<Customer | null> {
-    const result = await this.db.query("SELECT * FROM customers WHERE id = ?", [id]);
+    const result = await this.db.query("SELECT * FROM customers WHERE id = ?", [
+      id,
+    ]);
     if (result.length === 0) return null;
     const row = result[0] as unknown[];
     return {
@@ -51,14 +65,24 @@ export class CustomerModel {
     };
   }
 
-  async update(id: string, customer: Partial<Omit<Customer, 'id' | 'createdAt'>>): Promise<Customer | null> {
+  async update(
+    id: string,
+    customer: Partial<Omit<Customer, "id" | "createdAt">>,
+  ): Promise<Customer | null> {
     const existingCustomer = await this.findById(id);
     if (!existingCustomer) return null;
 
     const updatedCustomer = { ...existingCustomer, ...customer };
     await this.db.query(
-      "UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, tax_id = ? WHERE id = ?", 
-      [updatedCustomer.name, updatedCustomer.email, updatedCustomer.phone, updatedCustomer.address, updatedCustomer.taxId, id]
+      "UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, tax_id = ? WHERE id = ?",
+      [
+        updatedCustomer.name,
+        updatedCustomer.email,
+        updatedCustomer.phone,
+        updatedCustomer.address,
+        updatedCustomer.taxId,
+        id,
+      ],
     );
     return updatedCustomer;
   }

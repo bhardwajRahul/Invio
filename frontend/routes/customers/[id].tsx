@@ -1,39 +1,66 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
-import { backendGet, backendDelete, getAuthHeaderFromCookie } from "../../utils/backend.ts";
+import {
+  backendDelete,
+  backendGet,
+  getAuthHeaderFromCookie,
+} from "../../utils/backend.ts";
 
 type Customer = { id: string; name?: string; email?: string; address?: string };
 type Data = { authed: boolean; customer?: Customer; error?: string };
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
-    const auth = getAuthHeaderFromCookie(req.headers.get("cookie") || undefined);
-    if (!auth) return new Response(null, { status: 303, headers: { Location: "/login" } });
+    const auth = getAuthHeaderFromCookie(
+      req.headers.get("cookie") || undefined,
+    );
+    if (!auth) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/login" },
+      });
+    }
     const { id } = ctx.params as { id: string };
     try {
-      const customer = await backendGet(`/api/v1/customers/${id}`, auth) as Customer;
+      const customer = await backendGet(
+        `/api/v1/customers/${id}`,
+        auth,
+      ) as Customer;
       return ctx.render({ authed: true, customer });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
     }
   },
   async POST(req, ctx) {
-    const auth = getAuthHeaderFromCookie(req.headers.get("cookie") || undefined);
-    if (!auth) return new Response(null, { status: 303, headers: { Location: "/login" } });
+    const auth = getAuthHeaderFromCookie(
+      req.headers.get("cookie") || undefined,
+    );
+    if (!auth) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/login" },
+      });
+    }
     const { id } = ctx.params as { id: string };
     const form = await req.formData();
     const intent = String(form.get("intent") || "");
     if (intent === "delete") {
       try {
         await backendDelete(`/api/v1/customers/${id}`, auth);
-        return new Response(null, { status: 303, headers: { Location: "/customers" } });
-  } catch (_e) {
+        return new Response(null, {
+          status: 303,
+          headers: { Location: "/customers" },
+        });
+      } catch (_e) {
         // Redirect to an informational page when deletion is blocked (e.g., existing invoices)
-        return new Response(null, { status: 303, headers: { Location: `/customers/${id}/cannot-delete` } });
+        return new Response(null, {
+          status: 303,
+          headers: { Location: `/customers/${id}/cannot-delete` },
+        });
       }
     }
     return new Response("Unsupported action", { status: 400 });
-  }
+  },
 };
 
 export default function CustomerDetail(props: PageProps<Data>) {
@@ -48,7 +75,10 @@ export default function CustomerDetail(props: PageProps<Data>) {
               <i data-lucide="pencil" class="w-4 h-4"></i>
               Edit
             </a>
-            <form method="post" data-confirm="Delete this customer? This cannot be undone.">
+            <form
+              method="post"
+              data-confirm="Delete this customer? This cannot be undone."
+            >
               <input type="hidden" name="intent" value="delete" />
               <button type="submit" class="btn btn-sm btn-outline btn-error">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -58,14 +88,27 @@ export default function CustomerDetail(props: PageProps<Data>) {
           </div>
         )}
       </div>
-      {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
-      {c && (
-        <div class="space-y-2">
-          {c.email && <div><span class="opacity-70">Email:</span> {c.email}</div>}
-          {c.address && <div><span class="opacity-70">Address:</span> {c.address}</div>}
+      {props.data.error && (
+        <div class="alert alert-error mb-3">
+          <span>{props.data.error}</span>
         </div>
       )}
-      <script>{`(function(){
+      {c && (
+        <div class="space-y-2">
+          {c.email && (
+            <div>
+              <span class="opacity-70">Email:</span> {c.email}
+            </div>
+          )}
+          {c.address && (
+            <div>
+              <span class="opacity-70">Address:</span> {c.address}
+            </div>
+          )}
+        </div>
+      )}
+      <script>
+        {`(function(){
         document.addEventListener('submit', function(e){
           var t = e.target;
           if (t && t.matches && t.matches('form[data-confirm]')) {
@@ -73,7 +116,8 @@ export default function CustomerDetail(props: PageProps<Data>) {
             if(!confirm(msg)) e.preventDefault();
           }
         }, true);
-      })();`}</script>
+      })();`}
+      </script>
     </Layout>
   );
 }

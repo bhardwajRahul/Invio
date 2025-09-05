@@ -4,7 +4,9 @@ import { generateUUID } from "../utils/uuid.ts";
 
 export const getTemplates = () => {
   const db = getDatabase();
-  const results = db.query("SELECT id, name, html, is_default, created_at FROM templates");
+  const results = db.query(
+    "SELECT id, name, html, is_default, created_at FROM templates",
+  );
   return results.map((row: unknown[]) => ({
     id: row[0] as string,
     name: row[1] as string,
@@ -17,20 +19,26 @@ export const getTemplates = () => {
 export const createTemplate = (data: Partial<Template>) => {
   const db = getDatabase();
   const templateId = generateUUID();
-  
+
   const template: Template = {
     id: templateId,
     name: data.name!,
     html: data.html!,
     isDefault: data.isDefault || false,
-    createdAt: new Date()
+    createdAt: new Date(),
   };
 
   db.query(
     "INSERT INTO templates (id, name, html, is_default, created_at) VALUES (?, ?, ?, ?, ?)",
-    [template.id, template.name, template.html, template.isDefault, template.createdAt]
+    [
+      template.id,
+      template.name,
+      template.html,
+      template.isDefault,
+      template.createdAt,
+    ],
   );
-  
+
   return template;
 };
 
@@ -38,10 +46,13 @@ export const updateTemplate = (id: string, data: Partial<Template>) => {
   const db = getDatabase();
   db.query(
     "UPDATE templates SET name = ?, html = ?, is_default = ? WHERE id = ?",
-    [data.name, data.html, data.isDefault, id]
+    [data.name, data.html, data.isDefault, id],
   );
-  
-  const result = db.query("SELECT id, name, html, is_default, created_at FROM templates WHERE id = ?", [id]);
+
+  const result = db.query(
+    "SELECT id, name, html, is_default, created_at FROM templates WHERE id = ?",
+    [id],
+  );
   if (result.length > 0) {
     const row = result[0] as unknown[];
     return {

@@ -1,6 +1,7 @@
-import { create, verify, decode } from "djwt";
+import { create, decode, verify } from "djwt";
 
-const secretKey = Deno.env.get("JWT_SECRET") || "your-secret-key-change-this-in-production";
+const secretKey = Deno.env.get("JWT_SECRET") ||
+  "your-secret-key-change-this-in-production";
 
 async function getKey(): Promise<CryptoKey> {
   const key = await crypto.subtle.importKey(
@@ -8,7 +9,7 @@ async function getKey(): Promise<CryptoKey> {
     new TextEncoder().encode(secretKey),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign", "verify"]
+    ["sign", "verify"],
   );
   return key;
 }

@@ -39,7 +39,11 @@ export function Breadcrumbs(props: { path?: string }) {
     <div class="breadcrumbs text-sm mb-4">
       <ul>
         {crumbs.map((c, i) => (
-          <li key={i}>{c.href ? <a href={c.href}>{c.label}</a> : <span class="font-medium">{c.label}</span>}</li>
+          <li key={i}>
+            {c.href
+              ? <a href={c.href}>{c.label}</a>
+              : <span class="font-medium">{c.label}</span>}
+          </li>
         ))}
       </ul>
     </div>

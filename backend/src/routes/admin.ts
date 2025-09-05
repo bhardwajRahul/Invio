@@ -3,6 +3,7 @@ import { basicAuth } from "hono/basic-auth";
 import {
   createInvoice,
   deleteInvoice,
+  duplicateInvoice,
   getInvoiceById,
   getInvoices,
   publishInvoice,
@@ -141,6 +142,13 @@ adminRoutes.post("/invoices/:id/unpublish", async (c) => {
   const id = c.req.param("id");
   const result = await unpublishInvoice(id);
   return c.json(result);
+});
+
+adminRoutes.post("/invoices/:id/duplicate", async (c) => {
+  const id = c.req.param("id");
+  const copy = await duplicateInvoice(id);
+  if (!copy) return c.json({ error: "Invoice not found" }, 404);
+  return c.json(copy);
 });
 
 // Template routes
@@ -454,20 +462,17 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
-  // brandLayout removed; always treating as logo-left in rendering
+    // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
   };
 
-  // Template/highlight from query
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
-    undefined;
-  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
-    undefined;
-  let selectedTemplateId: string | undefined =
-    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  // Use template/highlight from settings only (no query overrides)
+  const highlight = settingsMap.highlight ?? undefined;
+  let selectedTemplateId: string | undefined = settingsMap.templateId
+    ?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"
@@ -516,20 +521,17 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
-  // brandLayout removed; always treating as logo-left in rendering
+    // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
   };
 
-  // Template/highlight from query
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
-    undefined;
-  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
-    undefined;
-  let selectedTemplateId: string | undefined =
-    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  // Use template/highlight from settings only (no query overrides)
+  const highlight = settingsMap.highlight ?? undefined;
+  let selectedTemplateId: string | undefined = settingsMap.templateId
+    ?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"

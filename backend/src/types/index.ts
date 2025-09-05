@@ -15,8 +15,8 @@ export interface Invoice {
   issueDate: Date;
   dueDate?: Date;
   currency: string;
-  status: 'draft' | 'sent' | 'paid' | 'overdue';
-  
+  status: "draft" | "sent" | "paid" | "overdue";
+
   // Totals
   subtotal: number;
   discountAmount: number;
@@ -24,11 +24,11 @@ export interface Invoice {
   taxRate: number;
   taxAmount: number;
   total: number;
-  
+
   // Payment and notes
   paymentTerms?: string;
   notes?: string;
-  
+
   // System fields
   shareToken: string;
   createdAt: Date;
@@ -90,17 +90,17 @@ export interface CreateInvoiceRequest {
   issueDate?: string | Date;
   dueDate?: string | Date;
   currency?: string;
-  status?: 'draft' | 'sent' | 'paid' | 'overdue';
-  
+  status?: "draft" | "sent" | "paid" | "overdue";
+
   // Totals (optional, will be calculated if not provided)
   discountAmount?: number;
   discountPercentage?: number;
   taxRate?: number;
-  
+
   // Payment and notes
   paymentTerms?: string;
   notes?: string;
-  
+
   // Items
   items: {
     description: string;
@@ -140,21 +140,21 @@ export interface TemplateContext {
   companyEmail: string;
   companyPhone: string;
   companyTaxId?: string;
-  
+
   // Invoice info
   invoiceNumber: string;
   issueDate: string;
   dueDate?: string;
   currency: string;
   status: string;
-  
+
   // Customer info
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
   customerAddress?: string;
   customerTaxId?: string;
-  
+
   // Items
   items: Array<{
     description: string;
@@ -163,7 +163,7 @@ export interface TemplateContext {
     lineTotal: string;
     notes?: string;
   }>;
-  
+
   // Totals
   subtotal: string;
   discountAmount?: string;
@@ -171,16 +171,16 @@ export interface TemplateContext {
   taxRate?: number;
   taxAmount?: string;
   total: string;
-  
+
   // Flags
   hasDiscount: boolean;
   hasTax: boolean;
-  
+
   // Payment info
   paymentTerms?: string;
   paymentMethods?: string;
   bankAccount?: string;
-  
+
   // Notes
   notes?: string;
 }

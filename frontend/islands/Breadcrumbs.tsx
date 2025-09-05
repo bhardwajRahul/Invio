@@ -31,7 +31,9 @@ export default function Breadcrumbs() {
 
   const crumbs = useMemo<Crumb[]>(() => {
     try {
-      const segments = path.replace(/(^\/+|\/+?$)/g, "").split("/").filter(Boolean);
+      const segments = path.replace(/(^\/+|\/+?$)/g, "").split("/").filter(
+        Boolean,
+      );
       const parts: Crumb[] = [];
 
       // Home always present
@@ -58,7 +60,9 @@ export default function Breadcrumbs() {
       <ul>
         {crumbs.map((c, i) => (
           <li key={i}>
-            {c.href ? <a href={c.href}>{c.label}</a> : <span class="font-medium">{c.label}</span>}
+            {c.href
+              ? <a href={c.href}>{c.label}</a>
+              : <span class="font-medium">{c.label}</span>}
           </li>
         ))}
       </ul>

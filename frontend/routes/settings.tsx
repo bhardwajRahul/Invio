@@ -13,7 +13,12 @@ type Settings = Record<string, unknown> & {
   taxId?: string;
 };
 type Template = { id: string; name: string; isDefault?: boolean };
-type Data = { authed: boolean; settings?: Settings; templates?: Template[]; error?: string };
+type Data = {
+  authed: boolean;
+  settings?: Settings;
+  templates?: Template[];
+  error?: string;
+};
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
@@ -29,7 +34,9 @@ export const handler: Handlers<Data> = {
     try {
       const [settings, templates] = await Promise.all([
         backendGet("/api/v1/settings", auth) as Promise<Settings>,
-        backendGet("/api/v1/templates", auth).catch(() => []) as Promise<Template[]>,
+        backendGet("/api/v1/templates", auth).catch(() => []) as Promise<
+          Template[]
+        >,
       ]);
       return ctx.render({ authed: true, settings, templates });
     } catch (e) {
@@ -92,9 +99,9 @@ export const handler: Handlers<Data> = {
 export default function SettingsPage(props: PageProps<Data>) {
   const s = props.data.settings ?? {} as Settings;
   const templates = props.data.templates ?? [] as Template[];
-  const selectedTemplateId = (s.templateId as string)
-    || (templates.find((t) => t.isDefault)?.id)
-    || "minimalist-clean";
+  const selectedTemplateId = (s.templateId as string) ||
+    (templates.find((t) => t.isDefault)?.id) ||
+    "minimalist-clean";
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Settings</h1>
@@ -103,7 +110,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           <span>{props.data.error}</span>
         </div>
       )}
-  <div class="mb-4 card bg-base-100 border rounded-box">
+      <div class="mb-4 card bg-base-100 border rounded-box">
         <div class="card-body">
           <h2 class="card-title">Theme</h2>
           <div class="join">
@@ -125,27 +132,34 @@ export default function SettingsPage(props: PageProps<Data>) {
             <h2 class="card-title">Templates</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
               {templates.map((t) => (
-                <div class="flex items-center justify-between p-2 border rounded-box" key={t.id}>
+                <div
+                  class="flex items-center justify-between p-2 border rounded-box"
+                  key={t.id}
+                >
                   <div>
                     <div class="font-medium">{t.name}</div>
                     <div class="text-xs opacity-60">{t.id}</div>
                   </div>
-                  {selectedTemplateId === t.id ? (
-                    <span class="badge badge-primary">Default</span>
-                  ) : (
-                    <form method="post">
-                      <input type="hidden" name="templateId" value={t.id} />
-                      <button class="btn btn-sm" type="submit">Set as default</button>
-                    </form>
-                  )}
+                  {selectedTemplateId === t.id
+                    ? <span class="badge badge-primary">Default</span>
+                    : (
+                      <form method="post">
+                        <input type="hidden" name="templateId" value={t.id} />
+                        <button class="btn btn-sm" type="submit">
+                          Set as default
+                        </button>
+                      </form>
+                    )}
                 </div>
               ))}
             </div>
-            <p class="text-xs opacity-60">Built-in templates are protected and cannot be deleted.</p>
+            <p class="text-xs opacity-60">
+              Built-in templates are protected and cannot be deleted.
+            </p>
           </div>
         </div>
       )}
-  <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4">
+      <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="form-control">
             <div class="label">
@@ -229,11 +243,13 @@ export default function SettingsPage(props: PageProps<Data>) {
             />
           </label>
           <div class="flex items-center gap-3">
-            <span id="logo-error" class="text-error text-sm hidden">Invalid logo URL or data URI</span>
+            <span id="logo-error" class="text-error text-sm hidden">
+              Invalid logo URL or data URI
+            </span>
           </div>
         </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label class="form-control">
             <div class="label">
               <span class="label-text">Default Template</span>
@@ -243,16 +259,20 @@ export default function SettingsPage(props: PageProps<Data>) {
               class="select select-bordered w-full"
               value={selectedTemplateId}
             >
-              {templates.length > 0 ? (
-                templates.map((t) => (
-                  <option value={t.id} key={t.id}>{t.name}</option>
-                ))
-              ) : (
-                <>
-                  <option value="professional-modern">Professional Modern</option>
-                  <option value="minimalist-clean">Minimalist Clean</option>
-                </>
-              )}
+              {templates.length > 0
+                ? (
+                  templates.map((t) => (
+                    <option value={t.id} key={t.id}>{t.name}</option>
+                  ))
+                )
+                : (
+                  <>
+                    <option value="professional-modern">
+                      Professional Modern
+                    </option>
+                    <option value="minimalist-clean">Minimalist Clean</option>
+                  </>
+                )}
             </select>
           </label>
           <label class="form-control">
@@ -267,7 +287,12 @@ export default function SettingsPage(props: PageProps<Data>) {
                 class="input input-bordered w-full"
                 placeholder="#6B4EFF"
               />
-              <span id="highlight-swatch" class="inline-block w-6 h-6 rounded" style={`background: ${(s.highlight as string) || "#6B4EFF"}`}></span>
+              <span
+                id="highlight-swatch"
+                class="inline-block w-6 h-6 rounded"
+                style={`background: ${(s.highlight as string) || "#6B4EFF"}`}
+              >
+              </span>
             </div>
           </label>
         </div>
@@ -322,7 +347,8 @@ export default function SettingsPage(props: PageProps<Data>) {
           <button type="submit" class="btn btn-primary">Save Settings</button>
         </div>
       </form>
-      <script>{`(function(){
+      <script>
+        {`(function(){
         function setTheme(t){
           try { localStorage.setItem('theme', t); } catch(_err) {}
           document.documentElement.setAttribute('data-theme', t);
@@ -379,7 +405,8 @@ export default function SettingsPage(props: PageProps<Data>) {
             if (logoInput.value) updateLogo();
           }
         });
-      })();`}</script>
+      })();`}
+      </script>
     </Layout>
   );
 }

@@ -43,20 +43,17 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
     // pass-through layout controls
-  // brandLayout removed; always treating as logo-left in rendering
+    // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
   };
 
-  // Template/highlight from query
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
-    undefined;
-  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
-    undefined;
-  let selectedTemplateId: string | undefined =
-    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  // Use template/highlight from settings only (no query overrides)
+  const highlight = settingsMap.highlight ?? undefined;
+  let selectedTemplateId: string | undefined = settingsMap.templateId
+    ?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"
@@ -111,19 +108,17 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
-  // brandLayout removed; always treating as logo-left in rendering
+    // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
   };
 
-  const queryTemplate = c.req.query("template") ?? c.req.query("templateId") ??
-    undefined;
-  const highlight = (c.req.query("highlight") ?? settingsMap.highlight) ??
-    undefined;
-  let selectedTemplateId: string | undefined =
-    (queryTemplate ?? settingsMap.templateId)?.toLowerCase();
+  // Use template/highlight from settings only (no query overrides)
+  const highlight = settingsMap.highlight ?? undefined;
+  let selectedTemplateId: string | undefined = settingsMap.templateId
+    ?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"

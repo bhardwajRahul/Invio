@@ -1,6 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
-import { setAuthCookieHeaders, backendGet } from "../utils/backend.ts";
+import { backendGet, setAuthCookieHeaders } from "../utils/backend.ts";
 
 type Data = { error: string | null; username?: string };
 
@@ -22,7 +22,10 @@ export const handler: Handlers<Data> = {
     } catch (_e) {
       return ctx.render({ error: "Invalid credentials", username });
     }
-    const headers = new Headers({ ...setAuthCookieHeaders(basic), Location: "/dashboard" });
+    const headers = new Headers({
+      ...setAuthCookieHeaders(basic),
+      Location: "/dashboard",
+    });
     return new Response(null, { status: 303, headers });
   },
 };
@@ -38,12 +41,16 @@ export default function LoginPage(props: PageProps<Data>) {
               <h1 class="text-2xl font-semibold text-center mb-2">Sign in</h1>
 
               {props.data.error && (
-                <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
+                <div class="alert alert-error mb-3">
+                  <span>{props.data.error}</span>
+                </div>
               )}
 
               <form method="post" class="space-y-3">
                 <div class="form-control">
-                  <label class="label"><span class="label-text">Username</span></label>
+                  <label class="label">
+                    <span class="label-text">Username</span>
+                  </label>
                   <input
                     class="input input-bordered w-full"
                     name="username"
@@ -55,7 +62,9 @@ export default function LoginPage(props: PageProps<Data>) {
                   />
                 </div>
                 <div class="form-control">
-                  <label class="label"><span class="label-text">Password</span></label>
+                  <label class="label">
+                    <span class="label-text">Password</span>
+                  </label>
                   <input
                     class="input input-bordered w-full"
                     name="password"
@@ -65,7 +74,9 @@ export default function LoginPage(props: PageProps<Data>) {
                     required
                   />
                 </div>
-                <button type="submit" class="btn btn-primary w-full">Login</button>
+                <button type="submit" class="btn btn-primary w-full">
+                  Login
+                </button>
               </form>
             </div>
           </div>

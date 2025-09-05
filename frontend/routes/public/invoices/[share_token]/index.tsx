@@ -3,11 +3,13 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 type Data = { shareToken: string; error?: string };
 
 export const handler: Handlers<Data> = {
-  GET(req, ctx) {
+  GET(_req, ctx) {
     const { share_token } = ctx.params as { share_token: string };
-    const qs = new URL(req.url).search;
-    const target = `/public/invoices/${share_token}/html${qs || ""}`;
-  return new Response(null, { status: 307, headers: { Location: target, "X-Robots-Tag": "noindex" } });
+    const target = `/public/invoices/${share_token}/html`;
+    return new Response(null, {
+      status: 307,
+      headers: { Location: target, "X-Robots-Tag": "noindex" },
+    });
   },
 };
 
@@ -31,10 +33,16 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
         </div>
       </div>
       {props.data.error && (
-        <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>
+        <div class="alert alert-error mb-3">
+          <span>{props.data.error}</span>
+        </div>
       )}
       <div class="bg-base-100 border rounded-box overflow-hidden">
-        <iframe src={htmlUrl} class="w-full" style="height: calc(100vh - 200px);" />
+        <iframe
+          src={htmlUrl}
+          class="w-full"
+          style="height: calc(100vh - 200px);"
+        />
       </div>
     </div>
   );

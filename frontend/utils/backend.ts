@@ -1,4 +1,5 @@
-export const BACKEND_URL = Deno.env.get("BACKEND_URL") || "http://localhost:3000";
+export const BACKEND_URL = Deno.env.get("BACKEND_URL") ||
+  "http://localhost:3000";
 const AUTH_COOKIE = "invio_auth";
 
 export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
@@ -7,7 +8,10 @@ export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
     cookieHeader.split(/;\s*/).map((p) => {
       const i = p.indexOf("=");
       if (i === -1) return [p, ""];
-      return [decodeURIComponent(p.slice(0, i)), decodeURIComponent(p.slice(i + 1))];
+      return [
+        decodeURIComponent(p.slice(0, i)),
+        decodeURIComponent(p.slice(i + 1)),
+      ];
     }),
   );
   const b64 = cookies[AUTH_COOKIE];
@@ -21,7 +25,9 @@ export function setAuthCookieHeaders(basic: string): HeadersInit {
   if (basic.startsWith("Basic ")) {
     b64 = basic.slice("Basic ".length);
   }
-  const cookie = `${AUTH_COOKIE}=${encodeURIComponent(b64)}; HttpOnly; Path=/; SameSite=Lax`;
+  const cookie = `${AUTH_COOKIE}=${
+    encodeURIComponent(b64)
+  }; HttpOnly; Path=/; SameSite=Lax`;
   return { "Set-Cookie": cookie };
 }
 
@@ -38,7 +44,11 @@ export async function backendGet(path: string, authHeader: string) {
   return await res.json();
 }
 
-export async function backendPost(path: string, authHeader: string, body: unknown) {
+export async function backendPost(
+  path: string,
+  authHeader: string,
+  body: unknown,
+) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     method: "POST",
     headers: {
@@ -51,7 +61,11 @@ export async function backendPost(path: string, authHeader: string, body: unknow
   return await res.json();
 }
 
-export async function backendPut(path: string, authHeader: string, body: unknown) {
+export async function backendPut(
+  path: string,
+  authHeader: string,
+  body: unknown,
+) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     method: "PUT",
     headers: {
@@ -64,7 +78,11 @@ export async function backendPut(path: string, authHeader: string, body: unknown
   return await res.json();
 }
 
-export async function backendPatch(path: string, authHeader: string, body: unknown) {
+export async function backendPatch(
+  path: string,
+  authHeader: string,
+  body: unknown,
+) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     method: "PATCH",
     headers: {
@@ -85,6 +103,8 @@ export async function backendDelete(path: string, authHeader: string) {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   // Some DELETEs may return 204 No Content
   const contentType = res.headers.get("content-type") || "";
-  if (res.status === 204 || !contentType.includes("application/json")) return undefined;
+  if (res.status === 204 || !contentType.includes("application/json")) {
+    return undefined;
+  }
   return await res.json();
 }

@@ -1,9 +1,29 @@
 <p align="center">
   <img src="./assets/banner-default.png" alt="Invio" width="100%" />
 </p>
-[IN DEVELOPMENT, NO  BETA YET]
+Open‑source minimalist invoicing
 
-Open source minimalist invoice software
+Invio is a clean, fast invoicing app. Create an invoice, share a link, download
+a great‑looking PDF.
 
-This is super minimalist invoicing software for those who don't like clutter and over complicated UX.
-This repo contains the frontend and backend
+Monorepo layout:
+
+- `backend/` — Deno + Hono JSON API, SQLite storage
+- `frontend/` — Deno Fresh UI (SSR), DaisyUI, accessible by default
+
+Getting started (quick):
+
+- See `backend/README.md` for API setup, environment variables, and health
+  checks
+- See `frontend/README.md` for running the UI and environment config
+
+Current feature set (v1):
+
+- Invoice numbering (draft prefixes, finalized on publish)
+- Overdue logic derived from due date for unpaid invoices
+- Duplicate/clone invoice
+- Due date editing and status updates
+- Public share links with HTML/PDF rendering (uses saved Settings; no query
+  params)
+
+Roadmap and full documentation will be published separately.
