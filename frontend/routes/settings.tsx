@@ -113,16 +113,20 @@ export default function SettingsPage(props: PageProps<Data>) {
       <div class="mb-4 card bg-base-100 border rounded-box">
         <div class="card-body">
           <h2 class="card-title">Theme</h2>
-          <div class="join">
-            <button type="button" class="btn join-item" id="theme-light">
-              Light
-            </button>
-            <button type="button" class="btn join-item" id="theme-dark">
-              Dark
-            </button>
+          <div class="flex items-center gap-3">
+            <label class="label cursor-pointer gap-3">
+              <span class="label-text">Light</span>
+              <input
+                type="checkbox"
+                class="toggle theme-controller"
+                value="dark"
+                aria-label="Toggle dark mode"
+              />
+              <span class="label-text">Dark</span>
+            </label>
           </div>
           <p class="text-sm opacity-70">
-            Applies instantly and persists for your browser.
+            Uses DaisyUI theme controller and persists automatically.
           </p>
         </div>
       </div>
@@ -349,17 +353,8 @@ export default function SettingsPage(props: PageProps<Data>) {
       </form>
       <script>
         {`(function(){
-        function setTheme(t){
-          try { localStorage.setItem('theme', t); } catch(_err) {}
-          document.documentElement.setAttribute('data-theme', t);
-        }
         function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }
         onReady(function(){
-          var l = document.getElementById('theme-light');
-          var d = document.getElementById('theme-dark');
-          if(l) l.addEventListener('click', function(){ setTheme('light'); });
-          if(d) d.addEventListener('click', function(){ setTheme('dark'); });
-
           // Highlight color sync
           var input = document.getElementById('highlight-input');
           var swatch = document.getElementById('highlight-swatch');

@@ -1,9 +1,14 @@
 (function () {
   try {
-    const t = globalThis.localStorage
-      ? (globalThis.localStorage.getItem("theme") || "light")
-      : "light";
-    document.documentElement.setAttribute("data-theme", t);
+    // If no explicit theme, prefer system; DaisyUI theme-controller persists automatically
+    const root = document.documentElement;
+    const saved = globalThis.localStorage?.getItem("theme");
+    if (saved) {
+      root.setAttribute("data-theme", saved);
+    } else {
+      const prefersDark = globalThis.matchMedia && globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+    }
   } catch (_err) {
     // ignore theme init errors
   }
