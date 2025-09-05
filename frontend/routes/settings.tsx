@@ -110,26 +110,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           <span>{props.data.error}</span>
         </div>
       )}
-      <div class="mb-4 card bg-base-100 border rounded-box">
-        <div class="card-body">
-          <h2 class="card-title">Theme</h2>
-          <div class="flex items-center gap-3">
-            <label class="label cursor-pointer gap-3">
-              <span class="label-text">Light</span>
-              <input
-                type="checkbox"
-                class="toggle theme-controller"
-                value="dark"
-                aria-label="Toggle dark mode"
-              />
-              <span class="label-text">Dark</span>
-            </label>
-          </div>
-          <p class="text-sm opacity-70">
-            Uses DaisyUI theme controller and persists automatically.
-          </p>
-        </div>
-      </div>
+  {/* Theme removed: App is fixed to light mode */}
       {templates.length > 0 && (
         <div class="mb-4 card bg-base-100 border rounded-box">
           <div class="card-body">
@@ -355,6 +336,8 @@ export default function SettingsPage(props: PageProps<Data>) {
         {`(function(){
         function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }
         onReady(function(){
+          // Theme removed (forced to light). No-op here.
+
           // Highlight color sync
           var input = document.getElementById('highlight-input');
           var swatch = document.getElementById('highlight-swatch');

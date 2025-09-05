@@ -7,7 +7,8 @@ export default function App({ Component }: AppProps) {
       <Head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Invio Admin</title>
+  <title>Invio</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         {/* Tailwind CDN for utilities */}
         <script src="https://cdn.tailwindcss.com"></script>
         {/* App init (theme + icons) */}
@@ -29,7 +30,9 @@ export default function App({ Component }: AppProps) {
           rel="stylesheet"
         />
         <style>
-          {`html{font-family:Inter,ui-sans-serif,system-ui,-apple-system,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,\"Noto Sans\",\"Liberation Sans\",sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\",\"Segoe UI Symbol\",\"Noto Color Emoji\"}`}
+          {`html{font-family:Inter,ui-sans-serif,system-ui,-apple-system,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,\"Noto Sans\",\"Liberation Sans\",sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\",\"Segoe UI Symbol\",\"Noto Color Emoji\"}
+          .brand-logo{color:#17184b}
+          `}
         </style>
         {/* lucide icons */}
         <script src="https://unpkg.com/lucide@latest"></script>
