@@ -71,16 +71,16 @@ export interface Setting {
 
 export interface BusinessSettings {
   companyName: string;
-  companyAddress: string;
-  companyEmail: string;
-  companyPhone: string;
-  companyTaxId: string;
+  companyAddress?: string;
+  companyEmail?: string;
+  companyPhone?: string;
+  companyTaxId?: string;
   currency: string;
   logo?: string;
-  paymentMethods: string;
-  bankAccount: string;
-  paymentTerms: string;
-  defaultNotes: string;
+  paymentMethods?: string;
+  bankAccount?: string;
+  paymentTerms?: string;
+  defaultNotes?: string;
 }
 
 // Request/Response types for API

@@ -14,7 +14,21 @@ export const updateSettings = (data: Record<string, string>) => {
   const db = getDatabase();
   const results: Setting[] = [];
 
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key, raw] of Object.entries(data)) {
+    // Treat explicit empty strings for certain keys as clearing the setting
+    const shouldClear = [
+      "companyTaxId",
+      "taxId", // alias that may slip through
+    ].includes(key) && String(raw).trim() === "";
+
+    if (shouldClear) {
+      // delete the setting row if present
+      db.query("DELETE FROM settings WHERE key = ?", [key === "taxId" ? "companyTaxId" : key]);
+      results.push({ key: key === "taxId" ? "companyTaxId" : key, value: "" });
+      continue;
+    }
+
+    const value = String(raw);
     // Upsert the setting
     const existing = db.query("SELECT * FROM settings WHERE key = ?", [key]);
     if (existing.length > 0) {

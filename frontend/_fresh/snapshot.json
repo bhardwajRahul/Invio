@@ -1,0 +1,25 @@
+{
+  "build_id": "38a833ace70342432a5aef45d1a4db5ada044bb6",
+  "files": {
+    "main.js": [
+      "chunk-GI7LLYGM.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "deserializer.js": [],
+    "signals.js": [
+      "chunk-GI7LLYGM.js",
+      "chunk-EX6SY4DB.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "chunk-GI7LLYGM.js": [],
+    "island-breadcrumbs.js": [
+      "chunk-EX6SY4DB.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "chunk-EX6SY4DB.js": [
+      "chunk-JP5XG2OT.js"
+    ],
+    "chunk-JP5XG2OT.js": [],
+    "metafile.json": []
+  }
+}

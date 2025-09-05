@@ -9,8 +9,7 @@ Read-only admin UI for Invio backend.
   - Dashboard summary
   - List invoices, view invoice detail
   - List customers, view customer detail
-  - View templates list
-  - View settings
+  - Settings (company, theme, templates)
 
 ## Dev
 

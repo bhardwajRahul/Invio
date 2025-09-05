@@ -61,8 +61,8 @@ export default function CustomerDetail(props: PageProps<Data>) {
       {props.data.error && <div class="alert alert-error mb-3"><span>{props.data.error}</span></div>}
       {c && (
         <div class="space-y-2">
-          <div><span class="opacity-70">Email:</span> {c.email}</div>
-          <div><span class="opacity-70">Address:</span> {c.address}</div>
+          {c.email && <div><span class="opacity-70">Email:</span> {c.email}</div>}
+          {c.address && <div><span class="opacity-70">Address:</span> {c.address}</div>}
         </div>
       )}
       <script>{`(function(){

@@ -20,7 +20,6 @@ export function Layout(props: { children: ComponentChildren; authed?: boolean; p
                 <li><a href="/dashboard"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard</a></li>
                 <li><a href="/invoices"><i data-lucide="receipt-text" class="w-4 h-4"></i>Invoices</a></li>
                 <li><a href="/customers"><i data-lucide="users" class="w-4 h-4"></i>Customers</a></li>
-                <li><a href="/templates"><i data-lucide="layers" class="w-4 h-4"></i>Templates</a></li>
                 <li><a href="/settings"><i data-lucide="settings" class="w-4 h-4"></i>Settings</a></li>
                 <li><a href="/logout"><i data-lucide="log-out" class="w-4 h-4"></i>Logout</a></li>
               </ul>
@@ -35,7 +34,6 @@ export function Layout(props: { children: ComponentChildren; authed?: boolean; p
                 <li><a href="/dashboard"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard</a></li>
                 <li><a href="/invoices"><i data-lucide="receipt-text" class="w-4 h-4"></i>Invoices</a></li>
                 <li><a href="/customers"><i data-lucide="users" class="w-4 h-4"></i>Customers</a></li>
-                <li><a href="/templates"><i data-lucide="layers" class="w-4 h-4"></i>Templates</a></li>
                 <li><a href="/settings"><i data-lucide="settings" class="w-4 h-4"></i>Settings</a></li>
                 <li><a href="/logout"><i data-lucide="log-out" class="w-4 h-4"></i>Logout</a></li>
               </ul>

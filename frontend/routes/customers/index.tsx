@@ -39,7 +39,7 @@ export default function Customers(props: PageProps<Data>) {
             {list.map((c) => (
               <tr class="hover">
                 <td><a class="link" href={`/customers/${c.id}`}>{c.name || c.id}</a></td>
-                <td class="opacity-70">{c.email}</td>
+                <td class="opacity-70">{c.email || ''}</td>
               </tr>
             ))}
           </tbody>

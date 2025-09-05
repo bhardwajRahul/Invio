@@ -5,10 +5,10 @@ import { generateUUID } from "../utils/uuid.ts";
 const mapRowToCustomer = (row: unknown[]): Customer => ({
   id: row[0] as string,
   name: row[1] as string,
-  email: row[2] as string,
-  phone: row[3] as string,
-  address: row[4] as string,
-  taxId: row[5] as string,
+  email: (row[2] ?? undefined) as string | undefined,
+  phone: (row[3] ?? undefined) as string | undefined,
+  address: (row[4] ?? undefined) as string | undefined,
+  taxId: (row[5] ?? undefined) as string | undefined,
   createdAt: new Date(row[6] as string),
 });
 
@@ -25,41 +25,68 @@ export const getCustomerById = (id: string): Customer | null => {
   return mapRowToCustomer(results[0] as unknown[]);
 };
 
+const toNullable = (v?: string): string | null => {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s.length ? s : null;
+};
+
 export const createCustomer = (data: CreateCustomerRequest): Customer => {
   const db = getDatabase();
   const customerId = generateUUID();
   const now = new Date();
   
-  const customer: Customer = {
-    id: customerId,
-    name: data.name,
-    email: data.email,
-    phone: data.phone,
-    address: data.address,
-    taxId: data.taxId,
-    createdAt: now,
-  };
+  // Normalize optional fields: store NULLs for empty strings
+  const email = toNullable(data.email);
+  const phone = toNullable(data.phone);
+  const address = toNullable(data.address);
+  const taxId = toNullable(data.taxId);
 
   db.query(`
     INSERT INTO customers (id, name, email, phone, address, tax_id, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `, [
-    customer.id, customer.name, customer.email, customer.phone, 
-    customer.address, customer.taxId, customer.createdAt
+    customerId, data.name, email, phone, address, taxId, now
   ]);
 
-  return customer;
+  // Return undefined for missing optional fields
+  return {
+    id: customerId,
+    name: data.name,
+    email: email ?? undefined,
+    phone: phone ?? undefined,
+    address: address ?? undefined,
+    taxId: taxId ?? undefined,
+    createdAt: now,
+  };
 };
 
 export const updateCustomer = (id: string, data: UpdateCustomerRequest): Customer | null => {
   const db = getDatabase();
-  
+  // Read existing to support partials and normalize empties
+  const existing = getCustomerById(id);
+  if (!existing) return null;
+
+  const next = {
+    name: data.name ?? existing.name,
+    email: data.email === undefined ? existing.email : undefined,
+    phone: data.phone === undefined ? existing.phone : undefined,
+    address: data.address === undefined ? existing.address : undefined,
+    taxId: data.taxId === undefined ? existing.taxId : undefined,
+  } as Partial<Customer>;
+
+  // If provided, coerce empty to NULL
+  const email = data.email !== undefined ? toNullable(data.email) : (existing.email ?? null);
+  const phone = data.phone !== undefined ? toNullable(data.phone) : (existing.phone ?? null);
+  const address = data.address !== undefined ? toNullable(data.address) : (existing.address ?? null);
+  const taxId = data.taxId !== undefined ? toNullable(data.taxId) : (existing.taxId ?? null);
+
   db.query(`
     UPDATE customers SET 
       name = ?, email = ?, phone = ?, address = ?, tax_id = ?
     WHERE id = ?
   `, [
-    data.name, data.email, data.phone, data.address, data.taxId, id
+    next.name, email, phone, address, taxId, id
   ]);
 
   return getCustomerById(id);
