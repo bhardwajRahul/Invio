@@ -1,0 +1,62 @@
+import { useState } from "preact/hooks";
+
+function getAuthHeaderFromCookie(cookie: string): string | null {
+  const parts = cookie.split(/;\s*/);
+  for (const p of parts) {
+    const i = p.indexOf("=");
+    if (i === -1) continue;
+    const k = decodeURIComponent(p.slice(0, i));
+    const v = decodeURIComponent(p.slice(i + 1));
+    if (k === "invio_auth" && v) return `Basic ${v}`;
+  }
+  return null;
+}
+
+export default function InstallTemplateForm() {
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setErr(null);
+        const u = url.trim();
+        if (!u) return setErr("Enter a manifest URL");
+        try {
+          setBusy(true);
+          const auth = getAuthHeaderFromCookie(document.cookie);
+          const res = await fetch("/api/templates/install", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(auth ? { Authorization: auth } : {}),
+            },
+            body: JSON.stringify({ url: u }),
+          });
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          globalThis.location?.reload();
+        } catch (e) {
+          setErr(String(e));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <label class="form-control">
+        <div class="label"><span class="label-text">Install from Manifest URL</span></div>
+        <div class="flex gap-2">
+          <input
+            name="manifestUrl"
+            class="input input-bordered w-full"
+            placeholder="https://.../manifest.yaml"
+            value={url}
+            onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
+          />
+          <button type="submit" class="btn btn-primary" disabled={busy}>Install</button>
+        </div>
+        {err && <span class="text-error text-sm mt-1">{err}</span>}
+      </label>
+    </form>
+  );
+}

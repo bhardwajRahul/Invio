@@ -1,9 +1,23 @@
+// @ts-nocheck: simplify handlers without explicit typings
 import { Hono } from "hono";
 import { getInvoiceByShareToken } from "../controllers/invoices.ts";
 import { getSettings } from "../controllers/settings.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 
 const publicRoutes = new Hono();
+
+// Serve stored template files (fonts, html) for installed templates
+publicRoutes.get("/_template-assets/:id/:version/*", async (c) => {
+  const { id, version } = c.req.param();
+  const rest = c.req.param("*");
+  const path = `./data/templates/${id}/${version}/${rest}`;
+  try {
+    const bytes = await Deno.readFile(path);
+    return new Response(bytes);
+  } catch {
+    return c.notFound();
+  }
+});
 
 publicRoutes.get("/public/invoices/:share_token", async (c) => {
   const shareToken = c.req.param("share_token");

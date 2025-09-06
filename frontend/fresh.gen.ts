@@ -3,6 +3,7 @@
 // This file is automatically updated during development when running `dev.ts`.
 
 import * as $_app from "./routes/_app.tsx";
+import * as $api_templates_install from "./routes/api/templates/install.ts";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
 import * as $customers_id_cannot_delete from "./routes/customers/[id]/cannot-delete.tsx";
 import * as $customers_id_edit from "./routes/customers/[id]/edit.tsx";
@@ -24,11 +25,13 @@ import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[sha
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
+import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
+    "./routes/api/templates/install.ts": $api_templates_install,
     "./routes/customers/[id].tsx": $customers_id_,
     "./routes/customers/[id]/cannot-delete.tsx": $customers_id_cannot_delete,
     "./routes/customers/[id]/edit.tsx": $customers_id_edit,
@@ -55,6 +58,7 @@ const manifest = {
   },
   islands: {
     "./islands/Breadcrumbs.tsx": $Breadcrumbs,
+    "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

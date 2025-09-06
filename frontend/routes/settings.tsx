@@ -1,8 +1,10 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
+import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
 import {
   backendGet,
   backendPatch,
+  backendDelete,
   getAuthHeaderFromCookie,
 } from "../utils/backend.ts";
 
@@ -55,6 +57,19 @@ export const handler: Handlers<Data> = {
     }
     const form = await req.formData();
     const payload: Record<string, string> = {};
+    // Handle delete template action early
+    const deleteId = String(form.get("deleteTemplateId") ?? "").trim();
+    if (deleteId) {
+      try {
+        await backendDelete(`/api/v1/templates/${deleteId}`, auth);
+        return new Response(null, {
+          status: 303,
+          headers: { Location: "/settings" },
+        });
+      } catch (e) {
+        return new Response(String(e), { status: 500 });
+      }
+    }
     const fields = [
       "companyName",
       "companyAddress",
@@ -115,6 +130,9 @@ export default function SettingsPage(props: PageProps<Data>) {
         <div class="mb-4 card bg-base-100 border rounded-box">
           <div class="card-body">
             <h2 class="card-title">Templates</h2>
+            <div class="mb-3">
+              <InstallTemplateForm />
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
               {templates.map((t) => (
                 <div
@@ -125,16 +143,27 @@ export default function SettingsPage(props: PageProps<Data>) {
                     <div class="font-medium">{t.name}</div>
                     <div class="text-xs opacity-60">{t.id}</div>
                   </div>
-                  {selectedTemplateId === t.id
-                    ? <span class="badge badge-primary">Default</span>
-                    : (
+                  <div class="flex items-center gap-2">
+                    {selectedTemplateId === t.id
+                      ? <span class="badge badge-primary">Default</span>
+                      : (
+                        <form method="post">
+                          <input type="hidden" name="templateId" value={t.id} />
+                          <button class="btn btn-sm" type="submit">
+                            Set as default
+                          </button>
+                        </form>
+                      )}
+                    {/* Delete allowed only for non-builtins and non-default */}
+                    {t.id !== "professional-modern" && t.id !== "minimalist-clean" && selectedTemplateId !== t.id && (
                       <form method="post">
-                        <input type="hidden" name="templateId" value={t.id} />
-                        <button class="btn btn-sm" type="submit">
-                          Set as default
+                        <input type="hidden" name="deleteTemplateId" value={t.id} />
+                        <button class="btn btn-sm btn-error" type="submit">
+                          Delete
                         </button>
                       </form>
                     )}
+                  </div>
                 </div>
               ))}
             </div>
