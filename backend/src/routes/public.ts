@@ -6,6 +6,13 @@ import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 
 const publicRoutes = new Hono();
 
+// Expose a lightweight public endpoint so unauthenticated clients can
+// detect whether the backend is running in demo (read-only) mode.
+const DEMO_MODE = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
+publicRoutes.get("/demo-mode", (c) => {
+  return c.json({ demoMode: DEMO_MODE });
+});
+
 // Serve stored template files (fonts, html) for installed templates
 publicRoutes.get("/_template-assets/:id/:version/*", async (c) => {
   const { id, version } = c.req.param();

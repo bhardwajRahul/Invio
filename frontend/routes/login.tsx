@@ -8,10 +8,10 @@ export const handler: Handlers<Data> = {
   async GET(_req, ctx) {
     // Try to fetch public settings to detect demoMode
     try {
-      const resp = await fetch(`${BACKEND_URL}/api/v1/settings`);
+      const resp = await fetch(`${BACKEND_URL}/api/v1/demo-mode`);
       if (resp.ok) {
-        const settings = await resp.json();
-        const demoMode = settings?.demoMode === "true" || settings?.demoMode === true;
+        const body = await resp.json();
+        const demoMode = body?.demoMode === true || body?.demoMode === "true";
         return ctx.render({ error: null, demoMode });
       }
     } catch (_e) {
