@@ -1,11 +1,22 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
-import { backendGet, setAuthCookieHeaders } from "../utils/backend.ts";
+import { backendGet, setAuthCookieHeaders, BACKEND_URL } from "../utils/backend.ts";
 
-type Data = { error: string | null; username?: string };
+type Data = { error: string | null; username?: string; demoMode?: boolean };
 
 export const handler: Handlers<Data> = {
-  GET(_req, ctx) {
+  async GET(_req, ctx) {
+    // Try to fetch public settings to detect demoMode
+    try {
+      const resp = await fetch(`${BACKEND_URL}/api/v1/settings`);
+      if (resp.ok) {
+        const settings = await resp.json();
+        const demoMode = settings?.demoMode === "true" || settings?.demoMode === true;
+        return ctx.render({ error: null, demoMode });
+      }
+    } catch (_e) {
+      // ignore
+    }
     return ctx.render({ error: null });
   },
   async POST(req, ctx) {
@@ -32,13 +43,21 @@ export const handler: Handlers<Data> = {
 
 export default function LoginPage(props: PageProps<Data>) {
   const username = props.data.username || "";
+  const dm = (props.data as unknown as { demoMode?: boolean | string }).demoMode;
+  const demoMode = dm === true || dm === "true";
   return (
-    <Layout path={new URL(props.url).pathname}>
+    <Layout path={new URL(props.url).pathname} demoMode={demoMode}>
       <div class="min-h-[65vh] flex items-center justify-center">
         <div class="w-full max-w-sm">
           <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
               <h1 class="text-2xl font-semibold text-center mb-2">Sign in</h1>
+
+              {demoMode && (
+                <div class="alert alert-info mb-2">
+                  Demo credentials: <strong class="ml-2">username</strong> = <code>demo</code>, <strong>password</strong> = <code>demo</code>
+                </div>
+              )}
 
               {props.data.error && (
                 <div class="alert alert-error mb-3">
