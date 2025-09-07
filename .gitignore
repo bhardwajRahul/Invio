@@ -9,3 +9,5 @@
 
 # fresh build
 **/_fresh
+
+.env
