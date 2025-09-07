@@ -113,23 +113,24 @@ export const handler: Handlers<Data> = {
 };
 
 export default function EditInvoicePage(props: PageProps<Data>) {
+  const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   const inv = props.data.invoice;
   return (
-    <Layout authed={props.data.authed} path={new URL(props.url).pathname} wide>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
       {props.data.error && (
         <div class="alert alert-error mb-3">
           <span>{props.data.error}</span>
         </div>
       )}
       {inv && (
-        <form method="post" class="space-y-4">
+    <form method="post" class="space-y-4" data-writable>
           <div class="flex items-center justify-between gap-2">
             <h1 class="text-2xl font-semibold">Edit Invoice</h1>
             <div class="flex items-center gap-2">
               <a href={`/invoices/${inv.id}`} class="btn btn-ghost btn-sm">
                 Cancel
               </a>
-              <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
                 <i data-lucide="save" class="w-4 h-4"></i>
                 Save
               </button>
@@ -148,6 +149,7 @@ export default function EditInvoicePage(props: PageProps<Data>) {
             paymentTerms={inv.paymentTerms}
             items={inv.items ||
               [{ description: "", quantity: 1, unitPrice: 0 }]}
+            demoMode={demoMode}
           />
         </form>
       )}

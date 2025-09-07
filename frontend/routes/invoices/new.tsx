@@ -142,11 +142,12 @@ export const handler: Handlers<Data> = {
 
 export default function NewInvoicePage(props: PageProps<Data>) {
   const customers = props.data.customers ?? [];
+  const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   const currency = props.data.currency || "USD";
   const paymentTerms = props.data.paymentTerms || "Due in 30 days";
   const defaultNotes = props.data.defaultNotes || "";
   return (
-    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Create Invoice</h1>
       {props.data.error && (
         <div class="alert alert-error mb-3">
@@ -156,6 +157,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
       <form
         method="post"
         class="space-y-4 w-full bg-base-100 border p-4 rounded-box"
+        data-writable
       >
         <InvoiceEditor
           mode="create"
@@ -164,11 +166,12 @@ export default function NewInvoicePage(props: PageProps<Data>) {
           status="draft"
           paymentTerms={paymentTerms}
           notes={defaultNotes}
+          demoMode={demoMode}
           items={[{ description: "", quantity: 1, unitPrice: 0 }]}
           showDates
         />
         <div class="pt-2">
-          <button type="submit" class="btn btn-primary">Create Invoice</button>
+          <button type="submit" class="btn btn-primary" data-writable>Create Invoice</button>
         </div>
       </form>
     </Layout>

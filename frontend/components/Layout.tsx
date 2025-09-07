@@ -4,14 +4,15 @@ import { Breadcrumbs } from "./Breadcrumbs.tsx";
 export function Layout(
   props: {
     children: ComponentChildren;
-    authed?: boolean;
+  authed?: boolean;
+  demoMode?: boolean;
     path?: string;
     wide?: boolean;
   },
 ) {
   return (
     <div class="min-h-screen bg-base-200">
-      <div class="navbar bg-base-100 border-b">
+  <div class="navbar bg-base-100 border-b" data-demo={props.demoMode ? "true" : "false"}>
         <div class="container mx-auto flex items-center">
           {/* Left: Logo only */}
           <div class="navbar-start flex-1">
@@ -127,6 +128,12 @@ export function Layout(
         class={"container mx-auto p-4 " +
           (props.wide ? "max-w-screen-2xl" : "")}
       >
+        {/* If demoMode is enabled, add a tiny client-side script that disables write controls but keeps them visible */}
+        {props.demoMode && (
+          <script>
+            {`(function(){try{const sel='[data-writable]';document.querySelectorAll(sel).forEach(function(el){if(el instanceof HTMLElement){el.setAttribute('disabled','true');el.classList.add('opacity-50','cursor-not-allowed');}});}catch(e){}})();`}
+          </script>
+        )}
         {props.authed && props.path && <Breadcrumbs path={props.path} />}
         {props.children}
       </main>

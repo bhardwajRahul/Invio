@@ -21,6 +21,7 @@ export function InvoiceEditor(props: {
   showDates?: boolean;
   issueDate?: string;
   dueDate?: string;
+  demoMode?: boolean;
 }): JSX.Element {
   const items = props.items && props.items.length > 0
     ? props.items
@@ -113,7 +114,7 @@ export function InvoiceEditor(props: {
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="block text-sm">Items</label>
-          <button type="button" id="add-item" class="btn btn-sm">
+          <button type="button" id="add-item" class="btn btn-sm" data-writable disabled={props.demoMode}>
             <i data-lucide="plus" class="w-4 h-4"></i>Add item
           </button>
         </div>
@@ -125,6 +126,8 @@ export function InvoiceEditor(props: {
                 value={it.description}
                 placeholder="Description"
                 class="input input-bordered flex-1 min-w-0"
+                data-writable
+                disabled={props.demoMode}
               />
               <input
                 type="number"
@@ -133,6 +136,8 @@ export function InvoiceEditor(props: {
                 name="item_quantity"
                 value={String(it.quantity)}
                 class="input input-bordered w-16 sm:w-20 shrink-0"
+                data-writable
+                disabled={props.demoMode}
               />
               <input
                 type="number"
@@ -141,17 +146,23 @@ export function InvoiceEditor(props: {
                 name="item_unitPrice"
                 value={String(it.unitPrice)}
                 class="input input-bordered w-24 shrink-0"
+                data-writable
+                disabled={props.demoMode}
               />
               <input
                 name="item_notes"
                 value={it.notes || ""}
                 placeholder="Notes"
                 class="input input-bordered w-40 max-w-xs shrink-0"
+                data-writable
+                disabled={props.demoMode}
               />
               <button
                 type="button"
                 class="remove-item btn btn-ghost btn-square btn-sm shrink-0"
                 aria-label="Remove item"
+                data-writable
+                disabled={props.demoMode}
               >
                 ×
               </button>
@@ -164,6 +175,8 @@ export function InvoiceEditor(props: {
               name="item_description"
               placeholder="Description"
               class="input input-bordered flex-1 min-w-0"
+              data-writable
+              disabled={props.demoMode}
             />
             <input
               type="number"
@@ -172,6 +185,8 @@ export function InvoiceEditor(props: {
               name="item_quantity"
               value="1"
               class="input input-bordered w-16 sm:w-20 shrink-0"
+              data-writable
+              disabled={props.demoMode}
             />
             <input
               type="number"
@@ -180,16 +195,22 @@ export function InvoiceEditor(props: {
               name="item_unitPrice"
               value="0"
               class="input input-bordered w-24 shrink-0"
+              data-writable
+              disabled={props.demoMode}
             />
             <input
               name="item_notes"
               placeholder="Notes"
               class="input input-bordered w-40 max-w-xs shrink-0"
+              data-writable
+              disabled={props.demoMode}
             />
             <button
               type="button"
               class="remove-item btn btn-ghost btn-square btn-sm shrink-0"
               aria-label="Remove item"
+              data-writable
+              disabled={props.demoMode}
             >
               ×
             </button>
@@ -208,13 +229,15 @@ export function InvoiceEditor(props: {
             value={props.paymentTerms || ""}
             placeholder="e.g. Due in 30 days"
             class="input input-bordered w-full"
+            data-writable
+            disabled={props.demoMode}
           />
         </label>
         <label class="form-control">
           <div class="label">
             <span class="label-text">Notes</span>
           </div>
-          <textarea name="notes" class="textarea textarea-bordered" rows={3}>
+          <textarea name="notes" class="textarea textarea-bordered" rows={3} data-writable disabled={props.demoMode}>
             {props.notes || ""}
           </textarea>
         </label>

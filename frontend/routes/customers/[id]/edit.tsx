@@ -71,9 +71,10 @@ export const handler: Handlers<Data> = {
 };
 
 export default function EditCustomerPage(props: PageProps<Data>) {
+  const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   const c = props.data.customer;
   return (
-    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Edit Customer</h1>
       {props.data.error && (
         <div class="alert alert-error mb-3">
@@ -84,6 +85,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
         <form
           method="post"
           class="space-y-3 max-w-xl bg-base-100 border p-4 rounded-box"
+          data-writable
         >
           <label class="form-control">
             <div class="label">
@@ -93,6 +95,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               name="name"
               value={c.name || ""}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -105,6 +108,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
                 name="email"
                 value={c.email || ""}
                 class="input input-bordered w-full"
+                data-writable
               />
             </label>
             <label class="form-control">
@@ -115,6 +119,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
                 name="phone"
                 value={c.phone || ""}
                 class="input input-bordered w-full"
+                data-writable
               />
             </label>
           </div>
@@ -126,6 +131,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               name="address"
               class="textarea textarea-bordered"
               rows={3}
+              data-writable
             >
               {c.address || ""}
             </textarea>
@@ -138,10 +144,11 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               name="taxId"
               value={c.taxId || ""}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
           <div class="pt-2">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" data-writable>
               <i data-lucide="save" class="w-4 h-4"></i>
               Save
             </button>

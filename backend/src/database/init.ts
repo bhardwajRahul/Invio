@@ -7,7 +7,10 @@ await load({ export: true });
 let db: DB;
 
 export function initDatabase(): void {
-  const dbPath = Deno.env.get("DATABASE_PATH") || "./invio.db";
+  // Support demo mode DB override: when DEMO_MODE=true use DEMO_DB_PATH if provided
+  const demoMode = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
+  const demoDb = Deno.env.get("DEMO_DB_PATH");
+  const dbPath = demoMode && demoDb ? demoDb : (Deno.env.get("DATABASE_PATH") || "./invio.db");
   db = new DB(dbPath);
 
   // Read and execute the migration file

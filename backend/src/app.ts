@@ -38,5 +38,12 @@ app.get("/health", (c) => {
   }
 });
 
-// Start the server
-Deno.serve({ port: 3000 }, app.fetch);
+// Start the server: allow configuration via BACKEND_PORT or PORT env vars
+const rawPort = Deno.env.get("BACKEND_PORT") || Deno.env.get("PORT");
+const port = rawPort ? parseInt(rawPort, 10) : 3000;
+if (Number.isNaN(port) || port <= 0) {
+  console.warn(`Invalid port in BACKEND_PORT/PORT (${rawPort}), falling back to 3000`);
+}
+const listenPort = Number.isFinite(port) && port > 0 ? port : 3000;
+console.log(`Starting backend on port ${listenPort}`);
+Deno.serve({ port: listenPort }, app.fetch);

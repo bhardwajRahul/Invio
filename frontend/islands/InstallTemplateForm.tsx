@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+type Props = { demoMode?: boolean };
 
 function getAuthHeaderFromCookie(cookie: string): string | null {
   const parts = cookie.split(/;\s*/);
@@ -12,12 +13,12 @@ function getAuthHeaderFromCookie(cookie: string): string | null {
   return null;
 }
 
-export default function InstallTemplateForm() {
+export default function InstallTemplateForm({ demoMode }: Props) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   return (
-    <form
+  <form
       onSubmit={async (e) => {
         e.preventDefault();
         setErr(null);
@@ -56,6 +57,7 @@ export default function InstallTemplateForm() {
           <button type="submit" class="btn btn-primary" disabled={busy}>Install</button>
         </div>
         {err && <span class="text-error text-sm mt-1">{err}</span>}
+        {demoMode && <span class="text-sm mt-1 text-muted">Demo mode: installation will be blocked (read-only)</span>}
       </label>
     </form>
   );

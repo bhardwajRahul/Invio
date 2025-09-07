@@ -55,8 +55,9 @@ export const handler: Handlers<Data> = {
 };
 
 export default function NewCustomerPage(props: PageProps<Data>) {
+  const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   return (
-    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Create Customer</h1>
       {props.data.error && (
         <div class="alert alert-error mb-3">
@@ -66,12 +67,13 @@ export default function NewCustomerPage(props: PageProps<Data>) {
       <form
         method="post"
         class="space-y-3 max-w-xl bg-base-100 border p-4 rounded-box"
+        data-writable
       >
         <label class="form-control">
           <div class="label">
             <span class="label-text">Name</span>
           </div>
-          <input name="name" class="input input-bordered w-full" required />
+          <input name="name" class="input input-bordered w-full" required data-writable />
         </label>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="form-control">
@@ -82,13 +84,14 @@ export default function NewCustomerPage(props: PageProps<Data>) {
               type="email"
               name="email"
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
           <label class="form-control">
             <div class="label">
               <span class="label-text">Phone</span>
             </div>
-            <input name="phone" class="input input-bordered w-full" />
+            <input name="phone" class="input input-bordered w-full" data-writable />
           </label>
         </div>
         <label class="form-control">
@@ -99,16 +102,17 @@ export default function NewCustomerPage(props: PageProps<Data>) {
             name="address"
             class="textarea textarea-bordered"
             rows={3}
+            data-writable
           />
         </label>
         <label class="form-control">
           <div class="label">
             <span class="label-text">Tax ID</span>
           </div>
-          <input name="taxId" class="input input-bordered w-full" />
+          <input name="taxId" class="input input-bordered w-full" data-writable />
         </label>
         <div class="pt-2">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" data-writable>
             <i data-lucide="user-plus" class="w-4 h-4"></i>
             Create Customer
           </button>

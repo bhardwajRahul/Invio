@@ -70,6 +70,7 @@ export const handler: Handlers<Data> = {
         return new Response(String(e), { status: 500 });
       }
     }
+
     const fields = [
       "companyName",
       "companyAddress",
@@ -91,13 +92,16 @@ export const handler: Handlers<Data> = {
     }
     // Normalize aliases back to stored keys
     if (payload.email && !payload.companyEmail) {
-      payload.companyEmail = payload.email, delete payload.email;
+      payload.companyEmail = payload.email;
+      delete payload.email;
     }
     if (payload.phone && !payload.companyPhone) {
-      payload.companyPhone = payload.phone, delete payload.phone;
+      payload.companyPhone = payload.phone;
+      delete payload.phone;
     }
     if (payload.taxId && !payload.companyTaxId) {
-      payload.companyTaxId = payload.taxId, delete payload.taxId;
+      payload.companyTaxId = payload.taxId;
+      delete payload.taxId;
     }
     try {
       await backendPatch("/api/v1/settings", auth, payload);
@@ -117,9 +121,15 @@ export default function SettingsPage(props: PageProps<Data>) {
   const selectedTemplateId = (s.templateId as string) ||
     (templates.find((t) => t.isDefault)?.id) ||
     "minimalist-clean";
+  const demoMode = (s.demoMode === "true" || s.demoMode === true);
   return (
-    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Settings</h1>
+      {demoMode && (
+        <div class="alert alert-warning mb-4">
+          Demo mode: the app is read-only. Changes are disabled.
+        </div>
+      )}
       {props.data.error && (
         <div class="alert alert-error mb-3">
           <span>{props.data.error}</span>
@@ -131,7 +141,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           <div class="card-body">
             <h2 class="card-title">Templates</h2>
             <div class="mb-3">
-              <InstallTemplateForm />
+              <InstallTemplateForm demoMode={demoMode} />
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
               {templates.map((t) => (
@@ -147,18 +157,18 @@ export default function SettingsPage(props: PageProps<Data>) {
                     {selectedTemplateId === t.id
                       ? <span class="badge badge-primary">Default</span>
                       : (
-                        <form method="post">
+                        <form method="post" data-writable>
                           <input type="hidden" name="templateId" value={t.id} />
-                          <button class="btn btn-sm" type="submit">
+                          <button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>
                             Set as default
                           </button>
                         </form>
                       )}
                     {/* Delete allowed only for non-builtins and non-default */}
                     {t.id !== "professional-modern" && t.id !== "minimalist-clean" && selectedTemplateId !== t.id && (
-                      <form method="post">
+                      <form method="post" data-writable>
                         <input type="hidden" name="deleteTemplateId" value={t.id} />
-                        <button class="btn btn-sm btn-error" type="submit">
+                        <button class="btn btn-sm btn-error" type="submit" disabled={demoMode} data-writable>
                           Delete
                         </button>
                       </form>
@@ -173,7 +183,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           </div>
         </div>
       )}
-      <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4">
+  <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4" data-writable>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="form-control">
             <div class="label">
@@ -183,6 +193,7 @@ export default function SettingsPage(props: PageProps<Data>) {
               name="companyName"
               value={(s.companyName as string) || ""}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
           <label class="form-control">
@@ -193,6 +204,7 @@ export default function SettingsPage(props: PageProps<Data>) {
               name="currency"
               value={(s.currency as string) || "USD"}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
         </div>
@@ -205,6 +217,7 @@ export default function SettingsPage(props: PageProps<Data>) {
             name="companyAddress"
             class="textarea textarea-bordered"
             rows={2}
+            data-writable
           >
             {(s.companyAddress as string) || ""}
           </textarea>
@@ -219,6 +232,7 @@ export default function SettingsPage(props: PageProps<Data>) {
               name="email"
               value={(s.email as string) || (s.companyEmail as string) || ""}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
           <label class="form-control">
@@ -229,6 +243,7 @@ export default function SettingsPage(props: PageProps<Data>) {
               name="phone"
               value={(s.phone as string) || (s.companyPhone as string) || ""}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
           <label class="form-control">
@@ -239,6 +254,7 @@ export default function SettingsPage(props: PageProps<Data>) {
               name="taxId"
               value={(s.taxId as string) || (s.companyTaxId as string) || ""}
               class="input input-bordered w-full"
+              data-writable
             />
           </label>
         </div>
