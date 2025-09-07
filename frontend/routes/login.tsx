@@ -54,8 +54,14 @@ export default function LoginPage(props: PageProps<Data>) {
               <h1 class="text-2xl font-semibold text-center mb-2">Sign in</h1>
 
               {demoMode && (
-                <div class="alert alert-info mb-2">
-                  Demo credentials: <strong class="ml-2">username</strong> = <code>demo</code>, <strong>password</strong> = <code>demo</code>
+                <div class="alert alert-info mb-4">
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span class="font-semibold">Demo credentials:</span>
+                    <div class="flex gap-3 flex-wrap">
+                      <span>username: <code>demo</code></span>
+                      <span>password: <code>demo</code></span>
+                    </div>
+                  </div>
                 </div>
               )}
 
