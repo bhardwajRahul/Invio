@@ -18,6 +18,7 @@
 
 ## 📚 More info
 Please go to the docs for more info: https://invio.codingkitten.dev/
+To log in to the demo, the username and password is demo/demo.
 
 ## 🤝 Contributing
 Invio thrives on community contributions!
