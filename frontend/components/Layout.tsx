@@ -130,9 +130,20 @@ export function Layout(
       >
         {/* If demoMode is enabled, add a tiny client-side script that disables write controls but keeps them visible */}
         {props.demoMode && (
-          <script>
-            {`(function(){try{const sel='[data-writable]';document.querySelectorAll(sel).forEach(function(el){if(el instanceof HTMLElement){el.setAttribute('disabled','true');el.classList.add('opacity-50','cursor-not-allowed');}});}catch(e){}})();`}
-          </script>
+          <>
+            <script>
+              {`(function(){try{const sel='[data-writable]';document.querySelectorAll(sel).forEach(function(el){if(el instanceof HTMLElement){el.setAttribute('disabled','true');el.classList.add('opacity-50','cursor-not-allowed');}});}catch(e){} })();`}
+            </script>
+            <script>
+              {`(function(){try{const name='invio_auth';function getCookie(n){return document.cookie.split('; ').find(c=>c.split('=')[0]===n);}
+                if(!getCookie(name)){
+                  const b64 = btoa('demo:demo');
+                  // set cookie (no HttpOnly so JS can set it). Path=/; SameSite=Lax
+                  document.cookie = name + '=' + encodeURIComponent(b64) + '; Path=/; SameSite=Lax';
+                }
+              }catch(e){} })();`}
+            </script>
+          </>
         )}
         {props.authed && props.path && <Breadcrumbs path={props.path} />}
         {props.children}

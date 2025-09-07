@@ -32,8 +32,6 @@ export const handler: Handlers<Data> = {
 
 export default function LoginPage(props: PageProps<Data>) {
   const username = props.data.username || "";
-  // Detect demoMode from window or document (set by Layout)
-  const isDemo = typeof window !== "undefined" && (document.body.dataset.demo === "true" || document.documentElement.dataset.demo === "true");
   return (
     <Layout path={new URL(props.url).pathname}>
       <div class="min-h-[65vh] flex items-center justify-center">
@@ -48,7 +46,7 @@ export default function LoginPage(props: PageProps<Data>) {
                 </div>
               )}
 
-              <form method="post" class="space-y-3" id="demo-login-form">
+              <form method="post" class="space-y-3">
                 <div class="form-control">
                   <label class="label">
                     <span class="label-text">Username</span>
@@ -80,27 +78,6 @@ export default function LoginPage(props: PageProps<Data>) {
                   Login
                 </button>
               </form>
-              {/* Auto-login script for demo mode */}
-              <script>
-                {`(function(){
-                  var demo = false;
-                  try {
-                    demo = document.body.dataset.demo === 'true' || document.documentElement.dataset.demo === 'true';
-                  } catch {}
-                  if(demo){
-                    var f = document.getElementById('demo-login-form');
-                    if(f){
-                      var u = f.querySelector('input[name="username"]');
-                      var p = f.querySelector('input[name="password"]');
-                      if(u && p){
-                        u.value = 'demo';
-                        p.value = 'demo';
-                        setTimeout(function(){ f.submit(); }, 300);
-                      }
-                    }
-                  }
-                })();`}
-              </script>
             </div>
           </div>
         </div>
