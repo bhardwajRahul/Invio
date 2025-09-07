@@ -1,29 +1,34 @@
 <p align="center">
-  <img src="./assets/banner-default.png" alt="Invio" width="100%" />
+  <img src="https://raw.githubusercontent.com/kittendevv/Invio/refs/heads/main/assets/banner-default.png" alt="Invio" width="100%" />
 </p>
-Open‑source minimalist invoicing
+<p align="center"><b>Self-hosted invoicing without the bloat. Fast, transparent, and fully yours.</b></p>
+<p align="center">
+  <a href="https://invio-demo.codingkitten.hackclub.app">Live Demo</a> •
+  <a href="https://invio.codingkitten.dev/">Documentation</a> •
+  <a href="https://ko-fi.com/codingkitten">Support</a>
+</p>
 
-Invio is a clean, fast invoicing app. Create an invoice, share a link, download
-a great‑looking PDF.
+---
 
-Monorepo layout:
+## 🌟 Why Invio?
+- Built for doing, not configuring — create an invoice, send a link, get paid. No CRMs, projects, or bloat getting in your way.
+- You really own it — self‑hosted by default. Your data lives where you put it, and exporting is always an option.
+- Fast & dependable — Deno + Fresh on the frontend and Hono + SQLite on the backend keep things simple and quick.
+- Client‑friendly — share a secure public link—no accounts or passwords required to view invoices.
 
-- `backend/` — Deno + Hono JSON API, SQLite storage
-- `frontend/` — Deno Fresh UI (SSR), DaisyUI, accessible by default
+## 📚 More info
+Please go to the docs for more info: https://invio.codingkitten.dev/
 
-Getting started (quick):
+## 🤝 Contributing
+Invio thrives on community contributions!
+- Found a bug or have an idea? Open an issue.
+- Want to add a feature or fix something? Fork and submit a PR.
+- All experience levels welcome — we’re excited to build with you.
 
-- See `backend/README.md` for API setup, environment variables, and health
-  checks
-- See `frontend/README.md` for running the UI and environment config
+## ☕ Support the Creator
+If you like Invio and want to support development:
+- Buy me a coffee: https://ko-fi.com/codingkitten
 
-Current feature set (v1):
+---
 
-- Invoice numbering (draft prefixes, finalized on publish)
-- Overdue logic derived from due date for unpaid invoices
-- Duplicate/clone invoice
-- Due date editing and status updates
-- Public share links with HTML/PDF rendering (uses saved Settings; no query
-  params)
-
-Roadmap and full documentation will be published separately.
+Made with 💖 by <a href="https://github.com/kittendevv">kittendevv</a> — if you find this useful, please ⭐️ the repo!
