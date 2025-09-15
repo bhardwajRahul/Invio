@@ -36,13 +36,14 @@ import {
   updateCustomer,
 } from "../controllers/customers.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
+import { resetDatabaseFromDemo } from "../database/init.ts";
 
 const adminRoutes = new Hono();
 
 // Basic auth middleware for admin routes
 const ADMIN_USER = Deno.env.get("ADMIN_USER") || "admin";
 const ADMIN_PASS = Deno.env.get("ADMIN_PASS") || "supersecret";
-// Demo mode: when true, backend becomes read-only for mutating admin endpoints
+// Demo mode flag (mutations allowed; periodic resets handle reverting state)
 const DEMO_MODE = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
 
 adminRoutes.use(
@@ -105,9 +106,19 @@ adminRoutes.use(
   }),
 );
 
+// Demo helper: trigger an immediate reset (only effective when DEMO_MODE=true)
+adminRoutes.post("/admin/demo/reset", (c) => {
+  if (!DEMO_MODE) return c.json({ error: "Demo mode is not enabled" }, 400);
+  try {
+    resetDatabaseFromDemo();
+    return c.json({ ok: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
 // Invoice routes
 adminRoutes.post("/invoices", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot create invoices" }, 403);
   const data = await c.req.json();
   const invoice = createInvoice(data);
   return c.json(invoice);
@@ -144,7 +155,6 @@ adminRoutes.get("/invoices/:id", (c) => {
 });
 
 adminRoutes.put("/invoices/:id", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot update invoices" }, 403);
   const id = c.req.param("id");
   const data = await c.req.json();
   const invoice = await updateInvoice(id, data);
@@ -152,28 +162,24 @@ adminRoutes.put("/invoices/:id", async (c) => {
 });
 
 adminRoutes.delete("/invoices/:id", (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot delete invoices" }, 403);
   const id = c.req.param("id");
   deleteInvoice(id);
   return c.json({ success: true });
 });
 
 adminRoutes.post("/invoices/:id/publish", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot publish invoices" }, 403);
   const id = c.req.param("id");
   const result = await publishInvoice(id);
   return c.json(result);
 });
 
 adminRoutes.post("/invoices/:id/unpublish", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot unpublish invoices" }, 403);
   const id = c.req.param("id");
   const result = await unpublishInvoice(id);
   return c.json(result);
 });
 
 adminRoutes.post("/invoices/:id/duplicate", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot duplicate invoices" }, 403);
   const id = c.req.param("id");
   const copy = await duplicateInvoice(id);
   if (!copy) return c.json({ error: "Invoice not found" }, 404);
@@ -199,7 +205,6 @@ adminRoutes.get("/templates", async (c) => {
 });
 
 adminRoutes.post("/templates", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot create templates" }, 403);
   const data = await c.req.json();
   const template = await createTemplate(data);
   return c.json(template);
@@ -207,7 +212,6 @@ adminRoutes.post("/templates", async (c) => {
 
 // Install a template from a remote manifest URL (YAML or JSON)
 adminRoutes.post("/templates/install-from-manifest", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot install templates" }, 403);
   try {
     const { url } = await c.req.json();
     if (!url || typeof url !== "string") {
@@ -222,7 +226,6 @@ adminRoutes.post("/templates/install-from-manifest", async (c) => {
 
 // Delete a template (disallow removing built-in app templates)
 adminRoutes.delete("/templates/:id", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot delete templates" }, 403);
   const id = c.req.param("id");
   // Built-in templates are protected
   const builtin = new Set(["professional-modern", "minimalist-clean"]);
@@ -325,7 +328,6 @@ adminRoutes.post("/templates/:id/preview", async (c) => {
 
 // Load template from file
 adminRoutes.post("/templates/load-from-file", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot load templates from file" }, 403);
   try {
     const { filePath, name, isDefault, highlightColor } = await c.req.json();
 
@@ -369,7 +371,6 @@ adminRoutes.get("/settings", async (c) => {
 });
 
 adminRoutes.put("/settings", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot update settings" }, 403);
   const data = await c.req.json();
   // Normalize legacy logoUrl to logo
   if (typeof data.logoUrl === "string" && !data.logo) {
@@ -391,7 +392,6 @@ adminRoutes.put("/settings", async (c) => {
 
 // Partial update (PATCH) to merge provided keys only
 adminRoutes.patch("/settings", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot update settings" }, 403);
   const data = await c.req.json();
   // Normalize legacy logoUrl to logo
   if (typeof data.logoUrl === "string" && !data.logo) {
@@ -428,7 +428,6 @@ adminRoutes.get("/admin/settings", async (c) => {
 });
 
 adminRoutes.put("/admin/settings", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot update settings" }, 403);
   const data = await c.req.json();
   if (typeof data.logoUrl === "string" && !data.logo) {
     data.logo = data.logoUrl;
@@ -442,7 +441,6 @@ adminRoutes.put("/admin/settings", async (c) => {
 });
 
 adminRoutes.patch("/admin/settings", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot update settings" }, 403);
   const data = await c.req.json();
   if (typeof data.logoUrl === "string" && !data.logo) {
     data.logo = data.logoUrl;
@@ -471,14 +469,12 @@ adminRoutes.get("/customers/:id", async (c) => {
 });
 
 adminRoutes.post("/customers", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot create customers" }, 403);
   const data = await c.req.json();
   const customer = await createCustomer(data);
   return c.json(customer);
 });
 
 adminRoutes.put("/customers/:id", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot update customers" }, 403);
   const id = c.req.param("id");
   const data = await c.req.json();
   const customer = await updateCustomer(id, data);
@@ -486,7 +482,6 @@ adminRoutes.put("/customers/:id", async (c) => {
 });
 
 adminRoutes.delete("/customers/:id", async (c) => {
-  if (DEMO_MODE) return c.json({ error: "Read-only demo mode: cannot delete customers" }, 403);
   const id = c.req.param("id");
   await deleteCustomer(id);
   return c.json({ success: true });

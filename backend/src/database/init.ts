@@ -6,18 +6,53 @@ await load({ export: true });
 
 let db: DB;
 
+// Resolve workspace-relative paths consistently from project root
+function resolvePath(p: string): string {
+  if (p.startsWith("/")) return p; // absolute
+  // Assume process CWD is project root during deno run; keep relative as-is
+  return p;
+}
+
+// Minimal dirname for POSIX-style paths
+function simpleDirname(p: string): string {
+  const i = p.lastIndexOf("/");
+  if (i <= 0) return "/";
+  return p.slice(0, i);
+}
+
 export function initDatabase(): void {
-  // Support demo mode DB override: when DEMO_MODE=true use DEMO_DB_PATH if provided
-  const demoMode = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
-  const demoDb = Deno.env.get("DEMO_DB_PATH");
-  const dbPath = demoMode && demoDb ? demoDb : (Deno.env.get("DATABASE_PATH") || "./invio.db");
+  // In all modes, open the active database at DATABASE_PATH. In demo mode we may
+  // periodically copy a pristine DEMO_DB_PATH over this file.
+  const dbPath = resolvePath(Deno.env.get("DATABASE_PATH") || "./invio.db");
+
+  // Ensure parent directory exists if using a nested path
+  try {
+    const dir = simpleDirname(dbPath);
+    if (dir && dir !== "." && dir !== "/") {
+      try {
+        Deno.mkdirSync(dir, { recursive: true });
+      } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+
   db = new DB(dbPath);
 
   // Read and execute the migration file
   const migrationSQL = Deno.readTextFileSync("./src/database/migrations.sql");
 
-  // Split by semicolon and execute each statement
-  const statements = migrationSQL
+  // Remove line comments and split by semicolon
+  const withoutComments = migrationSQL
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("--")) return ""; // drop whole-line comments
+      // strip inline comments starting with --
+      const idx = line.indexOf("--");
+      return idx >= 0 ? line.slice(0, idx) : line;
+    })
+    .join("\n");
+
+  const statements = withoutComments
     .split(";")
     .map((stmt) => stmt.trim())
     .filter((stmt) => stmt.length > 0);
@@ -42,6 +77,47 @@ export function initDatabase(): void {
   ensureTemplateDefaults(db);
 
   console.log("Database initialized successfully");
+}
+
+/**
+ * Reset the active DATABASE_PATH contents from DEMO_DB_PATH.
+ * This closes the current DB connection, copies the file, and re-initializes.
+ * Safe to call at startup and on an interval when DEMO_MODE=true.
+ */
+export function resetDatabaseFromDemo(): void {
+  const demoMode = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
+  const demoDb = Deno.env.get("DEMO_DB_PATH");
+  const activePath = resolvePath(Deno.env.get("DATABASE_PATH") || "./invio.db");
+  if (!demoMode) return; // only meaningful in demo mode
+  if (!demoDb) {
+    console.warn("DEMO_MODE is true but DEMO_DB_PATH is not set; skipping reset.");
+    return;
+  }
+
+  try {
+    closeDatabase();
+  } catch { /* ignore */ }
+
+  try {
+    // Ensure destination directory exists
+    const dir = simpleDirname(activePath);
+    if (dir && dir !== "." && dir !== "/") {
+      try {
+        Deno.mkdirSync(dir, { recursive: true });
+      } catch { /* ignore */ }
+    }
+    // Overwrite the active DB with the pristine demo DB
+    try {
+      Deno.removeSync(activePath);
+    } catch { /* ignore if missing */ }
+    Deno.copyFileSync(resolvePath(demoDb), activePath);
+    console.log("♻️  Demo database reset from DEMO_DB_PATH.");
+  } catch (e) {
+    console.error("Failed to reset demo database:", e);
+  }
+
+  // Re-open and run migrations/template maintenance
+  initDatabase();
 }
 
 function insertBuiltinTemplates(database: DB) {

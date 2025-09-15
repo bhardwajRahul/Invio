@@ -13,6 +13,7 @@ download a good‑looking PDF. That’s it.
 - Smart logo-left layout, global highlight color, predictable PDFs
 - wkhtmltopdf pipeline with pdf-lib fallback (works even without wkhtmltopdf)
 - No client-side JS needed for rendering
+- Demo mode with writable sandbox that auto-resets periodically
 
 ## Project Structure
 
@@ -187,6 +188,22 @@ curl -s "http://localhost:3000/api/v1/public/invoices/<token>/pdf" -o invoice.pd
   setting status to paid suppresses overdue.
 - Duplicate/clone: creates a new draft with a new ID and draft number; share
   token is not copied.
+
+### Demo mode
+
+When `DEMO_MODE=true`, the API is fully writable so you can try creating and editing
+data. The database automatically resets to a pristine snapshot every 3 hours by default.
+
+Environment variables:
+
+- `DEMO_MODE=true` — enable demo mode
+- `DEMO_DB_PATH` — path to the pristine demo database file (e.g. `/app/data/invio-demo.db`)
+- `DATABASE_PATH` — active database file that the app writes to (e.g. `/app/data/invio.db`)
+- `DEMO_RESET_HOURS` — interval in hours between resets (default: `3`)
+- `DEMO_RESET_ON_START` — whether to perform a reset on startup (default: `true`)
+
+On each reset, the server briefly closes the DB connection, copies the pristine
+demo DB over the active DB, and reinitializes migrations and built-in templates.
 
 ## Ethos
 
