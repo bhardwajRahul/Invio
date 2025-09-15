@@ -32,4 +32,4 @@ If you like Invio and want to support development:
 
 ---
 
-Made with 💖 by <a href="https://github.com/kittendevv">kittendevv</a> — if you find this useful, please ⭐️ the repo!
+Made with 💖 by <a href="https://github.com/kittendevv">kittendevv</a> and contributors — if you find this useful, please ⭐️ the repo!
