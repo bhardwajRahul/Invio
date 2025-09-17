@@ -22,7 +22,7 @@ type Data = {
   error?: string;
 };
 
-export const handler: Handlers<Data> = {
+export const handler: Handlers<Data & { demoMode: boolean }> = {
   async GET(req, ctx) {
     const auth = getAuthHeaderFromCookie(
       req.headers.get("cookie") || undefined,
@@ -34,15 +34,29 @@ export const handler: Handlers<Data> = {
       });
     }
     try {
-      const [settings, templates] = await Promise.all([
+      // Fetch demo mode from public endpoint (no auth)
+      const demoModePromise = fetch("/api/public/demo-mode").then(async (r) => {
+        if (!r.ok) return false;
+        const data = await r.json();
+        return !!data.demoMode;
+      }).catch(() => false);
+      const [settings, templates, demoMode] = await Promise.all([
         backendGet("/api/v1/settings", auth) as Promise<Settings>,
-        backendGet("/api/v1/templates", auth).catch(() => []) as Promise<
-          Template[]
-        >,
+        backendGet("/api/v1/templates", auth).catch(() => []) as Promise<Template[]>,
+        demoModePromise,
       ]);
-      return ctx.render({ authed: true, settings, templates });
+      return ctx.render({ authed: true, settings, templates, demoMode });
     } catch (e) {
-      return ctx.render({ authed: true, error: String(e) });
+      // Try to still get demoMode if possible
+      let demoMode = false;
+      try {
+        const r = await fetch("/api/public/demo-mode");
+        if (r.ok) {
+          const data = await r.json();
+          demoMode = !!data.demoMode;
+        }
+  } catch { /* ignore */ }
+      return ctx.render({ authed: true, error: String(e), demoMode });
     }
   },
   async POST(req) {
@@ -120,19 +134,20 @@ export const handler: Handlers<Data> = {
   },
 };
 
-export default function SettingsPage(props: PageProps<Data>) {
+export default function SettingsPage(props: PageProps<Data & { demoMode: boolean }>) {
   const s = props.data.settings ?? {} as Settings;
   const templates = props.data.templates ?? [] as Template[];
   const selectedTemplateId = (s.templateId as string) ||
     (templates.find((t) => t.isDefault)?.id) ||
     "minimalist-clean";
-  const demoMode = (s.demoMode === "true" || s.demoMode === true);
+  // Use demoMode from backend /demo-mode route
+  const demoMode = props.data.demoMode;
   return (
     <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
       <h1 class="text-2xl font-semibold mb-4">Settings</h1>
       {demoMode && (
         <div class="alert alert-warning mb-4">
-          Demo mode: the app is read-only. Changes are disabled.
+          Demo mode: the app is still fully functional, however the database of this hosted instance resets every 30 minutes, your changes are not permanent.
         </div>
       )}
       {props.data.error && (
