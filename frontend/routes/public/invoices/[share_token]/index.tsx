@@ -17,6 +17,7 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
   const token = props.data.shareToken;
   const htmlUrl = `/public/invoices/${token}/html`;
   const pdfUrl = `/public/invoices/${token}/pdf`;
+  const ublUrl = `/public/invoices/${token}/ubl.xml`;
   return (
     <div class="container mx-auto p-4">
       <div class="flex items-center justify-between mb-3">
@@ -25,6 +26,10 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
           <a class="btn btn-sm btn-primary" href={pdfUrl}>
             <i data-lucide="download" class="w-4 h-4"></i>
             Download PDF
+          </a>
+          <a class="btn btn-sm btn-outline" href={ublUrl}>
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            Download UBL XML
           </a>
           <a class="btn btn-sm btn-ghost" href={htmlUrl} target="_blank">
             <i data-lucide="external-link" class="w-4 h-4"></i>

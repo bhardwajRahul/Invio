@@ -11,12 +11,18 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('companyEmail', 'contact@yourcompany.com'),
   ('companyPhone', '+1 (555) 123-4567'),
   ('companyTaxId', 'TAX123456789'),
+  ('companyCountryCode', 'US'),
   ('currency', 'USD'),
   ('logo', ''),
   ('paymentMethods', 'Bank Transfer, PayPal, Credit Card'),
   ('bankAccount', 'Account: 1234567890, Routing: 987654321'),
   ('paymentTerms', 'Due in 30 days'),
-  ('defaultNotes', 'Thank you for your business!');
+  ('defaultNotes', 'Thank you for your business!'),
+  -- Optional PEPPOL endpoint configuration (leave empty if not applicable)
+  ('peppolSellerEndpointId', ''),
+  ('peppolSellerEndpointSchemeId', ''),
+  ('peppolBuyerEndpointId', ''),
+  ('peppolBuyerEndpointSchemeId', '');
 
 -- Enhanced customers table
 CREATE TABLE customers (
@@ -25,6 +31,7 @@ CREATE TABLE customers (
   email TEXT,
   phone TEXT,
   address TEXT,
+  country_code TEXT,
   tax_id TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

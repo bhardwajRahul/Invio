@@ -9,6 +9,7 @@ download a good‑looking PDF. That’s it.
 - Admin endpoints behind Basic Auth (ADMIN_USER/ADMIN_PASS)
 - Public share links per invoice (no login)
 - HTML and PDF renderers share the same templates
+- UBL 2.1 (PEPPOL BIS Billing 3.0) XML export for each invoice
 - Built‑in templates: `professional-modern`, `minimalist-clean`
 - Smart logo-left layout, global highlight color, predictable PDFs
 - wkhtmltopdf pipeline with pdf-lib fallback (works even without wkhtmltopdf)
@@ -158,6 +159,7 @@ Invoice payload (trimmed):
 - GET `/api/v1/public/invoices/:share_token` → JSON invoice
 - GET `/api/v1/public/invoices/:share_token/html` → HTML page
 - GET `/api/v1/public/invoices/:share_token/pdf` → PDF download
+- GET `/api/v1/public/invoices/:share_token/ubl.xml` → UBL XML download
 
 Query params: none (generation now uses saved Settings only)
 
@@ -169,6 +171,9 @@ curl -s "http://localhost:3000/api/v1/public/invoices/<token>/html" > invoice.ht
 
 # PDF download
 curl -s "http://localhost:3000/api/v1/public/invoices/<token>/pdf" -o invoice.pdf
+
+# UBL XML download
+curl -s "http://localhost:3000/api/v1/public/invoices/<token>/ubl.xml" -o invoice.xml
 ```
 
 ## Rendering
@@ -188,6 +193,18 @@ curl -s "http://localhost:3000/api/v1/public/invoices/<token>/pdf" -o invoice.pd
   setting status to paid suppresses overdue.
 - Duplicate/clone: creates a new draft with a new ID and draft number; share
   token is not copied.
+
+  ### UBL / PEPPOL settings
+
+  The UBL generator uses business settings for seller data and invoice/customer data for buyer details. Optional PEPPOL endpoint IDs can be configured via settings:
+
+  - `peppolSellerEndpointId` (e.g., `0192:123456785`)
+  - `peppolSellerEndpointSchemeId` (e.g., `0192`)
+  - `peppolBuyerEndpointId`
+  - `peppolBuyerEndpointSchemeId`
+  - `companyCountryCode` (ISO alpha-2, default `US`)
+
+  If these are left empty, the XML remains valid but omits the corresponding EndpointID elements.
 
 ### Demo mode
 

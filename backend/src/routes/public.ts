@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { getInvoiceByShareToken } from "../controllers/invoices.ts";
 import { getSettings } from "../controllers/settings.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
+import { generateUBLInvoiceXML } from "../utils/ubl.ts";
 
 const publicRoutes = new Hono();
 
@@ -127,6 +128,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
+    companyCountryCode: settingsMap.companyCountryCode || settingsMap.countryCode || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
     // brandLayout removed; always treating as logo-left in rendering
@@ -159,6 +161,54 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex",
+    },
+  });
+});
+
+// Return invoice as UBL (PEPPOL BIS Billing 3.0) XML
+publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
+  const shareToken = c.req.param("share_token");
+  const invoice = await getInvoiceByShareToken(shareToken);
+  if (!invoice) {
+    return c.json({ message: "Invoice not found" }, 404);
+  }
+
+  const settings = getSettings();
+  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const businessSettings = {
+    companyName: settingsMap.companyName || "Your Company",
+    companyAddress: settingsMap.companyAddress || "",
+    companyEmail: settingsMap.companyEmail || "",
+    companyPhone: settingsMap.companyPhone || "",
+    companyTaxId: settingsMap.companyTaxId || "",
+    currency: settingsMap.currency || "USD",
+    logo: settingsMap.logo,
+    paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
+    bankAccount: settingsMap.bankAccount || "",
+    paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
+    defaultNotes: settingsMap.defaultNotes || "",
+  };
+
+  const xml = generateUBLInvoiceXML(invoice, businessSettings, {
+    sellerEndpointId: settingsMap.peppolSellerEndpointId,
+    sellerEndpointSchemeId: settingsMap.peppolSellerEndpointSchemeId,
+    buyerEndpointId: settingsMap.peppolBuyerEndpointId,
+    buyerEndpointSchemeId: settingsMap.peppolBuyerEndpointSchemeId,
+    sellerCountryCode: settingsMap.companyCountryCode,
+    buyerCountryCode: invoice.customer.countryCode,
+  });
+
+  return new Response(xml, {
+    headers: {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Content-Disposition": `attachment; filename="invoice-${
+        invoice.invoiceNumber || shareToken
+      }.xml"`,
       "X-Robots-Tag": "noindex",
     },
   });

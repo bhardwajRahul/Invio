@@ -4,6 +4,7 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  countryCode?: string; // ISO 3166-1 alpha-2
   taxId?: string;
   createdAt: Date;
 }
@@ -75,6 +76,7 @@ export interface BusinessSettings {
   companyEmail?: string;
   companyPhone?: string;
   companyTaxId?: string;
+  companyCountryCode?: string; // ISO alpha-2
   currency: string;
   logo?: string;
   paymentMethods?: string;
@@ -119,6 +121,7 @@ export interface CreateCustomerRequest {
   email?: string;
   phone?: string;
   address?: string;
+  countryCode?: string; // ISO alpha-2
   taxId?: string;
 }
 

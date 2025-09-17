@@ -12,19 +12,25 @@ const mapRowToCustomer = (row: unknown[]): Customer => ({
   email: (row[2] ?? undefined) as string | undefined,
   phone: (row[3] ?? undefined) as string | undefined,
   address: (row[4] ?? undefined) as string | undefined,
-  taxId: (row[5] ?? undefined) as string | undefined,
-  createdAt: new Date(row[6] as string),
+  countryCode: (row[5] ?? undefined) as string | undefined,
+  taxId: (row[6] ?? undefined) as string | undefined,
+  createdAt: new Date(row[7] as string),
 });
 
 export const getCustomers = () => {
   const db = getDatabase();
-  const results = db.query("SELECT * FROM customers ORDER BY created_at DESC");
+  const results = db.query(
+    "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers ORDER BY created_at DESC",
+  );
   return results.map((row: unknown[]) => mapRowToCustomer(row));
 };
 
 export const getCustomerById = (id: string): Customer | null => {
   const db = getDatabase();
-  const results = db.query("SELECT * FROM customers WHERE id = ?", [id]);
+  const results = db.query(
+    "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
+    [id],
+  );
   if (results.length === 0) return null;
   return mapRowToCustomer(results[0] as unknown[]);
 };
@@ -44,12 +50,13 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
   const email = toNullable(data.email);
   const phone = toNullable(data.phone);
   const address = toNullable(data.address);
+  const countryCode = toNullable(data.countryCode);
   const taxId = toNullable(data.taxId);
 
   db.query(
     `
-    INSERT INTO customers (id, name, email, phone, address, tax_id, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       customerId,
@@ -57,6 +64,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
       email,
       phone,
       address,
+      countryCode,
       taxId,
       now,
     ],
@@ -69,6 +77,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     email: email ?? undefined,
     phone: phone ?? undefined,
     address: address ?? undefined,
+    countryCode: countryCode ?? undefined,
     taxId: taxId ?? undefined,
     createdAt: now,
   };
@@ -101,6 +110,9 @@ export const updateCustomer = (
   const address = data.address !== undefined
     ? toNullable(data.address)
     : (existing.address ?? null);
+  const countryCode = data.countryCode !== undefined
+    ? toNullable(data.countryCode)
+    : (existing.countryCode ?? null);
   const taxId = data.taxId !== undefined
     ? toNullable(data.taxId)
     : (existing.taxId ?? null);
@@ -108,7 +120,7 @@ export const updateCustomer = (
   db.query(
     `
     UPDATE customers SET 
-      name = ?, email = ?, phone = ?, address = ?, tax_id = ?
+      name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?
     WHERE id = ?
   `,
     [
@@ -116,6 +128,7 @@ export const updateCustomer = (
       email,
       phone,
       address,
+      countryCode,
       taxId,
       id,
     ],

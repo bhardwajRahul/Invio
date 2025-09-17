@@ -22,6 +22,7 @@ import * as $logout from "./routes/logout.ts";
 import * as $public_invoices_share_token_html from "./routes/public/invoices/[share_token]/html.ts";
 import * as $public_invoices_share_token_index from "./routes/public/invoices/[share_token]/index.tsx";
 import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[share_token]/pdf.ts";
+import * as $public_invoices_share_token_ubl_xml from "./routes/public/invoices/[share_token]/ubl.xml.ts";
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
@@ -54,6 +55,8 @@ const manifest = {
       $public_invoices_share_token_index,
     "./routes/public/invoices/[share_token]/pdf.ts":
       $public_invoices_share_token_pdf,
+    "./routes/public/invoices/[share_token]/ubl.xml.ts":
+      $public_invoices_share_token_ubl_xml,
     "./routes/settings.tsx": $settings,
     "./routes/templates/index.tsx": $templates_index,
   },

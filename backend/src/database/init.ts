@@ -75,6 +75,7 @@ export function initDatabase(): void {
   // Insert built-in templates and clean up legacy/default conflicts
   insertBuiltinTemplates(db);
   ensureTemplateDefaults(db);
+  ensureSchemaUpgrades(db);
 
   console.log("Database initialized successfully");
 }
@@ -224,6 +225,27 @@ export function getDatabase(): DB {
 export function closeDatabase(): void {
   if (db) {
     db.close();
+  }
+}
+
+function ensureSchemaUpgrades(database: DB) {
+  try {
+    // Ensure customers.country_code exists
+    const cols = database.query("PRAGMA table_info(customers)") as unknown[] as Array<unknown[]>;
+    const names = new Set(cols.map((r) => String(r[1])));
+    if (!names.has("country_code")) {
+      try {
+        database.execute("ALTER TABLE customers ADD COLUMN country_code TEXT");
+        console.log("✅ Added customers.country_code column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add customers.country_code:", msg);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Schema upgrade check failed:", e);
   }
 }
 

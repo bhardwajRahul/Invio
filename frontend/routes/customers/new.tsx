@@ -32,7 +32,8 @@ export const handler: Handlers<Data> = {
     const email = String(form.get("email") || "");
     const phone = String(form.get("phone") || "");
     const address = String(form.get("address") || "");
-    const taxId = String(form.get("taxId") || "");
+  const taxId = String(form.get("taxId") || "");
+  const countryCode = String(form.get("countryCode") || "");
 
     if (!name) return new Response("Name is required", { status: 400 });
 
@@ -43,6 +44,7 @@ export const handler: Handlers<Data> = {
         phone,
         address,
         taxId,
+        countryCode,
       }) as { id: string };
       return new Response(null, {
         status: 303,
@@ -110,6 +112,12 @@ export default function NewCustomerPage(props: PageProps<Data>) {
             <span class="label-text">Tax ID</span>
           </div>
           <input name="taxId" class="input input-bordered w-full" data-writable />
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Country Code (ISO alpha-2)</span>
+          </div>
+          <input name="countryCode" class="input input-bordered w-full" maxlength={2} placeholder="e.g. US, NL, DE" data-writable />
         </label>
         <div class="pt-2">
           <button type="submit" class="btn btn-primary" data-writable>

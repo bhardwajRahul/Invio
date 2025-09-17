@@ -77,6 +77,7 @@ export const handler: Handlers<Data> = {
       "email",
       "phone",
       "taxId",
+      "countryCode",
       "currency",
       "paymentMethods",
       "bankAccount",
@@ -102,6 +103,10 @@ export const handler: Handlers<Data> = {
     if (payload.taxId && !payload.companyTaxId) {
       payload.companyTaxId = payload.taxId;
       delete payload.taxId;
+    }
+    if (payload.countryCode && !payload.companyCountryCode) {
+      payload.companyCountryCode = payload.countryCode;
+      delete payload.countryCode;
     }
     try {
       await backendPatch("/api/v1/settings", auth, payload);
@@ -223,7 +228,7 @@ export default function SettingsPage(props: PageProps<Data>) {
           </textarea>
         </label>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <label class="form-control">
             <div class="label">
               <span class="label-text">Email</span>
@@ -254,6 +259,19 @@ export default function SettingsPage(props: PageProps<Data>) {
               name="taxId"
               value={(s.taxId as string) || (s.companyTaxId as string) || ""}
               class="input input-bordered w-full"
+              data-writable
+            />
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Country Code (ISO alpha-2)</span>
+            </div>
+            <input
+              name="countryCode"
+              value={(s.countryCode as string) || (s.companyCountryCode as string) || ""}
+              class="input input-bordered w-full"
+              placeholder="e.g. US, NL, DE"
+              maxlength={2}
               data-writable
             />
           </label>

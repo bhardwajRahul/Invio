@@ -36,6 +36,7 @@ import {
   updateCustomer,
 } from "../controllers/customers.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
+import { generateUBLInvoiceXML } from "../utils/ubl.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 
 const adminRoutes = new Hono();
@@ -362,6 +363,7 @@ adminRoutes.get("/settings", async (c) => {
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
+  if (map.companyCountryCode && !map.countryCode) map.countryCode = map.companyCountryCode;
   // Unify logo fields: prefer single 'logo'; hide legacy 'logoUrl'
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
@@ -398,6 +400,11 @@ adminRoutes.patch("/settings", async (c) => {
     data.logo = data.logoUrl;
     delete data.logoUrl;
   }
+  // Normalize countryCode alias to companyCountryCode
+  if (typeof data.countryCode === "string" && !data.companyCountryCode) {
+    data.companyCountryCode = data.countryCode;
+    delete data.countryCode;
+  }
   const settings = await updateSettings(data);
   if (typeof data.templateId === "string" && data.templateId) {
     try {
@@ -420,6 +427,7 @@ adminRoutes.get("/admin/settings", async (c) => {
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
+  if (map.companyCountryCode && !map.countryCode) map.countryCode = map.companyCountryCode;
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
   // Expose demo mode to frontend UI for admin-prefixed route as well
@@ -605,6 +613,55 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
       "Content-Disposition": `attachment; filename="invoice-${
         invoice.invoiceNumber || id
       }.pdf"`,
+    },
+  });
+});
+
+// UBL (PEPPOL BIS Billing 3.0) XML for an invoice by ID
+adminRoutes.get("/invoices/:id/ubl.xml", async (c) => {
+  const id = c.req.param("id");
+  const invoice = getInvoiceById(id);
+  if (!invoice) {
+    return c.json({ message: "Invoice not found" }, 404);
+  }
+
+  const settings = await getSettings();
+  const map = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const businessSettings = {
+    companyName: map.companyName || "Your Company",
+    companyAddress: map.companyAddress || "",
+    companyEmail: map.companyEmail || "",
+    companyPhone: map.companyPhone || "",
+    companyTaxId: map.companyTaxId || "",
+    currency: map.currency || "USD",
+    logo: map.logo,
+    paymentMethods: map.paymentMethods || "Bank Transfer",
+    bankAccount: map.bankAccount || "",
+    paymentTerms: map.paymentTerms || "Due in 30 days",
+    defaultNotes: map.defaultNotes || "",
+      companyCountryCode: map.companyCountryCode || "",
+  };
+
+  // Optional PEPPOL endpoint IDs if configured in settings
+  const xml = generateUBLInvoiceXML(invoice, businessSettings, {
+    sellerEndpointId: map.peppolSellerEndpointId,
+    sellerEndpointSchemeId: map.peppolSellerEndpointSchemeId,
+    buyerEndpointId: map.peppolBuyerEndpointId,
+    buyerEndpointSchemeId: map.peppolBuyerEndpointSchemeId,
+    sellerCountryCode: map.companyCountryCode,
+    buyerCountryCode: invoice.customer.countryCode,
+  });
+
+  return new Response(xml, {
+    headers: {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Content-Disposition": `attachment; filename="invoice-${
+        invoice.invoiceNumber || id
+      }.xml"`,
     },
   });
 });
