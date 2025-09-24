@@ -104,3 +104,45 @@ CREATE INDEX idx_invoices_customer ON invoices(customer_id);
 CREATE INDEX idx_invoices_status ON invoices(status);
 CREATE INDEX idx_invoices_share_token ON invoices(share_token);
 CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
+
+-- Normalized tax schema (for complex/composite taxes)
+CREATE TABLE IF NOT EXISTS tax_definitions (
+  id TEXT PRIMARY KEY,
+  code TEXT UNIQUE,
+  name TEXT,
+  percent NUMERIC NOT NULL,
+  category_code TEXT,
+  country_code TEXT,
+  vendor_specific_id TEXT,
+  default_included BOOLEAN DEFAULT 0,
+  metadata TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invoice_item_taxes (
+  id TEXT PRIMARY KEY,
+  invoice_item_id TEXT NOT NULL REFERENCES invoice_items(id) ON DELETE CASCADE,
+  tax_definition_id TEXT REFERENCES tax_definitions(id),
+  percent NUMERIC NOT NULL,
+  taxable_amount NUMERIC NOT NULL,
+  amount NUMERIC NOT NULL,
+  included BOOLEAN NOT NULL DEFAULT 0,
+  sequence INTEGER DEFAULT 0,
+  note TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invoice_taxes (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  tax_definition_id TEXT REFERENCES tax_definitions(id),
+  percent NUMERIC NOT NULL,
+  taxable_amount NUMERIC NOT NULL,
+  tax_amount NUMERIC NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Invoice-level flags for tax pricing/rounding
+ALTER TABLE invoices ADD COLUMN prices_include_tax BOOLEAN DEFAULT 0;
+ALTER TABLE invoices ADD COLUMN rounding_mode TEXT DEFAULT 'line';

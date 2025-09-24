@@ -6,7 +6,7 @@
 // If certain optional identifiers (like PEPPOL endpoint IDs) are not
 // configured, the XML remains valid but omits those elements.
 
-import { InvoiceWithDetails, BusinessSettings } from "../types/index.ts";
+import { BusinessSettings, InvoiceWithDetails } from "../types/index.ts";
 
 type Maybe<T> = T | undefined | null;
 
@@ -33,11 +33,15 @@ function fmtDate(d?: Date): string | undefined {
 function _fmtAmount(n: number, currency: string): string {
   // UBL requires a decimal with a currencyID attribute; value should be plain decimal
   // We'll fix to 2 fraction digits for currencies typically used.
-  return `<cbc:Amount currencyID="${xmlEscape(currency)}">${(n).toFixed(2)}</cbc:Amount>`;
+  return `<cbc:Amount currencyID="${xmlEscape(currency)}">${
+    n.toFixed(2)
+  }</cbc:Amount>`;
 }
 
 function amountTag(name: string, n: number, currency: string): string {
-  return `<cbc:${name} currencyID="${xmlEscape(currency)}">${(n).toFixed(2)}</cbc:${name}>`;
+  return `<cbc:${name} currencyID="${xmlEscape(currency)}">${
+    n.toFixed(2)
+  }</cbc:${name}>`;
 }
 
 function decimals(n: number): string {
@@ -58,7 +62,12 @@ function splitAddress(addr?: string): {
   // We keep it simple: first comma -> street; last token with 2-3 uppercase -> country code if matches.
   if (!addr) return {};
   const parts = addr.split(",").map((s) => s.trim()).filter(Boolean);
-  const out: { street?: string; city?: string; postalZone?: string; countryCode?: string } = {};
+  const out: {
+    street?: string;
+    city?: string;
+    postalZone?: string;
+    countryCode?: string;
+  } = {};
   if (parts.length > 0) out.street = parts[0];
   if (parts.length > 1) out.city = parts[1];
   if (parts.length > 2) {
@@ -70,7 +79,9 @@ function splitAddress(addr?: string): {
   // Country code heuristic: last 2 letters token
   const last = parts[parts.length - 1] || "";
   const cc = last.trim().toUpperCase();
-  if (/^[A-Z]{2,3}$/.test(cc)) out.countryCode = cc.length === 3 ? cc.slice(0, 2) : cc;
+  if (/^[A-Z]{2,3}$/.test(cc)) {
+    out.countryCode = cc.length === 3 ? cc.slice(0, 2) : cc;
+  }
   return out;
 }
 
@@ -109,8 +120,12 @@ export function generateUBLInvoiceXML(
     buyerAddress.countryCode = options.buyerCountryCode.toUpperCase();
   }
   // Override parsed country codes with explicit fields if present
-  if (business.companyCountryCode) sellerAddress.countryCode = business.companyCountryCode.toUpperCase();
-  if (invoice.customer.countryCode) buyerAddress.countryCode = invoice.customer.countryCode.toUpperCase();
+  if (business.companyCountryCode) {
+    sellerAddress.countryCode = business.companyCountryCode.toUpperCase();
+  }
+  if (invoice.customer.countryCode) {
+    buyerAddress.countryCode = invoice.customer.countryCode.toUpperCase();
+  }
 
   const taxRate = Number(invoice.taxRate || 0);
   const taxCatId = taxCategoryId(taxRate);
@@ -124,33 +139,81 @@ export function generateUBLInvoiceXML(
     `<cbc:IssueDate>${issueDate}</cbc:IssueDate>`,
     dueDate ? `<cbc:DueDate>${dueDate}</cbc:DueDate>` : "",
     `<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>`,
-    `<cbc:DocumentCurrencyCode>${xmlEscape(currency)}</cbc:DocumentCurrencyCode>`,
+    `<cbc:DocumentCurrencyCode>${
+      xmlEscape(currency)
+    }</cbc:DocumentCurrencyCode>`,
   ].filter(Boolean).join("");
 
   // Supplier party
   const supplierParty = `
   <cac:AccountingSupplierParty>
     <cac:Party>
-      ${options.sellerEndpointId ? `<cbc:EndpointID${options.sellerEndpointSchemeId ? ` schemeID="${xmlEscape(options.sellerEndpointSchemeId)}"` : ""}>${xmlEscape(options.sellerEndpointId)}</cbc:EndpointID>` : ""}
-      <cac:PartyName><cbc:Name>${xmlEscape(business.companyName)}</cbc:Name></cac:PartyName>
+      ${
+    options.sellerEndpointId
+      ? `<cbc:EndpointID${
+        options.sellerEndpointSchemeId
+          ? ` schemeID="${xmlEscape(options.sellerEndpointSchemeId)}"`
+          : ""
+      }>${xmlEscape(options.sellerEndpointId)}</cbc:EndpointID>`
+      : ""
+  }
+      <cac:PartyName><cbc:Name>${
+    xmlEscape(business.companyName)
+  }</cbc:Name></cac:PartyName>
       <cac:PostalAddress>
-        ${sellerAddress.street ? `<cbc:StreetName>${xmlEscape(sellerAddress.street)}</cbc:StreetName>` : ""}
-        ${sellerAddress.city ? `<cbc:CityName>${xmlEscape(sellerAddress.city)}</cbc:CityName>` : ""}
-        ${sellerAddress.postalZone ? `<cbc:PostalZone>${xmlEscape(sellerAddress.postalZone)}</cbc:PostalZone>` : ""}
-        <cac:Country><cbc:IdentificationCode>${xmlEscape(sellerAddress.countryCode || "US")}</cbc:IdentificationCode></cac:Country>
+        ${
+    sellerAddress.street
+      ? `<cbc:StreetName>${xmlEscape(sellerAddress.street)}</cbc:StreetName>`
+      : ""
+  }
+        ${
+    sellerAddress.city
+      ? `<cbc:CityName>${xmlEscape(sellerAddress.city)}</cbc:CityName>`
+      : ""
+  }
+        ${
+    sellerAddress.postalZone
+      ? `<cbc:PostalZone>${
+        xmlEscape(sellerAddress.postalZone)
+      }</cbc:PostalZone>`
+      : ""
+  }
+        <cac:Country><cbc:IdentificationCode>${
+    xmlEscape(sellerAddress.countryCode || "US")
+  }</cbc:IdentificationCode></cac:Country>
       </cac:PostalAddress>
-      ${business.companyTaxId ? `
+      ${
+    business.companyTaxId
+      ? `
       <cac:PartyTaxScheme>
         <cbc:CompanyID>${xmlEscape(business.companyTaxId)}</cbc:CompanyID>
         <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
-      </cac:PartyTaxScheme>` : ""}
+      </cac:PartyTaxScheme>`
+      : ""
+  }
       <cac:PartyLegalEntity>
-        <cbc:RegistrationName>${xmlEscape(business.companyName)}</cbc:RegistrationName>
-        ${business.companyTaxId ? `<cbc:CompanyID>${xmlEscape(business.companyTaxId)}</cbc:CompanyID>` : ""}
+        <cbc:RegistrationName>${
+    xmlEscape(business.companyName)
+  }</cbc:RegistrationName>
+        ${
+    business.companyTaxId
+      ? `<cbc:CompanyID>${xmlEscape(business.companyTaxId)}</cbc:CompanyID>`
+      : ""
+  }
       </cac:PartyLegalEntity>
       <cac:Contact>
-        ${business.companyEmail ? `<cbc:ElectronicMail>${xmlEscape(business.companyEmail)}</cbc:ElectronicMail>` : ""}
-        ${business.companyPhone ? `<cbc:Telephone>${xmlEscape(business.companyPhone)}</cbc:Telephone>` : ""}
+        ${
+    business.companyEmail
+      ? `<cbc:ElectronicMail>${
+        xmlEscape(business.companyEmail)
+      }</cbc:ElectronicMail>`
+      : ""
+  }
+        ${
+    business.companyPhone
+      ? `<cbc:Telephone>${xmlEscape(business.companyPhone)}</cbc:Telephone>`
+      : ""
+  }
       </cac:Contact>
     </cac:Party>
   </cac:AccountingSupplierParty>`;
@@ -160,49 +223,95 @@ export function generateUBLInvoiceXML(
   const customerParty = `
   <cac:AccountingCustomerParty>
     <cac:Party>
-      ${options.buyerEndpointId ? `<cbc:EndpointID${options.buyerEndpointSchemeId ? ` schemeID=\"${xmlEscape(options.buyerEndpointSchemeId)}\"` : ""}>${xmlEscape(options.buyerEndpointId)}</cbc:EndpointID>` : ""}
-      <cac:PartyName><cbc:Name>${xmlEscape(buyer.name)}</cbc:Name></cac:PartyName>
+      ${
+    options.buyerEndpointId
+      ? `<cbc:EndpointID${
+        options.buyerEndpointSchemeId
+          ? ` schemeID=\"${xmlEscape(options.buyerEndpointSchemeId)}\"`
+          : ""
+      }>${xmlEscape(options.buyerEndpointId)}</cbc:EndpointID>`
+      : ""
+  }
+      <cac:PartyName><cbc:Name>${
+    xmlEscape(buyer.name)
+  }</cbc:Name></cac:PartyName>
       <cac:PostalAddress>
-        ${buyerAddress.street ? `<cbc:StreetName>${xmlEscape(buyerAddress.street)}</cbc:StreetName>` : ""}
-        ${buyerAddress.city ? `<cbc:CityName>${xmlEscape(buyerAddress.city)}</cbc:CityName>` : ""}
-        ${buyerAddress.postalZone ? `<cbc:PostalZone>${xmlEscape(buyerAddress.postalZone)}</cbc:PostalZone>` : ""}
-        <cac:Country><cbc:IdentificationCode>${xmlEscape(buyerAddress.countryCode || "US")}</cbc:IdentificationCode></cac:Country>
+        ${
+    buyerAddress.street
+      ? `<cbc:StreetName>${xmlEscape(buyerAddress.street)}</cbc:StreetName>`
+      : ""
+  }
+        ${
+    buyerAddress.city
+      ? `<cbc:CityName>${xmlEscape(buyerAddress.city)}</cbc:CityName>`
+      : ""
+  }
+        ${
+    buyerAddress.postalZone
+      ? `<cbc:PostalZone>${xmlEscape(buyerAddress.postalZone)}</cbc:PostalZone>`
+      : ""
+  }
+        <cac:Country><cbc:IdentificationCode>${
+    xmlEscape(buyerAddress.countryCode || "US")
+  }</cbc:IdentificationCode></cac:Country>
       </cac:PostalAddress>
-      ${buyer.taxId ? `
+      ${
+    buyer.taxId
+      ? `
       <cac:PartyTaxScheme>
         <cbc:CompanyID>${xmlEscape(buyer.taxId)}</cbc:CompanyID>
         <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
-      </cac:PartyTaxScheme>` : ""}
+      </cac:PartyTaxScheme>`
+      : ""
+  }
       <cac:Contact>
-        ${buyer.email ? `<cbc:ElectronicMail>${xmlEscape(buyer.email)}</cbc:ElectronicMail>` : ""}
-        ${buyer.phone ? `<cbc:Telephone>${xmlEscape(buyer.phone)}</cbc:Telephone>` : ""}
+        ${
+    buyer.email
+      ? `<cbc:ElectronicMail>${xmlEscape(buyer.email)}</cbc:ElectronicMail>`
+      : ""
+  }
+        ${
+    buyer.phone
+      ? `<cbc:Telephone>${xmlEscape(buyer.phone)}</cbc:Telephone>`
+      : ""
+  }
       </cac:Contact>
     </cac:Party>
   </cac:AccountingCustomerParty>`;
 
   // Payment means (credit transfer if bank account provided)
-  const paymentMeans = business.bankAccount ? `
+  const paymentMeans = business.bankAccount
+    ? `
   <cac:PaymentMeans>
     <cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>
     ${dueDate ? `<cbc:PaymentDueDate>${dueDate}</cbc:PaymentDueDate>` : ""}
     <cac:PayeeFinancialAccount>
       <cbc:ID>${xmlEscape(business.bankAccount)}</cbc:ID>
     </cac:PayeeFinancialAccount>
-  </cac:PaymentMeans>` : "";
+  </cac:PaymentMeans>`
+    : "";
 
   const paymentTerms = business.paymentTerms || invoice.paymentTerms;
-  const paymentTermsXml = paymentTerms ? `
+  const paymentTermsXml = paymentTerms
+    ? `
   <cac:PaymentTerms>
     <cbc:Note>${xmlEscape(paymentTerms)}</cbc:Note>
-  </cac:PaymentTerms>` : "";
+  </cac:PaymentTerms>`
+    : "";
 
   // Tax total (single rate across invoice as per current data model)
   const taxTotal = `
   <cac:TaxTotal>
-    <cbc:TaxAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.taxAmount)}</cbc:TaxAmount>
+    <cbc:TaxAmount currencyID="${xmlEscape(currency)}">${
+    decimals(invoice.taxAmount)
+  }</cbc:TaxAmount>
     <cac:TaxSubtotal>
-      <cbc:TaxableAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.subtotal - invoice.discountAmount)}</cbc:TaxableAmount>
-      <cbc:TaxAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.taxAmount)}</cbc:TaxAmount>
+      <cbc:TaxableAmount currencyID="${xmlEscape(currency)}">${
+    decimals(invoice.subtotal - invoice.discountAmount)
+  }</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="${xmlEscape(currency)}">${
+    decimals(invoice.taxAmount)
+  }</cbc:TaxAmount>
       <cac:TaxCategory>
         <cbc:ID>${taxCatId}</cbc:ID>
         <cbc:Percent>${decimals(taxRate)}</cbc:Percent>
@@ -214,8 +323,20 @@ export function generateUBLInvoiceXML(
   // Monetary totals
   const legalMonetaryTotal = `
   <cac:LegalMonetaryTotal>
-    ${amountTag("LineExtensionAmount", invoice.subtotal - invoice.discountAmount, currency)}
-    ${amountTag("TaxExclusiveAmount", invoice.subtotal - invoice.discountAmount, currency)}
+    ${
+    amountTag(
+      "LineExtensionAmount",
+      invoice.subtotal - invoice.discountAmount,
+      currency,
+    )
+  }
+    ${
+    amountTag(
+      "TaxExclusiveAmount",
+      invoice.subtotal - invoice.discountAmount,
+      currency,
+    )
+  }
     ${amountTag("TaxInclusiveAmount", invoice.total, currency)}
     ${amountTag("PayableAmount", invoice.total, currency)}
   </cac:LegalMonetaryTotal>`;
@@ -229,7 +350,9 @@ export function generateUBLInvoiceXML(
     <cac:InvoiceLine>
       <cbc:ID>${idx + 1}</cbc:ID>
       <cbc:InvoicedQuantity unitCode="EA">${qty}</cbc:InvoicedQuantity>
-      <cbc:LineExtensionAmount currencyID="${xmlEscape(currency)}">${decimals(lineExt)}</cbc:LineExtensionAmount>
+      <cbc:LineExtensionAmount currencyID="${xmlEscape(currency)}">${
+      decimals(lineExt)
+    }</cbc:LineExtensionAmount>
       <cac:Item>
         <cbc:Name>${xmlEscape(item.description)}</cbc:Name>
         <cac:ClassifiedTaxCategory>
@@ -239,7 +362,9 @@ export function generateUBLInvoiceXML(
         </cac:ClassifiedTaxCategory>
       </cac:Item>
       <cac:Price>
-        <cbc:PriceAmount currencyID="${xmlEscape(currency)}">${decimals(unitPrice)}</cbc:PriceAmount>
+        <cbc:PriceAmount currencyID="${xmlEscape(currency)}">${
+      decimals(unitPrice)
+    }</cbc:PriceAmount>
       </cac:Price>
     </cac:InvoiceLine>`;
   }).join("");

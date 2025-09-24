@@ -231,6 +231,29 @@ function buildContext(
   _highlight?: string,
 ): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
   const currency = invoice.currency || settings?.currency || "USD";
+  // Build tax summary from normalized taxes if present
+  let taxSummary = (invoice.taxes && invoice.taxes.length > 0)
+    ? invoice.taxes.map((t) => ({
+      label: `VAT ${t.percent}%`,
+      percent: t.percent,
+      taxable: toMoney(t.taxableAmount),
+      amount: toMoney(t.taxAmount),
+    }))
+    : undefined;
+  // Fallback: synthesize a single-row summary from invoice-level taxRate
+  if ((!taxSummary || taxSummary.length === 0) && (invoice.taxAmount > 0)) {
+    const percent = invoice.taxRate || 0;
+    const taxableBase = Math.max(
+      0,
+      (invoice.subtotal || 0) - (invoice.discountAmount || 0),
+    );
+    taxSummary = [{
+      label: `VAT ${percent}%`,
+      percent,
+      taxable: toMoney(taxableBase),
+      amount: toMoney(invoice.taxAmount),
+    }];
+  }
   return {
     // Company
     companyName: settings?.companyName || "Your Company",
@@ -271,6 +294,12 @@ function buildContext(
     taxRate: invoice.taxRate || undefined,
     taxAmount: invoice.taxAmount > 0 ? toMoney(invoice.taxAmount) : undefined,
     total: toMoney(invoice.total),
+    taxSummary,
+    hasTaxSummary: Boolean(taxSummary && taxSummary.length > 0),
+    // Net subtotal (taxable base after discount, before tax) for convenience
+    netSubtotal: toMoney(
+      Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)),
+    ),
 
     // Flags
     hasDiscount: invoice.discountAmount > 0,

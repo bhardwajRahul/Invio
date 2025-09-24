@@ -128,7 +128,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
-    companyCountryCode: settingsMap.companyCountryCode || settingsMap.countryCode || "",
+    companyCountryCode: settingsMap.companyCountryCode ||
+      settingsMap.countryCode || "",
     currency: settingsMap.currency || "USD",
     logo: settingsMap.logo,
     // brandLayout removed; always treating as logo-left in rendering

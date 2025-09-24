@@ -12,17 +12,23 @@ type Item = {
   quantity: number;
   unitPrice: number;
   notes?: string;
+  taxes?: Array<{ percent: number }>;
 };
 type Invoice = {
   id: string;
+  invoiceNumber?: string;
   customer?: { name?: string };
   issue_date?: string;
   due_date?: string;
   items?: Item[];
   currency?: string;
+  taxRate?: number;
+  pricesIncludeTax?: boolean;
+  roundingMode?: string;
   notes?: string;
   paymentTerms?: string;
   status?: "draft" | "sent" | "paid" | "overdue";
+  taxes?: Array<{ percent: number; taxableAmount: number; taxAmount: number }>;
 };
 type Data = { authed: boolean; invoice?: Invoice; error?: string };
 
@@ -70,21 +76,35 @@ export const handler: Handlers<Data> = {
       | "sent"
       | "paid"
       | "overdue";
+  const taxRate = Number(form.get("taxRate") || 0) || 0;
+    const pricesIncludeTax = String(form.get("pricesIncludeTax") || 'false') === 'true';
+    const roundingMode = String(form.get("roundingMode") || "line");
+  const taxMode = String(form.get("taxMode") || 'invoice') as 'invoice' | 'line';
 
     // Collect items from repeated fields item_description[], item_quantity[], item_unitPrice[]
     const descriptions = form.getAll("item_description") as string[];
     const quantities = form.getAll("item_quantity") as string[];
     const unitPrices = form.getAll("item_unitPrice") as string[];
     const itemNotes = form.getAll("item_notes") as string[];
+    const itemTaxPercents = form.getAll("item_tax_percent") as string[];
     const items: Item[] = [];
     for (let i = 0; i < descriptions.length; i++) {
       const description = String(descriptions[i] || "").trim();
       if (!description) continue;
+      const taxPercentRaw = String(itemTaxPercents[i] || "").trim();
+      let taxes: Array<{ percent: number }> | undefined = undefined;
+      if (taxMode === 'line' && taxPercentRaw !== "") {
+        const n = Number(taxPercentRaw);
+        if (!isNaN(n) && isFinite(n) && n >= 0) {
+          taxes = [{ percent: n }];
+        }
+      }
       items.push({
         description,
         quantity: Number(quantities[i] || 1),
         unitPrice: Number(unitPrices[i] || 0),
         notes: String(itemNotes[i] || "") || undefined,
+        ...(taxes ? { taxes } : {}),
       });
     }
     if (items.length === 0) {
@@ -93,20 +113,35 @@ export const handler: Handlers<Data> = {
 
     try {
       // Send notes as-is, including empty string, so existing notes get cleared when user deletes them
+      const invoiceNumber = String(form.get("invoiceNumber") || "").trim();
+      // Adjust items based on tax mode
+      if (taxMode === 'invoice') {
+        items.forEach((it) => { delete (it as Record<string, unknown>).taxes; });
+      }
       await backendPut(`/api/v1/invoices/${id}`, auth, {
         currency,
         status,
         notes,
         paymentTerms,
+        taxRate: taxMode === 'invoice' ? taxRate : 0,
+        pricesIncludeTax,
+        roundingMode,
+        invoiceNumber: invoiceNumber || undefined,
         issueDate: issueDate || undefined,
         dueDate: dueDate || null,
         items,
+        taxMode, // informational only for now
       });
       return new Response(null, {
         status: 303,
         headers: { Location: `/invoices/${id}` },
       });
     } catch (e) {
+      const msg = String(e);
+      if (/409|already exists|duplicate/i.test(msg)) {
+        const invoice = await backendGet(`/api/v1/invoices/${id}`, auth) as Invoice;
+        return ctx.render({ authed: true, invoice, error: "Invoice number already exists" });
+      }
       return new Response(String(e), { status: 500 });
     }
   },
@@ -142,14 +177,26 @@ export default function EditInvoicePage(props: PageProps<Data>) {
             customerName={inv.customer?.name}
             currency={inv.currency}
             status={inv.status}
+            invoiceNumber={inv.invoiceNumber}
+            taxRate={inv.taxRate as number}
+            pricesIncludeTax={inv.pricesIncludeTax as boolean}
+            roundingMode={inv.roundingMode as string}
+            taxMode={(inv.items && inv.items.some(i => i.taxes && i.taxes.length)) ? 'line' : 'invoice'}
             showDates
             issueDate={(inv.issue_date as string) || ""}
             dueDate={(inv.due_date as string) || ""}
             notes={inv.notes}
             paymentTerms={inv.paymentTerms}
-            items={inv.items ||
-              [{ description: "", quantity: 1, unitPrice: 0 }]}
+            items={(inv.items ||
+              [{ description: "", quantity: 1, unitPrice: 0 }]).map((it) => {
+                // If item has single tax entry, surface its percent for UI
+                const single = it.taxes && it.taxes.length === 1
+                  ? it.taxes[0].percent
+                  : undefined;
+                return { ...it, taxPercent: single } as Item & { taxPercent?: number };
+              })}
             demoMode={demoMode}
+            invoiceNumberError={props.data.error}
           />
         </form>
       )}

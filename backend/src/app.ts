@@ -17,7 +17,8 @@ try {
   const demoMode = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
   if (demoMode) {
     const hours = Number(Deno.env.get("DEMO_RESET_HOURS") || "3");
-    const initial = (Deno.env.get("DEMO_RESET_ON_START") || "true").toLowerCase() !== "false";
+    const initial =
+      (Deno.env.get("DEMO_RESET_ON_START") || "true").toLowerCase() !== "false";
     if (initial) {
       // Perform a reset at startup to ensure a pristine state
       resetDatabaseFromDemo();
@@ -68,7 +69,9 @@ app.get("/health", (c: Context) => {
 const rawPort = Deno.env.get("BACKEND_PORT") || Deno.env.get("PORT");
 const port = rawPort ? parseInt(rawPort, 10) : 3000;
 if (Number.isNaN(port) || port <= 0) {
-  console.warn(`Invalid port in BACKEND_PORT/PORT (${rawPort}), falling back to 3000`);
+  console.warn(
+    `Invalid port in BACKEND_PORT/PORT (${rawPort}), falling back to 3000`,
+  );
 }
 const listenPort = Number.isFinite(port) && port > 0 ? port : 3000;
 console.log(`Starting backend on port ${listenPort}`);

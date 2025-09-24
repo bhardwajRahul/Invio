@@ -196,7 +196,9 @@ curl -s "http://localhost:3000/api/v1/public/invoices/<token>/ubl.xml" -o invoic
 
   ### UBL / PEPPOL settings
 
-  The UBL generator uses business settings for seller data and invoice/customer data for buyer details. Optional PEPPOL endpoint IDs can be configured via settings:
+  The UBL generator uses business settings for seller data and invoice/customer
+  data for buyer details. Optional PEPPOL endpoint IDs can be configured via
+  settings:
 
   - `peppolSellerEndpointId` (e.g., `0192:123456785`)
   - `peppolSellerEndpointSchemeId` (e.g., `0192`)
@@ -204,20 +206,25 @@ curl -s "http://localhost:3000/api/v1/public/invoices/<token>/ubl.xml" -o invoic
   - `peppolBuyerEndpointSchemeId`
   - `companyCountryCode` (ISO alpha-2, default `US`)
 
-  If these are left empty, the XML remains valid but omits the corresponding EndpointID elements.
+  If these are left empty, the XML remains valid but omits the corresponding
+  EndpointID elements.
 
 ### Demo mode
 
-When `DEMO_MODE=true`, the API is fully writable so you can try creating and editing
-data. The database automatically resets to a pristine snapshot every 3 hours by default.
+When `DEMO_MODE=true`, the API is fully writable so you can try creating and
+editing data. The database automatically resets to a pristine snapshot every 3
+hours by default.
 
 Environment variables:
 
 - `DEMO_MODE=true` — enable demo mode
-- `DEMO_DB_PATH` — path to the pristine demo database file (e.g. `/app/data/invio-demo.db`)
-- `DATABASE_PATH` — active database file that the app writes to (e.g. `/app/data/invio.db`)
+- `DEMO_DB_PATH` — path to the pristine demo database file (e.g.
+  `/app/data/invio-demo.db`)
+- `DATABASE_PATH` — active database file that the app writes to (e.g.
+  `/app/data/invio.db`)
 - `DEMO_RESET_HOURS` — interval in hours between resets (default: `3`)
-- `DEMO_RESET_ON_START` — whether to perform a reset on startup (default: `true`)
+- `DEMO_RESET_ON_START` — whether to perform a reset on startup (default:
+  `true`)
 
 On each reset, the server briefly closes the DB connection, copies the pristine
 demo DB over the active DB, and reinitializes migrations and built-in templates.

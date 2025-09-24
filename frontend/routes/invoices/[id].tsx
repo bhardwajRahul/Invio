@@ -23,6 +23,10 @@ type Invoice = {
   paymentTerms?: string;
   status?: "draft" | "sent" | "paid" | "overdue";
   shareToken?: string;
+  taxRate?: number;
+  pricesIncludeTax?: boolean;
+  roundingMode?: string;
+  taxes?: Array<{ percent: number; taxableAmount: number; taxAmount: number }>;
 };
 type Data = {
   authed: boolean;
@@ -369,6 +373,37 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               <span class="opacity-70">Customer:</span> {inv.customer?.name}
             </div>
             <div>
+            {inv.taxes && inv.taxes.length > 0 && (
+              <div class="pt-2">
+                <div class="font-medium mb-1">Tax Summary</div>
+                <div class="overflow-x-auto">
+                  <table class="table table-xs w-auto">
+                    <thead>
+                      <tr>
+                        <th class="text-left">Rate</th>
+                        <th class="text-right">Taxable</th>
+                        <th class="text-right">Tax</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inv.taxes.map((t) => (
+                        <tr>
+                          <td>VAT {t.percent}%</td>
+                          <td class="text-right">{fmtMoney(t.taxableAmount)}</td>
+                          <td class="text-right">{fmtMoney(t.taxAmount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td class="text-right font-medium" colspan={2}>Tax Total</td>
+                        <td class="text-right font-medium">{fmtMoney(inv.taxAmount)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
               <span class="opacity-70">Email:</span> {inv.customer?.email}
             </div>
             <div class="sm:col-span-2">
@@ -390,6 +425,15 @@ export default function InvoiceDetail(props: PageProps<Data>) {
             </div>
             <div>
               <span class="opacity-70">Tax:</span> {fmtMoney(inv.taxAmount)}
+            </div>
+            <div class="text-xs opacity-70">
+              {typeof inv.taxRate === 'number' ? `Tax rate: ${inv.taxRate}%` : ''}
+              {typeof inv.pricesIncludeTax === 'boolean' ? ` · Prices include tax: ${inv.pricesIncludeTax ? 'Yes' : 'No'}` : ''}
+              {inv.roundingMode ? ` · Rounding: ${inv.roundingMode}` : ''}
+              {(() => {
+                const mode = (inv.taxes && inv.taxes.length) ? 'line' : 'invoice';
+                return ` · Tax mode: ${mode === 'line' ? 'Per line' : 'Invoice total'}`;
+              })()}
             </div>
             <div>
               <span class="opacity-70">Discount:</span>{" "}

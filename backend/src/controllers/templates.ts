@@ -30,24 +30,43 @@ async function fetchText(url: string): Promise<string> {
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hash)).map((b) =>
+    b.toString(16).padStart(2, "0")
+  ).join("");
 }
 
 function basicHtmlSanity(html: string): void {
   const lower = html.toLowerCase();
-  const bannedTags = ["<script", "<iframe", "<object", "<embed", "<img", "<video", "<audio", "<link "];
+  const bannedTags = [
+    "<script",
+    "<iframe",
+    "<object",
+    "<embed",
+    "<img",
+    "<video",
+    "<audio",
+    "<link ",
+  ];
   for (const tag of bannedTags) {
-    if (lower.includes(tag)) throw new Error(`HTML contains disallowed tag: ${tag}`);
+    if (lower.includes(tag)) {
+      throw new Error(`HTML contains disallowed tag: ${tag}`);
+    }
   }
   // No external CSS imports or remote urls
   if (/[@]import\s+/i.test(lower)) throw new Error("CSS @import not allowed");
-  if (/url\(\s*['\"]?https?:/i.test(lower)) throw new Error("External URLs in CSS not allowed");
+  if (/url\(\s*['\"]?https?:/i.test(lower)) {
+    throw new Error("External URLs in CSS not allowed");
+  }
   // Disallow inline event handlers (attribute boundary)
-  if (/(\s|<)on[a-z]+\s*=\s*['\"]/i.test(lower)) throw new Error("Inline event handlers not allowed");
+  if (/(\s|<)on[a-z]+\s*=\s*['\"]/i.test(lower)) {
+    throw new Error("Inline event handlers not allowed");
+  }
 }
 
 function assertManifestShape(m: unknown): asserts m is TemplateManifest {
-  if (!m || typeof m !== "object") throw new Error("Manifest must be an object");
+  if (!m || typeof m !== "object") {
+    throw new Error("Manifest must be an object");
+  }
   const r = m as Record<string, unknown>;
   for (const k of ["id", "name", "version", "invio", "html"]) {
     if (!(k in r)) throw new Error(`Manifest missing ${k}`);
@@ -62,7 +81,9 @@ function assertManifestShape(m: unknown): asserts m is TemplateManifest {
 }
 
 export async function installTemplateFromManifest(manifestUrl: string) {
-  if (!/^https?:\/\//i.test(manifestUrl)) throw new Error("Manifest URL must be http(s)");
+  if (!/^https?:\/\//i.test(manifestUrl)) {
+    throw new Error("Manifest URL must be http(s)");
+  }
   // Load YAML (fallback JSON)
   const text = await fetchText(manifestUrl);
   let manifest: TemplateManifest;
@@ -80,7 +101,9 @@ export async function installTemplateFromManifest(manifestUrl: string) {
   const htmlRes = await fetch(manifest.html.url);
   if (!htmlRes.ok) throw new Error(`HTML fetch failed ${htmlRes.status}`);
   const htmlBuf = new Uint8Array(await htmlRes.arrayBuffer());
-  if (htmlBuf.byteLength > 128 * 1024) throw new Error("HTML too large (>128KB)");
+  if (htmlBuf.byteLength > 128 * 1024) {
+    throw new Error("HTML too large (>128KB)");
+  }
   // Verify sha if provided
   if (manifest.html.sha256 && manifest.html.sha256.trim()) {
     const digest = await sha256Hex(htmlBuf);
@@ -99,7 +122,8 @@ export async function installTemplateFromManifest(manifestUrl: string) {
 
   // Upsert by provided id, keep single default truth elsewhere. Store HTML in DB for current renderer.
   const saved = upsertTemplateWithId(manifest.id, {
-    name: `${manifest.name} ${manifest.version ? `v${manifest.version}` : ""}`.trim(),
+    name: `${manifest.name} ${manifest.version ? `v${manifest.version}` : ""}`
+      .trim(),
     html,
     isDefault: false,
   });

@@ -100,6 +100,10 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "templateId",
       "highlight",
       "logo",
+      // Defaults for taxes
+      "defaultTaxRate",
+      "defaultPricesIncludeTax",
+      "defaultRoundingMode",
     ];
     for (const f of fields) {
       const v = String(form.get(f) ?? "");
@@ -155,261 +159,121 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           <span>{props.data.error}</span>
         </div>
       )}
-  {/* Theme removed: App is fixed to light mode */}
-      {templates.length > 0 && (
-        <div class="mb-4 card bg-base-100 border rounded-box">
-          <div class="card-body">
-            <h2 class="card-title">Templates</h2>
-            <div class="mb-3">
-              <InstallTemplateForm demoMode={demoMode} />
+      {/* DaisyUI tabs (radio-based, no JS required) */}
+      <div role="tablist" class="tabs tabs-lifted">
+        {/* Company */}
+        <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="Company" checked />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+          <form method="post" data-writable>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text">Company Name</span></div>
+                <input name="companyName" value={(s.companyName as string) || ""} class="input input-bordered w-full" data-writable />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text">Currency</span></div>
+                <input name="currency" value={(s.currency as string) || "USD"} class="input input-bordered w-full" data-writable />
+              </label>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {templates.map((t) => (
-                <div
-                  class="flex items-center justify-between p-2 border rounded-box"
-                  key={t.id}
-                >
-                  <div>
-                    <div class="font-medium">{t.name}</div>
-                    <div class="text-xs opacity-60">{t.id}</div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    {selectedTemplateId === t.id
-                      ? <span class="badge badge-primary">Default</span>
-                      : (
-                        <form method="post" data-writable>
-                          <input type="hidden" name="templateId" value={t.id} />
-                          <button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>
-                            Set as default
-                          </button>
-                        </form>
-                      )}
-                    {/* Delete allowed only for non-builtins and non-default */}
-                    {t.id !== "professional-modern" && t.id !== "minimalist-clean" && selectedTemplateId !== t.id && (
-                      <form method="post" data-writable>
-                        <input type="hidden" name="deleteTemplateId" value={t.id} />
-                        <button class="btn btn-sm btn-error" type="submit" disabled={demoMode} data-writable>
-                          Delete
-                        </button>
-                      </form>
-                    )}
-                  </div>
+            <label class="form-control">
+              <div class="label"><span class="label-text">Company Address</span></div>
+              <textarea name="companyAddress" class="textarea textarea-bordered" rows={2} data-writable>{(s.companyAddress as string) || ""}</textarea>
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <label class="form-control"><div class="label"><span class="label-text">Email</span></div><input name="email" value={(s.email as string) || (s.companyEmail as string) || ""} class="input input-bordered w-full" data-writable /></label>
+              <label class="form-control"><div class="label"><span class="label-text">Phone</span></div><input name="phone" value={(s.phone as string) || (s.companyPhone as string) || ""} class="input input-bordered w-full" data-writable /></label>
+              <label class="form-control"><div class="label"><span class="label-text">Tax ID</span></div><input name="taxId" value={(s.taxId as string) || (s.companyTaxId as string) || ""} class="input input-bordered w-full" data-writable /></label>
+              <label class="form-control"><div class="label"><span class="label-text">Country Code (ISO alpha-2)</span></div><input name="countryCode" value={(s.countryCode as string) || (s.companyCountryCode as string) || ""} class="input input-bordered w-full" placeholder="e.g. US, NL, DE" maxlength={2} data-writable /></label>
+            </div>
+            <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
+        </div>
+
+        {/* Branding */}
+        <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="Branding" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+          <form method="post" data-writable>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text">Default Template</span></div>
+                <select name="templateId" class="select select-bordered w-full" value={selectedTemplateId}>
+                  {templates.length > 0 ? (templates.map((t) => (<option value={t.id} key={t.id}>{t.name}</option>))) : (<><option value="professional-modern">Professional Modern</option><option value="minimalist-clean">Minimalist Clean</option></>)}
+                </select>
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text">Highlight Color</span></div>
+                <div class="flex items-center gap-2">
+                  <input id="highlight-input" name="highlight" value={(s.highlight as string) || "#6B4EFF"} class="input input-bordered w-full" placeholder="#6B4EFF" />
+                  <span id="highlight-swatch" class="inline-block w-6 h-6 rounded" style={`background: ${(s.highlight as string) || "#6B4EFF"}`}></span>
                 </div>
-              ))}
+              </label>
             </div>
-            <p class="text-xs opacity-60">
-              Built-in templates are protected and cannot be deleted.
-            </p>
-          </div>
-        </div>
-      )}
-  <form method="post" class="space-y-4 bg-base-100 border rounded-box p-4" data-writable>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Company Name</span>
+            <div class="grid grid-cols-1 gap-3 mt-2">
+              <label class="form-control"><div class="label"><span class="label-text">Logo</span></div><input id="logo-input" name="logo" value={(s.logo as string) || (s.logoUrl as string) || ""} class="input input-bordered w-full" placeholder="https://example.com/logo.png or data:image/png;base64,..." /></label>
+              <div class="flex items-center gap-3"><span id="logo-error" class="text-error text-sm hidden">Invalid logo URL or data URI</span></div>
             </div>
-            <input
-              name="companyName"
-              value={(s.companyName as string) || ""}
-              class="input input-bordered w-full"
-              data-writable
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Currency</span>
-            </div>
-            <input
-              name="currency"
-              value={(s.currency as string) || "USD"}
-              class="input input-bordered w-full"
-              data-writable
-            />
-          </label>
+            <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
         </div>
 
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text">Company Address</span>
-          </div>
-          <textarea
-            name="companyAddress"
-            class="textarea textarea-bordered"
-            rows={2}
-            data-writable
-          >
-            {(s.companyAddress as string) || ""}
-          </textarea>
-        </label>
+        {/* Templates (only if any exist) */}
+        {templates.length > 0 && (
+          <>
+            <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="Templates" />
+            <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="card-title">Templates</h2>
+                <InstallTemplateForm demoMode={demoMode} />
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {templates.map((t) => (
+                  <div class="flex items-center justify-between p-2 border rounded-box" key={t.id}>
+                    <div><div class="font-medium">{t.name}</div><div class="text-xs opacity-60">{t.id}</div></div>
+                    <div class="flex items-center gap-2">
+                      {selectedTemplateId === t.id ? <span class="badge badge-primary">Default</span> : (
+                        <form method="post" data-writable><input type="hidden" name="templateId" value={t.id} /><button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>Set as default</button></form>
+                      )}
+                      {t.id !== "professional-modern" && t.id !== "minimalist-clean" && selectedTemplateId !== t.id && (
+                        <form method="post" data-writable><input type="hidden" name="deleteTemplateId" value={t.id} /><button class="btn btn-sm btn-error" type="submit" disabled={demoMode} data-writable>Delete</button></form>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p class="text-xs opacity-60">Built-in templates are protected and cannot be deleted.</p>
+            </div>
+          </>
+        )}
 
-  <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Email</span>
+        {/* Payments */}
+        <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="Payments" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+          <form method="post" data-writable>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="form-control"><div class="label"><span class="label-text">Payment Methods</span></div><input name="paymentMethods" value={(s.paymentMethods as string) || "Bank Transfer"} class="input input-bordered w-full" /></label>
+              <label class="form-control"><div class="label"><span class="label-text">Bank Account</span></div><input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" /></label>
             </div>
-            <input
-              name="email"
-              value={(s.email as string) || (s.companyEmail as string) || ""}
-              class="input input-bordered w-full"
-              data-writable
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Phone</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="form-control"><div class="label"><span class="label-text">Payment Terms</span></div><input name="paymentTerms" value={(s.paymentTerms as string) || "Due in 30 days"} class="input input-bordered w-full" /></label>
+              <label class="form-control"><div class="label"><span class="label-text">Default Notes</span></div><input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="input input-bordered w-full" /></label>
             </div>
-            <input
-              name="phone"
-              value={(s.phone as string) || (s.companyPhone as string) || ""}
-              class="input input-bordered w-full"
-              data-writable
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Tax ID</span>
-            </div>
-            <input
-              name="taxId"
-              value={(s.taxId as string) || (s.companyTaxId as string) || ""}
-              class="input input-bordered w-full"
-              data-writable
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Country Code (ISO alpha-2)</span>
-            </div>
-            <input
-              name="countryCode"
-              value={(s.countryCode as string) || (s.companyCountryCode as string) || ""}
-              class="input input-bordered w-full"
-              placeholder="e.g. US, NL, DE"
-              maxlength={2}
-              data-writable
-            />
-          </label>
+            <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-1 gap-3">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Logo</span>
+        {/* Tax */}
+        <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="Tax" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+          <form method="post" data-writable>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="form-control"><div class="label"><span class="label-text">Default tax rate (%)</span></div><input type="number" step="0.01" min="0" name="defaultTaxRate" value={String((s.defaultTaxRate as number) ?? 0)} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
+              <label class="form-control"><div class="label"><span class="label-text">Prices include tax?</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} disabled={demoMode}><option value="false">No</option><option value="true">Yes</option></select></label>
+              <label class="form-control"><div class="label"><span class="label-text">Rounding mode</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} disabled={demoMode}><option value="line">Round per line</option><option value="total">Round on totals</option></select></label>
             </div>
-            <input
-              id="logo-input"
-              name="logo"
-              value={(s.logo as string) || (s.logoUrl as string) || ""}
-              class="input input-bordered w-full"
-              placeholder="https://example.com/logo.png or data:image/png;base64,..."
-            />
-          </label>
-          <div class="flex items-center gap-3">
-            <span id="logo-error" class="text-error text-sm hidden">
-              Invalid logo URL or data URI
-            </span>
-          </div>
+            <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Default Template</span>
-            </div>
-            <select
-              name="templateId"
-              class="select select-bordered w-full"
-              value={selectedTemplateId}
-            >
-              {templates.length > 0
-                ? (
-                  templates.map((t) => (
-                    <option value={t.id} key={t.id}>{t.name}</option>
-                  ))
-                )
-                : (
-                  <>
-                    <option value="professional-modern">
-                      Professional Modern
-                    </option>
-                    <option value="minimalist-clean">Minimalist Clean</option>
-                  </>
-                )}
-            </select>
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Highlight Color</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <input
-                id="highlight-input"
-                name="highlight"
-                value={(s.highlight as string) || "#6B4EFF"}
-                class="input input-bordered w-full"
-                placeholder="#6B4EFF"
-              />
-              <span
-                id="highlight-swatch"
-                class="inline-block w-6 h-6 rounded"
-                style={`background: ${(s.highlight as string) || "#6B4EFF"}`}
-              >
-              </span>
-            </div>
-          </label>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Payment Methods</span>
-            </div>
-            <input
-              name="paymentMethods"
-              value={(s.paymentMethods as string) || "Bank Transfer"}
-              class="input input-bordered w-full"
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Bank Account</span>
-            </div>
-            <input
-              name="bankAccount"
-              value={(s.bankAccount as string) || ""}
-              class="input input-bordered w-full"
-            />
-          </label>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Payment Terms</span>
-            </div>
-            <input
-              name="paymentTerms"
-              value={(s.paymentTerms as string) || "Due in 30 days"}
-              class="input input-bordered w-full"
-            />
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Default Notes</span>
-            </div>
-            <input
-              name="defaultNotes"
-              value={(s.defaultNotes as string) || ""}
-              class="input input-bordered w-full"
-            />
-          </label>
-        </div>
-
-        <div class="pt-2">
-          <button type="submit" class="btn btn-primary">Save Settings</button>
-        </div>
-      </form>
+      </div>
       <script>
         {`(function(){
         function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }

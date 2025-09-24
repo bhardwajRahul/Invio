@@ -26,6 +26,10 @@ export interface Invoice {
   taxAmount: number;
   total: number;
 
+  // Tax behavior flags
+  pricesIncludeTax?: boolean; // whether unit prices are tax-inclusive
+  roundingMode?: string; // 'line' or 'total'
+
   // Payment and notes
   paymentTerms?: string;
   notes?: string;
@@ -45,6 +49,7 @@ export interface InvoiceItem {
   lineTotal: number;
   notes?: string;
   sortOrder: number;
+  taxes?: InvoiceItemTax[];
 }
 
 export interface InvoiceAttachment {
@@ -85,6 +90,40 @@ export interface BusinessSettings {
   defaultNotes?: string;
 }
 
+// Normalized tax types
+export interface TaxDefinition {
+  id: string;
+  code?: string;
+  name?: string;
+  percent: number;
+  categoryCode?: string; // UBL: S, Z, E, etc.
+  countryCode?: string;
+  vendorSpecificId?: string;
+  defaultIncluded?: boolean;
+  metadata?: string; // JSON string
+}
+
+export interface InvoiceItemTax {
+  id: string;
+  invoiceItemId: string;
+  taxDefinitionId?: string;
+  percent: number;
+  taxableAmount: number;
+  amount: number;
+  included: boolean;
+  sequence?: number;
+  note?: string;
+}
+
+export interface InvoiceTax {
+  id: string;
+  invoiceId: string;
+  taxDefinitionId?: string;
+  percent: number;
+  taxableAmount: number;
+  taxAmount: number;
+}
+
 // Request/Response types for API
 export interface CreateInvoiceRequest {
   customerId: string;
@@ -99,6 +138,10 @@ export interface CreateInvoiceRequest {
   discountPercentage?: number;
   taxRate?: number;
 
+  // Tax behavior flags
+  pricesIncludeTax?: boolean;
+  roundingMode?: string; // 'line' | 'total'
+
   // Payment and notes
   paymentTerms?: string;
   notes?: string;
@@ -109,6 +152,13 @@ export interface CreateInvoiceRequest {
     quantity: number;
     unitPrice: number;
     notes?: string;
+    // Optional per-line taxes (advanced). If omitted, falls back to invoice-level taxRate
+    taxes?: Array<{
+      percent: number; // e.g., 20 for 20%
+      code?: string; // e.g., "S" (standard), "Z" (zero), etc.
+      included?: boolean; // whether line unitPrice includes this tax
+      note?: string;
+    }>;
   }[];
 }
 
@@ -133,6 +183,7 @@ export interface InvoiceWithDetails extends Invoice {
   customer: Customer;
   items: InvoiceItem[];
   attachments?: InvoiceAttachment[];
+  taxes?: InvoiceTax[];
 }
 
 // Template rendering context
@@ -171,9 +222,17 @@ export interface TemplateContext {
   subtotal: string;
   discountAmount?: string;
   discountPercentage?: number;
-  taxRate?: number;
-  taxAmount?: string;
+  taxRate?: number; // kept for backward compatibility (single-rate mode)
+  taxAmount?: string; // kept for backward compatibility
   total: string;
+  // Advanced tax summary (grouped by rate/code)
+  taxSummary?: Array<{
+    label: string; // e.g., "VAT 20% (S)"
+    percent: number;
+    taxable: string; // formatted amount
+    amount: string; // formatted amount
+  }>;
+  hasTaxSummary?: boolean;
 
   // Flags
   hasDiscount: boolean;

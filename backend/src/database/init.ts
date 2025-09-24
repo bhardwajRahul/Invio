@@ -65,7 +65,8 @@ export function initDatabase(): void {
       const errorMessage = error instanceof Error
         ? error.message
         : String(error);
-      if (!errorMessage.includes("already exists")) {
+      // Also ignore duplicate column errors which occur when rerunning ALTER TABLE ADD COLUMN
+      if (!/already exists|duplicate column name/i.test(errorMessage)) {
         console.error("Migration error:", errorMessage);
         console.error("Statement:", statement);
       }
@@ -91,7 +92,9 @@ export function resetDatabaseFromDemo(): void {
   const activePath = resolvePath(Deno.env.get("DATABASE_PATH") || "./invio.db");
   if (!demoMode) return; // only meaningful in demo mode
   if (!demoDb) {
-    console.warn("DEMO_MODE is true but DEMO_DB_PATH is not set; skipping reset.");
+    console.warn(
+      "DEMO_MODE is true but DEMO_DB_PATH is not set; skipping reset.",
+    );
     return;
   }
 
@@ -231,7 +234,9 @@ export function closeDatabase(): void {
 function ensureSchemaUpgrades(database: DB) {
   try {
     // Ensure customers.country_code exists
-    const cols = database.query("PRAGMA table_info(customers)") as unknown[] as Array<unknown[]>;
+    const cols = database.query(
+      "PRAGMA table_info(customers)",
+    ) as unknown[] as Array<unknown[]>;
     const names = new Set(cols.map((r) => String(r[1])));
     if (!names.has("country_code")) {
       try {
@@ -244,6 +249,80 @@ function ensureSchemaUpgrades(database: DB) {
         }
       }
     }
+
+    // Ensure invoices.prices_include_tax exists
+    const invCols = database.query(
+      "PRAGMA table_info(invoices)",
+    ) as unknown[] as Array<unknown[]>;
+    const invNames = new Set(invCols.map((r) => String(r[1])));
+    if (!invNames.has("prices_include_tax")) {
+      try {
+        database.execute(
+          "ALTER TABLE invoices ADD COLUMN prices_include_tax BOOLEAN DEFAULT 0",
+        );
+        console.log("✅ Added invoices.prices_include_tax column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add invoices.prices_include_tax:", msg);
+        }
+      }
+    }
+    if (!invNames.has("rounding_mode")) {
+      try {
+        database.execute(
+          "ALTER TABLE invoices ADD COLUMN rounding_mode TEXT DEFAULT 'line'",
+        );
+        console.log("✅ Added invoices.rounding_mode column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add invoices.rounding_mode:", msg);
+        }
+      }
+    }
+
+    // Ensure normalized tax tables exist
+    database.execute(`
+      CREATE TABLE IF NOT EXISTS tax_definitions (
+        id TEXT PRIMARY KEY,
+        code TEXT UNIQUE,
+        name TEXT,
+        percent NUMERIC NOT NULL,
+        category_code TEXT,
+        country_code TEXT,
+        vendor_specific_id TEXT,
+        default_included BOOLEAN DEFAULT 0,
+        metadata TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    database.execute(`
+      CREATE TABLE IF NOT EXISTS invoice_item_taxes (
+        id TEXT PRIMARY KEY,
+        invoice_item_id TEXT NOT NULL REFERENCES invoice_items(id) ON DELETE CASCADE,
+        tax_definition_id TEXT REFERENCES tax_definitions(id),
+        percent NUMERIC NOT NULL,
+        taxable_amount NUMERIC NOT NULL,
+        amount NUMERIC NOT NULL,
+        included BOOLEAN NOT NULL DEFAULT 0,
+        sequence INTEGER DEFAULT 0,
+        note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    database.execute(`
+      CREATE TABLE IF NOT EXISTS invoice_taxes (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        tax_definition_id TEXT REFERENCES tax_definitions(id),
+        percent NUMERIC NOT NULL,
+        taxable_amount NUMERIC NOT NULL,
+        tax_amount NUMERIC NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
   } catch (e) {
     console.warn("Schema upgrade check failed:", e);
   }
@@ -327,29 +406,82 @@ export function calculateInvoiceTotals(
   discountPercentage: number = 0,
   discountAmount: number = 0,
   taxRate: number = 0,
+  pricesIncludeTax: boolean = false,
+  roundingMode: "line" | "total" = "line",
 ): CalculatedTotals {
-  // Calculate subtotal from items
-  const subtotal = items.reduce((sum, item) => {
-    return sum + (item.quantity * item.unitPrice);
-  }, 0);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const rate = Math.max(0, Number(taxRate) || 0) / 100;
+
+  // Calculate subtotal from items (sum of quantity * unitPrice)
+  const lines = items.map((it) => ({
+    qty: Number(it.quantity) || 0,
+    unit: Number(it.unitPrice) || 0,
+  }));
+  const lineGrosses = lines.map((l) => l.qty * l.unit);
+  const subtotal = lineGrosses.reduce((a, b) => a + b, 0);
 
   // Calculate discount
-  let finalDiscountAmount = discountAmount;
+  let finalDiscountAmount = Number(discountAmount) || 0;
   if (discountPercentage > 0) {
     finalDiscountAmount = subtotal * (discountPercentage / 100);
   }
+  // Cap discount not to exceed subtotal
+  finalDiscountAmount = Math.min(Math.max(finalDiscountAmount, 0), subtotal);
 
-  // Calculate tax on discounted amount
-  const taxableAmount = subtotal - finalDiscountAmount;
-  const taxAmount = taxableAmount * (taxRate / 100);
+  let taxAmount = 0;
+  let total = 0;
 
-  // Calculate total
-  const total = subtotal - finalDiscountAmount + taxAmount;
+  if (roundingMode === "line" && subtotal > 0) {
+    // Distribute discount proportionally to lines and round per line
+    let distributed = 0;
+    const lineDiscounts = lineGrosses.map((g, idx) => {
+      if (idx === lineGrosses.length - 1) {
+        // Last line gets the remainder to preserve total discount
+        return r2(finalDiscountAmount - distributed);
+      }
+      const share = g / subtotal;
+      const d = r2(finalDiscountAmount * share);
+      distributed += d;
+      return d;
+    });
+
+    let sumTax = 0;
+    let sumTotal = 0;
+    for (let i = 0; i < lineGrosses.length; i++) {
+      const gross = lineGrosses[i];
+      const ld = lineDiscounts[i] || 0;
+      const afterDiscount = Math.max(0, gross - ld);
+      if (pricesIncludeTax) {
+        // afterDiscount already includes tax; extract tax portion per line
+        const net = rate > 0 ? afterDiscount / (1 + rate) : afterDiscount;
+        const tax = afterDiscount - net;
+        sumTax += r2(tax);
+        sumTotal += r2(afterDiscount);
+      } else {
+        const tax = afterDiscount * rate;
+        sumTax += r2(tax);
+        sumTotal += r2(afterDiscount + r2(tax));
+      }
+    }
+    taxAmount = r2(sumTax);
+    total = r2(sumTotal);
+  } else {
+    // Total rounding mode
+    const afterDiscount = subtotal - finalDiscountAmount;
+    if (pricesIncludeTax) {
+      const net = rate > 0 ? afterDiscount / (1 + rate) : afterDiscount;
+      taxAmount = r2(afterDiscount - net);
+      total = r2(afterDiscount);
+    } else {
+      taxAmount = r2(afterDiscount * rate);
+      total = r2(afterDiscount + taxAmount);
+    }
+  }
 
   return {
-    subtotal: Math.round(subtotal * 100) / 100,
-    discountAmount: Math.round(finalDiscountAmount * 100) / 100,
-    taxAmount: Math.round(taxAmount * 100) / 100,
-    total: Math.round(total * 100) / 100,
+    subtotal: r2(subtotal),
+    discountAmount: r2(finalDiscountAmount),
+    taxAmount: r2(taxAmount),
+    total: r2(total),
   };
 }

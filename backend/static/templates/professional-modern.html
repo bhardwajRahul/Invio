@@ -21,29 +21,10 @@
         box-sizing: border-box;
       }
 
-      @page {
-        size: A4;
-        margin: 12mm;
-      }
-      body {
-        font-family:
-          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        line-height: 1.5;
-        color: var(--text-dark);
-        background: white;
-        padding: 8mm 10mm;
-        max-width: 190mm;
-        margin: 0 auto;
-        font-size: 13px;
-      }
+      @page { size: A4; margin: 10mm; }
+      body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.42; color: var(--text-dark); background:#fff; padding:4mm 6mm; max-width:190mm; margin:0 auto; font-size:12.2px; }
 
-      .header {
-        /* float-based layout for wkhtmltopdf compatibility */
-        margin-bottom: 22px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid var(--highlight-color);
-      }
+      .header { /* float-based layout for wkhtmltopdf compatibility */ margin-bottom:16px; padding-bottom:8px; border-bottom:2px solid var(--highlight-color); }
 
       .company-info {
         float: left;
@@ -77,13 +58,7 @@
         max-width: 220px;
       }
 
-      .company-name {
-        font-size: 22px;
-        font-weight: 800;
-        color: var(--highlight-color);
-        margin-bottom: 6px;
-        letter-spacing: -0.02em;
-      }
+      .company-name { font-size:20px; font-weight:800; color:var(--highlight-color); margin-bottom:4px; letter-spacing:-0.02em; }
 
       .company-details {
         color: var(--text-medium);
@@ -101,13 +76,7 @@
         max-width: 320px;
       }
 
-      .invoice-title {
-        font-size: 28px;
-        font-weight: 900;
-        color: var(--text-dark);
-        margin-bottom: 10px;
-        letter-spacing: -0.03em;
-      }
+      .invoice-title { font-size:24px; font-weight:900; color:var(--text-dark); margin-bottom:6px; letter-spacing:-0.025em; }
       .invoice-title-row {
         clear: both;
         padding-top: 8px;
@@ -140,9 +109,7 @@
         font-weight: 600;
       }
 
-      .customer-section {
-        margin-bottom: 24px;
-      }
+      .customer-section { margin-bottom:16px; }
 
       .section-title {
         font-size: 13px;
@@ -153,12 +120,7 @@
         letter-spacing: 0.04em;
       }
 
-      .customer-card {
-        background: var(--background-light);
-        padding: 14px;
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-      }
+      .customer-card { background: var(--background-light); padding:10px; border-radius:6px; border:1px solid var(--border-color); }
 
       .customer-name {
         font-size: 16px;
@@ -176,9 +138,7 @@
         margin: 2px 0;
       }
 
-      .items-section {
-        margin-bottom: 24px;
-      }
+      .items-section { margin-bottom:16px; }
 
       .items-table {
         width: 100%;
@@ -194,14 +154,7 @@
         color: white;
       }
 
-      .items-table th {
-        padding: 10px 10px;
-        text-align: left;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-      }
+      .items-table th { padding:6px 8px; text-align:left; font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:0.02em; }
 
       .items-table th:last-child,
       .items-table td:last-child {
@@ -220,10 +173,7 @@
         background-color: var(--background-light);
       }
 
-      .items-table td {
-        padding: 10px;
-        font-size: 12px;
-      }
+      .items-table td { padding:6px 8px; font-size:11.2px; }
 
       .item-description {
         font-weight: 600;
@@ -253,52 +203,19 @@
         font-weight: 600;
       }
 
-      .totals-section {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 20px;
-      }
+      .totals-section { display:flex; justify-content:flex-end; margin-bottom:16px; }
 
-      .totals-card {
-        background: white;
-        border: 2px solid var(--highlight-color);
-        border-radius: 8px;
-        overflow: hidden;
-        min-width: 280px;
-      }
+      .totals-card { background:#fff; border:2px solid var(--highlight-color); border-radius:6px; overflow:hidden; min-width:260px; page-break-inside:avoid; }
 
-      .totals-header {
-        background: var(--highlight-color);
-        color: white;
-        padding: 10px 14px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-      }
+      .totals-header { background:var(--highlight-color); color:#fff; padding:8px 12px; font-weight:700; text-transform:uppercase; letter-spacing:0.02em; }
 
-      .totals-body {
-        padding: 14px;
-      }
+      .totals-body { padding:10px 12px; }
 
-      .totals-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 6px 0;
-        border-bottom: 1px solid var(--border-color);
-      }
+      .totals-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-color); }
 
-      .totals-row:last-child {
-        border-bottom: none;
-        border-top: 2px solid var(--highlight-color);
-        padding-top: 10px;
-        margin-top: 6px;
-      }
+      .totals-row:last-child { border-bottom:none; border-top:2px solid var(--highlight-color); padding-top:8px; margin-top:6px; }
 
-      .totals-row.total-final {
-        font-size: 16px;
-        font-weight: 800;
-        color: var(--highlight-color);
-      }
+      .totals-row.total-final { font-size:15px; font-weight:800; color:var(--highlight-color); }
 
       .totals-label {
         color: var(--text-medium);
@@ -312,26 +229,11 @@
         font-size: 12px;
       }
 
-      .notes-section {
-        margin-bottom: 20px;
-      }
+      .notes-section { margin-bottom:16px; }
 
-      .notes-content {
-        background: var(--background-light);
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 4px solid var(--highlight-color);
-        color: var(--text-medium);
-        font-size: 12px;
-        line-height: 1.5;
-      }
+      .notes-content { background:var(--background-light); padding:10px; border-radius:6px; border-left:4px solid var(--highlight-color); color:var(--text-medium); font-size:11.5px; line-height:1.4; }
 
-      .footer {
-        border-top: 1px solid var(--border-color);
-        padding-top: 14px;
-        color: var(--text-light);
-        font-size: 11px;
-      }
+      .footer { border-top:1px solid var(--border-color); padding-top:12px; color:var(--text-light); font-size:10.5px; }
 
       .footer-grid {
         display: grid;
@@ -382,24 +284,7 @@
         color: #991b1b;
       }
 
-      @media print {
-        body {
-          padding: 0;
-          font-size: 12px;
-        }
-        .header {
-          margin-bottom: 18px;
-        }
-        .company-name {
-          font-size: 20px;
-        }
-        .invoice-title {
-          font-size: 24px;
-        }
-        table, tr, td, th {
-          page-break-inside: avoid !important;
-        }
-      }
+      @media print { body { padding:4mm 6mm; font-size:12px; } .header { margin-bottom:16px; } .company-name { font-size:20px; } .invoice-title { font-size:24px; } table, tr, td, th { page-break-inside: avoid !important; } }
 
       @media (max-width: 640px) {
         body {
@@ -551,7 +436,29 @@
             <span class="totals-label">Tax ({{taxRate}}%):</span>
             <span class="totals-value">{{currency}} {{taxAmount}}</span>
           </div>
-          {{/hasTax}}
+          {{/hasTax}} {{#hasTaxSummary}}
+          <div class="totals-row" style="display:block; padding-top:4px;">
+            <div style="font-weight:600; color:var(--text-medium); margin-bottom:4px; font-size:11.5px;">Tax Summary</div>
+            <table style="width:100%; font-size:11px; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="text-align:left; color:var(--text-light); font-weight:500;">Tax</th>
+                  <th style="text-align:right; color:var(--text-light); font-weight:500;">Taxable</th>
+                  <th style="text-align:right; color:var(--text-light); font-weight:500;">Tax Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#taxSummary}}
+                <tr>
+                  <td style="padding:2px 0;">{{label}}</td>
+                  <td style="text-align:right; padding:2px 0;">{{currency}} {{taxable}}</td>
+                  <td style="text-align:right; padding:2px 0;">{{currency}} {{amount}}</td>
+                </tr>
+                {{/taxSummary}}
+              </tbody>
+            </table>
+          </div>
+          {{/hasTaxSummary}}
           <div class="totals-row total-final">
             <span class="totals-label">Total:</span>
             <span class="totals-value">{{currency}} {{total}}</span>

@@ -16,10 +16,10 @@ import {
   deleteTemplate,
   getTemplateById,
   getTemplates,
+  installTemplateFromManifest,
   loadTemplateFromFile,
   renderTemplate,
   setDefaultTemplate,
-  installTemplateFromManifest,
 } from "../controllers/templates.ts";
 import {
   deleteSetting,
@@ -40,6 +40,51 @@ import { generateUBLInvoiceXML } from "../utils/ubl.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 
 const adminRoutes = new Hono();
+
+// Normalize tax-related settings coming from the client to robust canonical forms
+function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
+  // defaultTaxRate: parse to finite non-negative number, store as canonical string
+  if (data && Object.prototype.hasOwnProperty.call(data, "defaultTaxRate")) {
+    const raw = String(
+      (data as Record<string, unknown>)["defaultTaxRate"] ?? "",
+    ).trim();
+    const norm = raw.replace(",", ".");
+    const n = Number(norm);
+    if (!isFinite(n) || isNaN(n) || n < 0) {
+      // Remove invalid value to avoid persisting junk
+      delete (data as Record<string, unknown>)["defaultTaxRate"];
+    } else {
+      // Keep a trimmed canonical numeric string (avoid trailing spaces)
+      (data as Record<string, unknown>)["defaultTaxRate"] = String(n);
+    }
+  }
+
+  // defaultPricesIncludeTax: normalize to "true" | "false"
+  if (
+    data &&
+    Object.prototype.hasOwnProperty.call(data, "defaultPricesIncludeTax")
+  ) {
+    const v = String(
+      (data as Record<string, unknown>)["defaultPricesIncludeTax"] ?? "",
+    ).toLowerCase().trim();
+    const truthy = new Set(["1", "true", "yes", "y", "on"]);
+    (data as Record<string, unknown>)["defaultPricesIncludeTax"] = truthy.has(v)
+      ? "true"
+      : "false";
+  }
+
+  // defaultRoundingMode: normalize to "line" | "total" (default line)
+  if (
+    data && Object.prototype.hasOwnProperty.call(data, "defaultRoundingMode")
+  ) {
+    const v = String(
+      (data as Record<string, unknown>)["defaultRoundingMode"] ?? "",
+    ).toLowerCase().trim();
+    (data as Record<string, unknown>)["defaultRoundingMode"] = v === "total"
+      ? "total"
+      : "line";
+  }
+}
 
 // Basic auth middleware for admin routes
 const ADMIN_USER = Deno.env.get("ADMIN_USER") || "admin";
@@ -121,8 +166,16 @@ adminRoutes.post("/admin/demo/reset", (c) => {
 // Invoice routes
 adminRoutes.post("/invoices", async (c) => {
   const data = await c.req.json();
-  const invoice = createInvoice(data);
-  return c.json(invoice);
+  try {
+    const invoice = createInvoice(data);
+    return c.json(invoice);
+  } catch (e) {
+    const msg = String(e);
+    if (/already exists/i.test(msg)) {
+      return c.json({ error: msg }, 409);
+    }
+    return c.json({ error: msg }, 400);
+  }
 });
 
 adminRoutes.get("/invoices", (c) => {
@@ -158,8 +211,16 @@ adminRoutes.get("/invoices/:id", (c) => {
 adminRoutes.put("/invoices/:id", async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
-  const invoice = await updateInvoice(id, data);
-  return c.json(invoice);
+  try {
+    const invoice = await updateInvoice(id, data);
+    return c.json(invoice);
+  } catch (e) {
+    const msg = String(e);
+    if (/already exists/i.test(msg)) {
+      return c.json({ error: msg }, 409);
+    }
+    return c.json({ error: msg }, 400);
+  }
 });
 
 adminRoutes.delete("/invoices/:id", (c) => {
@@ -363,7 +424,9 @@ adminRoutes.get("/settings", async (c) => {
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
-  if (map.companyCountryCode && !map.countryCode) map.countryCode = map.companyCountryCode;
+  if (map.companyCountryCode && !map.countryCode) {
+    map.countryCode = map.companyCountryCode;
+  }
   // Unify logo fields: prefer single 'logo'; hide legacy 'logoUrl'
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
@@ -379,6 +442,8 @@ adminRoutes.put("/settings", async (c) => {
     data.logo = data.logoUrl;
     delete data.logoUrl;
   }
+  // Normalize tax-related settings
+  normalizeTaxSettingsPayload(data);
   const settings = await updateSettings(data);
   try {
     if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -405,6 +470,8 @@ adminRoutes.patch("/settings", async (c) => {
     data.companyCountryCode = data.countryCode;
     delete data.countryCode;
   }
+  // Normalize tax-related settings
+  normalizeTaxSettingsPayload(data);
   const settings = await updateSettings(data);
   if (typeof data.templateId === "string" && data.templateId) {
     try {
@@ -427,7 +494,9 @@ adminRoutes.get("/admin/settings", async (c) => {
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
-  if (map.companyCountryCode && !map.countryCode) map.countryCode = map.companyCountryCode;
+  if (map.companyCountryCode && !map.countryCode) {
+    map.countryCode = map.companyCountryCode;
+  }
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
   // Expose demo mode to frontend UI for admin-prefixed route as well
@@ -441,6 +510,8 @@ adminRoutes.put("/admin/settings", async (c) => {
     data.logo = data.logoUrl;
     delete data.logoUrl;
   }
+  // Normalize tax-related settings
+  normalizeTaxSettingsPayload(data);
   const settings = await updateSettings(data);
   try {
     if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -454,6 +525,8 @@ adminRoutes.patch("/admin/settings", async (c) => {
     data.logo = data.logoUrl;
     delete data.logoUrl;
   }
+  // Normalize tax-related settings
+  normalizeTaxSettingsPayload(data);
   const settings = await updateSettings(data);
   try {
     if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -494,7 +567,6 @@ adminRoutes.delete("/customers/:id", async (c) => {
   await deleteCustomer(id);
   return c.json({ success: true });
 });
-
 
 // Authenticated HTML/PDF generation for invoices by ID (no share token required)
 adminRoutes.get("/invoices/:id/html", async (c) => {
@@ -643,7 +715,7 @@ adminRoutes.get("/invoices/:id/ubl.xml", async (c) => {
     bankAccount: map.bankAccount || "",
     paymentTerms: map.paymentTerms || "Due in 30 days",
     defaultNotes: map.defaultNotes || "",
-      companyCountryCode: map.companyCountryCode || "",
+    companyCountryCode: map.companyCountryCode || "",
   };
 
   // Optional PEPPOL endpoint IDs if configured in settings

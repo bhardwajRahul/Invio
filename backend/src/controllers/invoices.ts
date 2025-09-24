@@ -13,6 +13,125 @@ import {
 } from "../types/index.ts";
 import { generateShareToken, generateUUID } from "../utils/uuid.ts";
 
+type LineTaxInput = {
+  percent: number;
+  code?: string;
+  included?: boolean; // ignored; we use invoice-level pricesIncludeTax
+  note?: string;
+};
+
+type ItemInput = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  notes?: string;
+  taxes?: LineTaxInput[];
+};
+
+type PerLineCalc = {
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  total: number;
+  // For each item index, the taxable base (after discount) and per-rate tax amounts
+  perItem: Array<{
+    taxable: number;
+    taxes: Array<{ percent: number; amount: number; note?: string }>;
+  }>;
+  // Summary grouped by percent
+  summary: Array<{ percent: number; taxable: number; amount: number }>;
+};
+
+function calculatePerLineTotals(
+  items: ItemInput[],
+  discountPercentage = 0,
+  discountAmount = 0,
+  pricesIncludeTax = false,
+  _roundingMode: "line" | "total" = "line",
+): PerLineCalc {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const lineGrosses = items.map((it) =>
+    (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)
+  );
+  const subtotal = lineGrosses.reduce((a, b) => a + b, 0);
+
+  let finalDiscountAmount = Number(discountAmount) || 0;
+  if (discountPercentage > 0) {
+    finalDiscountAmount = subtotal * (discountPercentage / 100);
+  }
+  finalDiscountAmount = Math.min(Math.max(finalDiscountAmount, 0), subtotal);
+
+  // Proportional discount per line to keep rounding consistent
+  let distributed = 0;
+  const lineDiscounts = lineGrosses.map((g, idx) => {
+    if (subtotal === 0) return 0;
+    if (idx === lineGrosses.length - 1) {
+      return r2(finalDiscountAmount - distributed);
+    }
+    const share = g / subtotal;
+    const d = r2(finalDiscountAmount * share);
+    distributed += d;
+    return d;
+  });
+
+  const perItem: PerLineCalc["perItem"] = [];
+  let taxAmount = 0;
+  let total = 0;
+  const summaryMap = new Map<number, { taxable: number; amount: number }>();
+
+  for (let i = 0; i < items.length; i++) {
+    const gross = lineGrosses[i] || 0;
+    const afterDiscount = Math.max(0, gross - (lineDiscounts[i] || 0));
+    const taxes = items[i].taxes || [];
+    const rateSum = taxes.reduce((s, t) => s + (Number(t.percent) || 0), 0) /
+      100;
+
+    let net = afterDiscount;
+    if (pricesIncludeTax && rateSum > 0) {
+      net = afterDiscount / (1 + rateSum);
+    }
+
+    const itemTaxes: Array<{ percent: number; amount: number; note?: string }> =
+      [];
+    for (const t of taxes) {
+      const p = (Number(t.percent) || 0) / 100;
+      const amt = r2(net * p);
+      itemTaxes.push({ percent: r2(p * 100), amount: amt, note: t.note });
+      const s = summaryMap.get(r2(p * 100)) || { taxable: 0, amount: 0 };
+      s.taxable = r2(s.taxable + net);
+      s.amount = r2(s.amount + amt);
+      summaryMap.set(r2(p * 100), s);
+    }
+
+    const itemTaxSum = r2(itemTaxes.reduce((a, b) => a + b.amount, 0));
+    perItem.push({ taxable: r2(net), taxes: itemTaxes });
+    if (pricesIncludeTax) {
+      total = r2(total + afterDiscount);
+      taxAmount = r2(taxAmount + itemTaxSum);
+    } else {
+      total = r2(total + net + itemTaxSum);
+      taxAmount = r2(taxAmount + itemTaxSum);
+    }
+  }
+
+  const summary = Array.from(summaryMap.entries())
+    .map(([percent, v]) => ({
+      percent,
+      taxable: r2(v.taxable),
+      amount: r2(v.amount),
+    }))
+    .sort((a, b) => a.percent - b.percent);
+
+  return {
+    subtotal: r2(subtotal),
+    discountAmount: r2(finalDiscountAmount),
+    taxAmount: r2(taxAmount),
+    total: r2(total),
+    perItem,
+    summary,
+  };
+}
+
 export const createInvoice = (
   data: CreateInvoiceRequest,
 ): InvoiceWithDetails => {
@@ -27,31 +146,70 @@ export const createInvoice = (
       [invoiceNumber],
     );
     if (exists.length > 0) {
-      // Fallback to auto-generated to avoid UNIQUE constraint violations
-      invoiceNumber = getNextInvoiceNumber();
+      // Client requested an explicit number which already exists -> reject
+      throw new Error("Invoice number already exists");
     }
   } else {
     // Use a draft placeholder first; final number is assigned on publish/send
     invoiceNumber = generateDraftInvoiceNumber();
   }
 
-  // Calculate totals from items and discount/tax info
-  const totals = calculateInvoiceTotals(
-    data.items,
-    data.discountPercentage || 0,
-    data.discountAmount || 0,
-    data.taxRate || 0,
-  );
+  // Load settings for defaults
+  const settings = getSettings();
+
+  // Determine tax behavior defaults
+  const defaultPricesIncludeTax =
+    String(settings.defaultPricesIncludeTax || "false").toLowerCase() ===
+      "true";
+  const defaultRoundingMode = String(settings.defaultRoundingMode || "line");
+  const defaultTaxRate = Number(settings.defaultTaxRate || 0) || 0;
+
+  // Determine if per-line taxes are used
+  const hasPerLineTaxes = Array.isArray(data.items) &&
+    data.items.some((i) =>
+      Array.isArray((i as { taxes?: LineTaxInput[] }).taxes) &&
+      (((i as { taxes?: LineTaxInput[] }).taxes?.length) || 0) > 0
+    );
+  let totals = { subtotal: 0, discountAmount: 0, taxAmount: 0, total: 0 };
+  let perLineCalc: PerLineCalc | undefined = undefined;
+  if (hasPerLineTaxes) {
+    perLineCalc = calculatePerLineTotals(
+      data.items as unknown as ItemInput[],
+      data.discountPercentage || 0,
+      data.discountAmount || 0,
+      data.pricesIncludeTax ?? defaultPricesIncludeTax,
+      (data.roundingMode as "line" | "total") ||
+        (defaultRoundingMode as "line" | "total"),
+    );
+    totals = {
+      subtotal: perLineCalc.subtotal,
+      discountAmount: perLineCalc.discountAmount,
+      taxAmount: perLineCalc.taxAmount,
+      total: perLineCalc.total,
+    };
+  } else {
+    totals = calculateInvoiceTotals(
+      data.items,
+      data.discountPercentage || 0,
+      data.discountAmount || 0,
+      (typeof data.taxRate === "number" ? data.taxRate : defaultTaxRate) || 0,
+      data.pricesIncludeTax ?? defaultPricesIncludeTax,
+      (data.roundingMode as "line" | "total") ||
+        defaultRoundingMode as "line" | "total",
+    );
+  }
 
   const now = new Date();
   const issueDate = data.issueDate ? new Date(data.issueDate) : now;
   const dueDate = data.dueDate ? new Date(data.dueDate) : undefined;
 
   // Get default settings for currency and payment terms
-  const settings = getSettings();
   const currency = data.currency || settings.currency || "USD";
   const paymentTerms = data.paymentTerms || settings.paymentTerms ||
     "Due in 30 days";
+
+  const pricesIncludeTax = data.pricesIncludeTax ?? defaultPricesIncludeTax;
+  const roundingMode = data.roundingMode || defaultRoundingMode;
 
   const invoice: Invoice = {
     id: invoiceId,
@@ -66,9 +224,12 @@ export const createInvoice = (
     subtotal: totals.subtotal,
     discountAmount: totals.discountAmount,
     discountPercentage: data.discountPercentage || 0,
-    taxRate: data.taxRate || 0,
+    taxRate: hasPerLineTaxes ? 0 : (data.taxRate || 0),
     taxAmount: totals.taxAmount,
     total: totals.total,
+
+    pricesIncludeTax,
+    roundingMode,
 
     // Payment and notes
     paymentTerms,
@@ -85,8 +246,9 @@ export const createInvoice = (
     `INSERT INTO invoices (
       id, invoice_number, customer_id, issue_date, due_date, currency, status,
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
-      payment_terms, notes, share_token, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      payment_terms, notes, share_token, created_at, updated_at,
+      prices_include_tax, rounding_mode
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -106,6 +268,8 @@ export const createInvoice = (
       invoice.shareToken,
       invoice.createdAt,
       invoice.updatedAt,
+      pricesIncludeTax ? 1 : 0,
+      roundingMode,
     ],
   );
 
@@ -144,6 +308,50 @@ export const createInvoice = (
     );
 
     items.push(invoiceItem);
+
+    // Insert per-line taxes if provided
+    if (hasPerLineTaxes && perLineCalc) {
+      const calc = perLineCalc.perItem[i];
+      if (calc && Array.isArray(item.taxes)) {
+        for (const t of calc.taxes) {
+          db.query(
+            `INSERT INTO invoice_item_taxes (id, invoice_item_id, tax_definition_id, percent, taxable_amount, amount, included, sequence, note, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              generateUUID(),
+              itemId,
+              null,
+              t.percent,
+              calc.taxable,
+              t.amount,
+              (data.pricesIncludeTax ?? defaultPricesIncludeTax) ? 1 : 0,
+              0,
+              t.note || null,
+              new Date(),
+            ],
+          );
+        }
+      }
+    }
+  }
+
+  // Insert invoice-level tax summary if calculated
+  if (hasPerLineTaxes && perLineCalc) {
+    for (const s of perLineCalc.summary) {
+      db.query(
+        `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          generateUUID(),
+          invoiceId,
+          null,
+          s.percent,
+          s.taxable,
+          s.amount,
+          new Date(),
+        ],
+      );
+    }
   }
 
   // Get customer info for response
@@ -156,6 +364,16 @@ export const createInvoice = (
     ...invoice,
     customer,
     items,
+    taxes: hasPerLineTaxes && perLineCalc
+      ? perLineCalc.summary.map((s) => ({
+        id: "",
+        invoiceId: invoiceId,
+        taxDefinitionId: undefined,
+        percent: s.percent,
+        taxableAmount: s.taxable,
+        taxAmount: s.amount,
+      }))
+      : undefined,
   };
 };
 
@@ -164,7 +382,8 @@ export const getInvoices = (): Invoice[] => {
   const results = db.query(`
     SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
-           payment_terms, notes, share_token, created_at, updated_at
+           payment_terms, notes, share_token, created_at, updated_at,
+           prices_include_tax, rounding_mode
     FROM invoices 
     ORDER BY created_at DESC
   `);
@@ -178,7 +397,8 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
     `
     SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
-           payment_terms, notes, share_token, created_at, updated_at
+           payment_terms, notes, share_token, created_at, updated_at,
+           prices_include_tax, rounding_mode
     FROM invoices 
     WHERE id = ?
   `,
@@ -216,10 +436,59 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
     sortOrder: row[7] as number,
   }));
 
+  // Attach per-item taxes
+  type ItemTaxRow = {
+    percent: number;
+    taxableAmount: number;
+    amount: number;
+    included: boolean;
+    note?: string;
+  };
+  let itemsWithTaxes = items.map((it) => ({ ...it }));
+  if (items.length > 0) {
+    const placeholders = items.map(() => "?").join(",");
+    const taxRows = db.query(
+      `SELECT invoice_item_id, percent, taxable_amount, amount, included, note FROM invoice_item_taxes WHERE invoice_item_id IN (${placeholders})`,
+      items.map((it) => it.id),
+    );
+    const taxesByItem = new Map<string, ItemTaxRow[]>();
+    for (const r of taxRows) {
+      const itemId = String((r as unknown[])[0]);
+      const tax: ItemTaxRow = {
+        percent: Number((r as unknown[])[1]),
+        taxableAmount: Number((r as unknown[])[2]),
+        amount: Number((r as unknown[])[3]),
+        included: Boolean((r as unknown[])[4]),
+        note: (r as unknown[])[5] as string | undefined,
+      };
+      if (!taxesByItem.has(itemId)) taxesByItem.set(itemId, []);
+      taxesByItem.get(itemId)!.push(tax);
+    }
+    itemsWithTaxes = items.map((it) => ({
+      ...it,
+      taxes: taxesByItem.get(it.id),
+    }));
+  }
+
+  // Invoice tax summary
+  const invTaxRows = db.query(
+    `SELECT id, invoice_id, percent, taxable_amount, tax_amount FROM invoice_taxes WHERE invoice_id = ?`,
+    [id],
+  );
+  const taxes = invTaxRows.map((r) => ({
+    id: r[0] as string,
+    invoiceId: r[1] as string,
+    taxDefinitionId: undefined,
+    percent: Number(r[2] as number),
+    taxableAmount: Number(r[3] as number),
+    taxAmount: Number(r[4] as number),
+  }));
+
   return {
     ...invoice,
     customer,
-    items,
+    items: itemsWithTaxes,
+    taxes,
   };
 };
 
@@ -231,7 +500,8 @@ export const getInvoiceByShareToken = (
     `
     SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
-           payment_terms, notes, share_token, created_at, updated_at
+           payment_terms, notes, share_token, created_at, updated_at,
+           prices_include_tax, rounding_mode
     FROM invoices 
     WHERE share_token = ?
   `,
@@ -269,10 +539,59 @@ export const getInvoiceByShareToken = (
     sortOrder: row[7] as number,
   }));
 
+  // Attach per-item taxes
+  type ItemTaxRow2 = {
+    percent: number;
+    taxableAmount: number;
+    amount: number;
+    included: boolean;
+    note?: string;
+  };
+  let itemsWithTaxes = items.map((it) => ({ ...it }));
+  if (items.length > 0) {
+    const placeholders = items.map(() => "?").join(",");
+    const taxRows = db.query(
+      `SELECT invoice_item_id, percent, taxable_amount, amount, included, note FROM invoice_item_taxes WHERE invoice_item_id IN (${placeholders})`,
+      items.map((it) => it.id),
+    );
+    const taxesByItem = new Map<string, ItemTaxRow2[]>();
+    for (const r of taxRows) {
+      const itemId = String((r as unknown[])[0]);
+      const tax: ItemTaxRow2 = {
+        percent: Number((r as unknown[])[1]),
+        taxableAmount: Number((r as unknown[])[2]),
+        amount: Number((r as unknown[])[3]),
+        included: Boolean((r as unknown[])[4]),
+        note: (r as unknown[])[5] as string | undefined,
+      };
+      if (!taxesByItem.has(itemId)) taxesByItem.set(itemId, []);
+      taxesByItem.get(itemId)!.push(tax);
+    }
+    itemsWithTaxes = items.map((it) => ({
+      ...it,
+      taxes: taxesByItem.get(it.id),
+    }));
+  }
+
+  // Invoice tax summary
+  const invTaxRows = db.query(
+    `SELECT id, invoice_id, percent, taxable_amount, tax_amount FROM invoice_taxes WHERE invoice_id = ?`,
+    [invoice.id],
+  );
+  const taxes = invTaxRows.map((r) => ({
+    id: r[0] as string,
+    invoiceId: r[1] as string,
+    taxDefinitionId: undefined,
+    percent: Number(r[2] as number),
+    taxableAmount: Number(r[3] as number),
+    taxAmount: Number(r[4] as number),
+  }));
+
   return {
     ...invoice,
     customer,
-    items,
+    items: itemsWithTaxes,
+    taxes,
   };
 };
 
@@ -285,6 +604,48 @@ export const updateInvoice = async (
 
   const db = getDatabase();
 
+  // Immutability: prevent structural changes once sent/paid
+  const isIssued = existing.status !== "draft";
+  if (isIssued) {
+    const forbidden = [
+      "items",
+      "discountAmount",
+      "discountPercentage",
+      "taxRate",
+      "pricesIncludeTax",
+      "roundingMode",
+      "currency",
+      "customerId",
+      "issueDate",
+      "invoiceNumber",
+      "subtotal",
+      "total",
+    ];
+    for (const k of forbidden) {
+      if ((data as Record<string, unknown>)[k] !== undefined) {
+        throw new Error(
+          "Issued invoices cannot be modified. Create a credit note instead.",
+        );
+      }
+    }
+  }
+
+  // Optional: validate a custom invoice number if provided
+  let nextInvoiceNumber: string | undefined = undefined;
+  if (typeof data.invoiceNumber === "string") {
+    const desired = data.invoiceNumber.trim();
+    if (desired.length > 0 && desired !== existing.invoiceNumber) {
+      const dup = db.query(
+        "SELECT 1 FROM invoices WHERE invoice_number = ? AND id <> ? LIMIT 1",
+        [desired, id],
+      );
+      if (dup.length > 0) {
+        throw new Error("Invoice number already exists");
+      }
+      nextInvoiceNumber = desired;
+    }
+  }
+
   // If items are being updated, recalculate totals
   let totals = {
     subtotal: existing.subtotal,
@@ -293,13 +654,37 @@ export const updateInvoice = async (
     total: existing.total,
   };
 
+  let perLineCalcUpdate: PerLineCalc | undefined = undefined;
   if (data.items) {
-    totals = calculateInvoiceTotals(
-      data.items,
-      data.discountPercentage ?? existing.discountPercentage,
-      data.discountAmount ?? existing.discountAmount,
-      data.taxRate ?? existing.taxRate,
-    );
+    const hasPerLine = (data.items as Array<{ taxes?: LineTaxInput[] }>).some((
+      i,
+    ) => Array.isArray(i.taxes) && (i.taxes?.length || 0) > 0);
+    if (hasPerLine) {
+      perLineCalcUpdate = calculatePerLineTotals(
+        data.items as unknown as ItemInput[],
+        data.discountPercentage ?? existing.discountPercentage,
+        data.discountAmount ?? existing.discountAmount,
+        data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false,
+        (data.roundingMode as "line" | "total") ||
+          (existing.roundingMode as "line" | "total") || "line",
+      );
+      totals = {
+        subtotal: perLineCalcUpdate.subtotal,
+        discountAmount: perLineCalcUpdate.discountAmount,
+        taxAmount: perLineCalcUpdate.taxAmount,
+        total: perLineCalcUpdate.total,
+      };
+    } else {
+      totals = calculateInvoiceTotals(
+        data.items,
+        data.discountPercentage ?? existing.discountPercentage,
+        data.discountAmount ?? existing.discountAmount,
+        data.taxRate ?? existing.taxRate,
+        data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false,
+        (data.roundingMode as "line" | "total") ||
+          (existing.roundingMode as "line" | "total") || "line",
+      );
+    }
   }
 
   const updatedAt = new Date();
@@ -317,7 +702,10 @@ export const updateInvoice = async (
     UPDATE invoices SET 
       customer_id = ?, issue_date = ?, due_date = ?, currency = ?, status = ?,
       subtotal = ?, discount_amount = ?, discount_percentage = ?, tax_rate = ?, tax_amount = ?, total = ?,
-      payment_terms = ?, notes = ?, updated_at = ?
+      payment_terms = ?, notes = ?, updated_at = ?,
+      prices_include_tax = COALESCE(?, prices_include_tax),
+      rounding_mode = COALESCE(?, rounding_mode),
+      invoice_number = COALESCE(?, invoice_number)
     WHERE id = ?
   `,
     [
@@ -337,6 +725,11 @@ export const updateInvoice = async (
       data.paymentTerms ?? existing.paymentTerms,
       normalizedNotes !== undefined ? normalizedNotes : existing.notes,
       updatedAt,
+      typeof data.pricesIncludeTax === "boolean"
+        ? (data.pricesIncludeTax ? 1 : 0)
+        : null,
+      data.roundingMode ?? null,
+      nextInvoiceNumber ?? null,
       id,
     ],
   );
@@ -361,7 +754,12 @@ export const updateInvoice = async (
 
   // Update items if provided
   if (data.items) {
-    // Delete existing items
+    // Delete existing taxes, then items
+    db.query(
+      "DELETE FROM invoice_item_taxes WHERE invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id = ?)",
+      [id],
+    );
+    db.query("DELETE FROM invoice_taxes WHERE invoice_id = ?", [id]);
     db.query("DELETE FROM invoice_items WHERE invoice_id = ?", [id]);
 
     // Insert new items
@@ -387,6 +785,50 @@ export const updateInvoice = async (
           i,
         ],
       );
+
+      if (perLineCalcUpdate) {
+        const calc = perLineCalcUpdate.perItem[i];
+        if (calc && Array.isArray((item as { taxes?: LineTaxInput[] }).taxes)) {
+          for (const t of calc.taxes) {
+            db.query(
+              `INSERT INTO invoice_item_taxes (id, invoice_item_id, tax_definition_id, percent, taxable_amount, amount, included, sequence, note, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                generateUUID(),
+                itemId,
+                null,
+                t.percent,
+                calc.taxable,
+                t.amount,
+                (data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false)
+                  ? 1
+                  : 0,
+                0,
+                t.note || null,
+                new Date(),
+              ],
+            );
+          }
+        }
+      }
+    }
+
+    if (perLineCalcUpdate) {
+      for (const s of perLineCalcUpdate.summary) {
+        db.query(
+          `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            generateUUID(),
+            id,
+            null,
+            s.percent,
+            s.taxable,
+            s.amount,
+            new Date(),
+          ],
+        );
+      }
     }
   }
 
@@ -428,8 +870,9 @@ export const duplicateInvoice = async (
     INSERT INTO invoices (
       id, invoice_number, customer_id, issue_date, due_date, currency, status,
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
-      payment_terms, notes, share_token, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      payment_terms, notes, share_token, created_at, updated_at,
+      prices_include_tax, rounding_mode
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       newId,
@@ -450,6 +893,8 @@ export const duplicateInvoice = async (
       newShare,
       now,
       now,
+      (original as Invoice).pricesIncludeTax ? 1 : 0,
+      (original as Invoice).roundingMode || "line",
     ],
   );
   // Copy items
@@ -482,6 +927,19 @@ export const publishInvoice = async (
   const invoice = await getInvoiceById(id);
   if (!invoice) {
     throw new Error("Invoice not found");
+  }
+
+  // Validate minimal required fields before issuing
+  const missing: string[] = [];
+  if (!invoice.customer?.name) missing.push("customer.name");
+  if (!invoice.customer?.address) missing.push("customer.address");
+  if (!invoice.items || invoice.items.length === 0) missing.push("items");
+  if (!invoice.currency) missing.push("currency");
+  if (!invoice.issueDate) missing.push("issueDate");
+  if (missing.length) {
+    throw new Error(
+      `Cannot publish invoice. Missing required fields: ${missing.join(", ")}`,
+    );
   }
 
   // Update status to 'sent' if it's currently 'draft'
@@ -548,6 +1006,8 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     shareToken: row[15] as string,
     createdAt: new Date(row[16] as string),
     updatedAt: new Date(row[17] as string),
+    pricesIncludeTax: Boolean(row[18] as number),
+    roundingMode: (row[19] as string) || "line",
   };
 }
 

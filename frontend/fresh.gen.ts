@@ -26,7 +26,6 @@ import * as $public_invoices_share_token_ubl_xml from "./routes/public/invoices/
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
-import * as $DemoToast from "./islands/DemoToast.tsx";
 import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
@@ -62,7 +61,6 @@ const manifest = {
   },
   islands: {
     "./islands/Breadcrumbs.tsx": $Breadcrumbs,
-    "./islands/DemoToast.tsx": $DemoToast,
     "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
   },
   baseUrl: import.meta.url,

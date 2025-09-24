@@ -6,6 +6,8 @@ type Item = {
   quantity: number;
   unitPrice: number;
   notes?: string;
+  // Optional single tax percent for UI (maps to a single-entry taxes array backend)
+  taxPercent?: number;
 };
 
 export function InvoiceEditor(props: {
@@ -15,6 +17,11 @@ export function InvoiceEditor(props: {
   customerName?: string;
   currency?: string;
   status?: "draft" | "sent" | "paid" | "overdue";
+  invoiceNumber?: string;
+  taxRate?: number;
+  pricesIncludeTax?: boolean;
+  roundingMode?: string;
+  taxMode?: 'invoice' | 'line';
   notes?: string;
   paymentTerms?: string;
   items: Item[];
@@ -22,6 +29,7 @@ export function InvoiceEditor(props: {
   issueDate?: string;
   dueDate?: string;
   demoMode?: boolean;
+  invoiceNumberError?: string;
 }): JSX.Element {
   const items = props.items && props.items.length > 0
     ? props.items
@@ -29,7 +37,7 @@ export function InvoiceEditor(props: {
   return (
     <div class="space-y-4">
       {/* Header fields */}
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div class="form-control">
           <div class="label">
             <span class="label-text">Customer</span>
@@ -55,6 +63,22 @@ export function InvoiceEditor(props: {
                 class="input input-bordered w-full"
               />
             )}
+        </div>
+        <div class="form-control">
+          <div class="label">
+            <span class="label-text">Invoice Number</span>
+          </div>
+          <input
+            name="invoiceNumber"
+            value={props.invoiceNumber || ""}
+            class="input input-bordered w-full"
+            placeholder="e.g. INV-2025-001"
+            data-writable
+            disabled={props.demoMode}
+          />
+          {props.invoiceNumberError && (
+            <div class="text-error text-xs mt-1">{props.invoiceNumberError}</div>
+          )}
         </div>
         <div class="form-control">
           <div class="label">
@@ -150,6 +174,18 @@ export function InvoiceEditor(props: {
                 disabled={props.demoMode}
               />
               <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="item_tax_percent"
+                value={typeof it.taxPercent === 'number' ? String(it.taxPercent) : ''}
+                placeholder="Tax %"
+                class="input input-bordered w-24 shrink-0 per-line-tax-input"
+                data-writable
+                disabled={props.demoMode}
+                title="Per-line tax rate (%)"
+              />
+              <input
                 name="item_notes"
                 value={it.notes || ""}
                 placeholder="Notes"
@@ -199,6 +235,17 @@ export function InvoiceEditor(props: {
               disabled={props.demoMode}
             />
             <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="item_tax_percent"
+              placeholder="Tax %"
+              class="input input-bordered w-24 shrink-0 per-line-tax-input"
+              data-writable
+              disabled={props.demoMode}
+              title="Per-line tax rate (%)"
+            />
+            <input
               name="item_notes"
               placeholder="Notes"
               class="input input-bordered w-40 max-w-xs shrink-0"
@@ -216,6 +263,69 @@ export function InvoiceEditor(props: {
             </button>
           </div>
         </template>
+      </div>
+
+      {/* Tax settings */}
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Tax Mode</span>
+          </div>
+          <select
+            name="taxMode"
+            id="tax-mode-select"
+            class="select select-bordered w-full"
+            value={props.taxMode || 'invoice'}
+            disabled={props.demoMode}
+          >
+            <option value="invoice">Invoice total</option>
+            <option value="line">Per line</option>
+          </select>
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Tax Rate (%)</span>
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="taxRate"
+            value={String(typeof props.taxRate === 'number' ? props.taxRate : 0)}
+            class="input input-bordered w-full"
+            data-writable
+            disabled={props.demoMode}
+            id="invoice-tax-rate-input"
+          />
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Prices include tax?</span>
+          </div>
+          <select
+            name="pricesIncludeTax"
+            class="select select-bordered w-full"
+            value={(props.pricesIncludeTax ? 'true' : 'false')}
+            disabled={props.demoMode}
+          >
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Rounding mode</span>
+          </div>
+          <select
+            name="roundingMode"
+            class="select select-bordered w-full"
+            value={props.roundingMode || 'line'}
+            disabled={props.demoMode}
+          >
+            <option value="line">Round per line</option>
+            <option value="total">Round on totals</option>
+          </select>
+        </label>
       </div>
 
       {/* Payment Terms & Notes */}
@@ -243,12 +353,14 @@ export function InvoiceEditor(props: {
         </label>
       </div>
 
-      {/* Minimal inline script to add/remove item rows */}
+      {/* Minimal inline script to add/remove item rows & toggle tax modes */}
       <script>
         {`(() => {
         const addBtn = document.getElementById('add-item');
         const container = document.getElementById('items-container');
         const tpl = document.getElementById('item-template');
+        const taxModeSelect = document.getElementById('tax-mode-select');
+        const invoiceTaxInput = document.getElementById('invoice-tax-rate-input');
         if (!addBtn || !container || !tpl) return;
         function bindRemove(el) {
           const btn = el.querySelector('.remove-item');
@@ -269,8 +381,36 @@ export function InvoiceEditor(props: {
           if (row) {
             container.appendChild(row);
             bindRemove(row);
+            applyTaxMode();
           }
         });
+
+        function applyTaxMode(){
+          const mode = taxModeSelect ? (taxModeSelect.value || 'invoice') : 'invoice';
+          const perLineInputs = container.querySelectorAll('.per-line-tax-input');
+          perLineInputs.forEach((inp) => {
+            if (!(inp instanceof HTMLElement)) return;
+            if (mode === 'line') {
+              inp.removeAttribute('disabled');
+              inp.parentElement?.classList.remove('hidden');
+            } else {
+              inp.setAttribute('disabled','disabled');
+              (inp as HTMLInputElement).value='';
+              inp.parentElement?.classList.add('hidden');
+            }
+          });
+          if (invoiceTaxInput) {
+            if (mode === 'invoice') {
+              invoiceTaxInput.removeAttribute('disabled');
+              invoiceTaxInput.parentElement?.classList.remove('hidden');
+            } else {
+              invoiceTaxInput.setAttribute('disabled','disabled');
+              invoiceTaxInput.parentElement?.classList.add('hidden');
+            }
+          }
+        }
+        if (taxModeSelect) taxModeSelect.addEventListener('change', applyTaxMode);
+        applyTaxMode();
       })();`}
       </script>
     </div>
