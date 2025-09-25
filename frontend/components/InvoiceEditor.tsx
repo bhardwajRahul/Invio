@@ -392,11 +392,14 @@ export function InvoiceEditor(props: {
             if (!(inp instanceof HTMLElement)) return;
             if (mode === 'line') {
               inp.removeAttribute('disabled');
-              inp.parentElement?.classList.remove('hidden');
+              // Show the per-line tax input itself (previously we un-hid the whole row)
+              inp.classList.remove('hidden');
             } else {
               inp.setAttribute('disabled','disabled');
-              (inp as HTMLInputElement).value='';
-              inp.parentElement?.classList.add('hidden');
+              // Clear value safely without TypeScript-only syntax (cast would break in runtime JS string)
+              if (inp instanceof HTMLInputElement) inp.value = '';
+              // Hide only the tax input (before: hid parent .item-row which removed the entire item)
+              inp.classList.add('hidden');
             }
           });
           if (invoiceTaxInput) {
