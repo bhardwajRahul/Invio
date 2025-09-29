@@ -18,6 +18,7 @@ export function InvoiceEditor(props: {
   currency?: string;
   status?: "draft" | "sent" | "paid" | "overdue";
   invoiceNumber?: string;
+  invoiceNumberPrefill?: string;
   taxRate?: number;
   pricesIncludeTax?: boolean;
   roundingMode?: string;
@@ -70,7 +71,7 @@ export function InvoiceEditor(props: {
           </div>
           <input
             name="invoiceNumber"
-            value={props.invoiceNumber || ""}
+            value={props.invoiceNumber || props.invoiceNumberPrefill || ""}
             class="input input-bordered w-full"
             placeholder="e.g. INV-2025-001"
             data-writable

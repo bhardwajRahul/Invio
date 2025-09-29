@@ -38,6 +38,7 @@ import {
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
+import { getNextInvoiceNumber } from "../database/init.ts";
 
 const adminRoutes = new Hono();
 
@@ -164,6 +165,14 @@ adminRoutes.post("/admin/demo/reset", (c) => {
 });
 
 // Invoice routes
+adminRoutes.get("/invoices/next-number", (c) => {
+  try {
+    const next = getNextInvoiceNumber();
+    return c.json({ next });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
 adminRoutes.post("/invoices", async (c) => {
   const data = await c.req.json();
   try {

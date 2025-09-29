@@ -104,6 +104,10 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "defaultTaxRate",
       "defaultPricesIncludeTax",
       "defaultRoundingMode",
+      // Numbering pattern
+      "invoiceNumberPattern",
+      // Toggle to enable/disable advanced invoice numbering pattern
+      "invoiceNumberingEnabled",
     ];
     for (const f of fields) {
       const v = String(form.get(f) ?? "");
@@ -270,6 +274,34 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               <label class="form-control"><div class="label"><span class="label-text">Prices include tax?</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} disabled={demoMode}><option value="false">No</option><option value="true">Yes</option></select></label>
               <label class="form-control"><div class="label"><span class="label-text">Rounding mode</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} disabled={demoMode}><option value="line">Round per line</option><option value="total">Round on totals</option></select></label>
             </div>
+            <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
+        </div>
+
+        {/* Numbering */}
+        <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="Numbering" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+          <form method="post" data-writable>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text">Enable advanced numbering pattern</span></div>
+                <div class="flex items-center gap-3">
+                  {/* Hidden field ensures a value is sent when unchecked */}
+                  <input type="hidden" name="invoiceNumberingEnabled" value="false" />
+                  <input type="checkbox" name="invoiceNumberingEnabled" value="true" class="toggle toggle-primary" checked={String((s.invoiceNumberingEnabled as string) ?? 'true').toLowerCase() !== 'false'} />
+                  <span class="text-sm opacity-70">When off, the invoice number pattern will be ignored and legacy numbering will be used.</span>
+                </div>
+              </label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text">Invoice Number Pattern</span></div>
+                <input name="invoiceNumberPattern" value={(s.invoiceNumberPattern as string) || ''} class="input input-bordered w-full" placeholder="e.g. INV-{YYYY}-{SEQ} or {YYYY}{MM}{SEQ}" />
+              </label>
+            </div>
+            <p class="text-xs mt-2 opacity-70">
+              Tokens: {`{YYYY}`} full year, {`{YY}`} short year, {`{MM}`} month (01-12), {`{DD}`} day, {`{DATE}`} = {`{YYYY}{MM}{DD}`}, {`{RAND4}`} random alnum 4 chars, {`{SEQ}`} auto-incrementing sequence (resets yearly when pattern includes {`{YYYY}`} ). Leave blank to use legacy prefix/year/padding settings.
+            </p>
             <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
           </form>
         </div>

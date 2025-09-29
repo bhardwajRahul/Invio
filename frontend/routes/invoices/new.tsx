@@ -19,6 +19,7 @@ type Data = {
   defaultRoundingMode?: string;
   error?: string;
   invoiceNumberError?: string;
+  invoiceNumberPrefill?: string;
 };
 
 export const handler: Handlers<Data> = {
@@ -46,6 +47,16 @@ export const handler: Handlers<Data> = {
       const defaultTaxRate = Number(settings?.defaultTaxRate || 0) || 0;
       const defaultPricesIncludeTax = String(settings?.defaultPricesIncludeTax || 'false').toLowerCase() === 'true';
       const defaultRoundingMode = settings?.defaultRoundingMode || 'line';
+      // Fetch next invoice number (if numbering pattern configured) to prefill
+      let invoiceNumberPrefill: string | undefined = undefined;
+      try {
+        // Only prefill when advanced numbering pattern is configured and enabled
+        const numberingEnabled = String(settings?.invoiceNumberingEnabled ?? 'true').toLowerCase() !== 'false';
+        if (numberingEnabled && settings?.invoiceNumberPattern) {
+          const nextResp = await backendGet('/api/v1/invoices/next-number', auth) as { next?: string };
+          if (nextResp && nextResp.next) invoiceNumberPrefill = nextResp.next;
+        }
+      } catch(_e) { /* ignore prefill failure */ }
       return ctx.render({
         authed: true,
         customers,
@@ -55,6 +66,7 @@ export const handler: Handlers<Data> = {
         defaultTaxRate,
         defaultPricesIncludeTax,
         defaultRoundingMode,
+        invoiceNumberPrefill,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -221,6 +233,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
           customers={customers}
           currency={currency}
           status="draft"
+          invoiceNumberPrefill={props.data.invoiceNumberPrefill}
           paymentTerms={paymentTerms}
           notes={defaultNotes}
           demoMode={demoMode}

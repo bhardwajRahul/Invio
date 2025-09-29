@@ -150,8 +150,22 @@ export const createInvoice = (
       throw new Error("Invoice number already exists");
     }
   } else {
-    // Use a draft placeholder first; final number is assigned on publish/send
-    invoiceNumber = generateDraftInvoiceNumber();
+    // If advanced numbering pattern with {SEQ} is active, allocate real number now; else draft placeholder
+    try {
+      const rows = db.query("SELECT value FROM settings WHERE key = 'invoiceNumberPattern' LIMIT 1");
+      if (rows.length > 0) {
+        const pattern = String((rows[0] as unknown[])[0] || '').trim();
+        if (pattern && /\{SEQ\}/.test(pattern)) {
+          invoiceNumber = getNextInvoiceNumber();
+        } else {
+          invoiceNumber = generateDraftInvoiceNumber();
+        }
+      } else {
+        invoiceNumber = generateDraftInvoiceNumber();
+      }
+    } catch(_e) {
+      invoiceNumber = generateDraftInvoiceNumber();
+    }
   }
 
   // Load settings for defaults

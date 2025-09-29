@@ -330,14 +330,17 @@ function ensureSchemaUpgrades(database: DB) {
 
 // Helper function to get next invoice number
 export function getNextInvoiceNumber(): string {
-  // Configurable numbering: PREFIX[-YYYY]-NNN
-  // Pull simple settings directly; defaults keep it minimal
+  // Support advanced pattern if configured: tokens {YYYY}{YY}{MM}{DD}{DATE}{RAND4}{SEQ}
+  // Fallback to legacy prefix/year/padding if pattern empty
   let prefix = "INV";
   let includeYear = true;
   let pad = 3;
+  let pattern: string | undefined = undefined;
+  // New flag: whether advanced invoice numbering (invoiceNumberPattern) is enabled
+  let numberingEnabled = true;
   try {
     const rows = db.query(
-      "SELECT key, value FROM settings WHERE key IN ('invoicePrefix','invoiceIncludeYear','invoiceNumberPadding')",
+      "SELECT key, value FROM settings WHERE key IN ('invoicePrefix','invoiceIncludeYear','invoiceNumberPadding','invoiceNumberPattern')",
     );
     const map = new Map<string, string>();
     for (const r of rows) {
@@ -349,7 +352,55 @@ export function getNextInvoiceNumber(): string {
       (map.get("invoiceIncludeYear") || "true").toLowerCase() !== "false";
     const p = parseInt(map.get("invoiceNumberPadding") || String(pad), 10);
     if (!Number.isNaN(p) && p >= 2 && p <= 8) pad = p;
+    pattern = (map.get("invoiceNumberPattern") || "").trim() || undefined;
+    // Respect explicit toggle if present (stored as "true"/"false")
+    try {
+      const raw = db.query("SELECT value FROM settings WHERE key = 'invoiceNumberingEnabled' LIMIT 1");
+      if (raw.length > 0) {
+        numberingEnabled = String(raw[0][0]).toLowerCase() !== 'false';
+      }
+    } catch (_) { /* ignore */ }
   } catch (_) { /* use defaults */ }
+
+  // If numbering is disabled, ignore advanced pattern and fall back to legacy
+  if (pattern && numberingEnabled) {
+    const now = new Date();
+    const YYYY = String(now.getFullYear());
+    const YY = YYYY.slice(-2);
+    const MM = String(now.getMonth() + 1).padStart(2, "0");
+    const DD = String(now.getDate()).padStart(2, "0");
+    const DATE = `${YYYY}${MM}${DD}`;
+    const baseWithoutSeq = pattern
+      .replace(/\{YYYY\}/g, YYYY)
+      .replace(/\{YY\}/g, YY)
+      .replace(/\{MM\}/g, MM)
+      .replace(/\{DD\}/g, DD)
+      .replace(/\{DATE\}/g, DATE)
+      .replace(/\{RAND4\}/g, () => {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        return Array.from({ length: 4 }).map(() => chars[Math.floor(Math.random() * chars.length)]).join("");
+      });
+    if (!/\{SEQ\}/.test(pattern)) {
+      // No sequence token: return rendered pattern immediately (not guaranteed unique)
+      return baseWithoutSeq;
+    }
+    // Sequence token present: find max existing sequence for same static prefix
+    const prefixForSeq = baseWithoutSeq.split("{SEQ}")[0];
+    const like = `${prefixForSeq}%`;
+    const result = db.query("SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?", [like]);
+    let maxSeq = 0;
+    const re = new RegExp(`^${prefixForSeq.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}(\\d+).*?$`);
+    for (const row of result) {
+      const inv = String((row as unknown[])[0] ?? "");
+      const m = inv.match(re);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (!Number.isNaN(n)) maxSeq = Math.max(maxSeq, n);
+      }
+    }
+    const nextSeq = String(maxSeq + 1).padStart(3, "0");
+    return baseWithoutSeq.replace(/\{SEQ\}/g, nextSeq);
+  }
 
   const year = new Date().getFullYear();
   const base = includeYear ? `${prefix}-${year}-` : `${prefix}-`;
