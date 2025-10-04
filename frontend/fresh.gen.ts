@@ -15,6 +15,7 @@ import * as $invoices_id_ from "./routes/invoices/[id].tsx";
 import * as $invoices_id_edit from "./routes/invoices/[id]/edit.tsx";
 import * as $invoices_id_html from "./routes/invoices/[id]/html.ts";
 import * as $invoices_id_pdf from "./routes/invoices/[id]/pdf.ts";
+import * as $invoices_id_xml from "./routes/invoices/[id]/xml.ts";
 import * as $invoices_index from "./routes/invoices/index.tsx";
 import * as $invoices_new from "./routes/invoices/new.tsx";
 import * as $login from "./routes/login.tsx";
@@ -23,6 +24,7 @@ import * as $public_invoices_share_token_html from "./routes/public/invoices/[sh
 import * as $public_invoices_share_token_index from "./routes/public/invoices/[share_token]/index.tsx";
 import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[share_token]/pdf.ts";
 import * as $public_invoices_share_token_ubl_xml from "./routes/public/invoices/[share_token]/ubl.xml.ts";
+import * as $public_invoices_share_token_xml from "./routes/public/invoices/[share_token]/xml.ts";
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
@@ -44,6 +46,7 @@ const manifest = {
     "./routes/invoices/[id]/edit.tsx": $invoices_id_edit,
     "./routes/invoices/[id]/html.ts": $invoices_id_html,
     "./routes/invoices/[id]/pdf.ts": $invoices_id_pdf,
+    "./routes/invoices/[id]/xml.ts": $invoices_id_xml,
     "./routes/invoices/index.tsx": $invoices_index,
     "./routes/invoices/new.tsx": $invoices_new,
     "./routes/login.tsx": $login,
@@ -56,6 +59,8 @@ const manifest = {
       $public_invoices_share_token_pdf,
     "./routes/public/invoices/[share_token]/ubl.xml.ts":
       $public_invoices_share_token_ubl_xml,
+    "./routes/public/invoices/[share_token]/xml.ts":
+      $public_invoices_share_token_xml,
     "./routes/settings.tsx": $settings,
     "./routes/templates/index.tsx": $templates_index,
   },

@@ -288,6 +288,17 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     Duplicate
                   </button>
                 </li>
+                <li>
+                  <a
+                    href={`/invoices/${inv.id}/xml`}
+                    target="_blank"
+                    title="Download XML (uses default profile from Settings)"
+                    class="flex items-center gap-2"
+                  >
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    Download XML
+                  </a>
+                </li>
                 {inv.status !== "draft" && (
                   <li>
                     <button

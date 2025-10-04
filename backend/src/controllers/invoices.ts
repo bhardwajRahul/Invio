@@ -1046,18 +1046,32 @@ function applyDerivedOverdue<
 
 function getCustomerById(id: string) {
   const db = getDatabase();
-  const result = db.query("SELECT * FROM customers WHERE id = ?", [id]);
-  if (result.length === 0) return null;
-
-  const row = result[0] as unknown[];
+  let rows: unknown[][] = [];
+  try {
+    rows = db.query(
+      "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
+      [id],
+    ) as unknown[][];
+  } catch (_e) {
+    // Fallback older schema without city/postal_code
+    rows = db.query(
+      "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
+      [id],
+    ) as unknown[][];
+  }
+  if (rows.length === 0) return null;
+  const row = rows[0] as unknown[];
   return {
     id: row[0] as string,
     name: row[1] as string,
     email: row[2] as string,
     phone: row[3] as string,
     address: row[4] as string,
-    taxId: row[5] as string,
-    createdAt: new Date(row[6] as string),
+    countryCode: (row[5] ?? undefined) as string | undefined,
+    taxId: row[6] as string,
+    createdAt: new Date(row[7] as string),
+    city: (row[8] ?? undefined) as string | undefined,
+    postalCode: (row[9] ?? undefined) as string | undefined,
   };
 }
 

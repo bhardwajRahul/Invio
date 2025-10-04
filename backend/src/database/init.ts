@@ -238,6 +238,7 @@ function ensureSchemaUpgrades(database: DB) {
       "PRAGMA table_info(customers)",
     ) as unknown[] as Array<unknown[]>;
     const names = new Set(cols.map((r) => String(r[1])));
+    // Add missing customer columns: country_code, city, postal_code
     if (!names.has("country_code")) {
       try {
         database.execute("ALTER TABLE customers ADD COLUMN country_code TEXT");
@@ -246,6 +247,28 @@ function ensureSchemaUpgrades(database: DB) {
         const msg = e instanceof Error ? e.message : String(e);
         if (!/duplicate column|already exists/i.test(msg)) {
           console.warn("Could not add customers.country_code:", msg);
+        }
+      }
+    }
+    if (!names.has("city")) {
+      try {
+        database.execute("ALTER TABLE customers ADD COLUMN city TEXT");
+        console.log("✅ Added customers.city column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add customers.city:", msg);
+        }
+      }
+    }
+    if (!names.has("postal_code")) {
+      try {
+        database.execute("ALTER TABLE customers ADD COLUMN postal_code TEXT");
+        console.log("✅ Added customers.postal_code column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add customers.postal_code:", msg);
         }
       }
     }

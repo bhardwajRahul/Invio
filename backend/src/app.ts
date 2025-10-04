@@ -8,6 +8,16 @@ import { authRoutes } from "./routes/auth.ts";
 
 const app = new Hono();
 
+// Check for required credentials in environment
+const requiredEnv = ["ADMIN_USER", "ADMIN_PASS", "JWT_SECRET"];
+const missing = requiredEnv.filter((key) => !Deno.env.get(key));
+if (missing.length > 0) {
+  console.error(
+    `FATAL: Missing required environment variables: ${missing.join(", ")}. Refusing to start.`,
+  );
+  Deno.exit(1);
+}
+
 // Initialize the database
 initDatabase();
 

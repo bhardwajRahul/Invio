@@ -13,6 +13,7 @@ type Settings = Record<string, unknown> & {
   email?: string;
   phone?: string;
   taxId?: string;
+  embedXmlInHtml?: string;
 };
 type Template = { id: string; name: string; isDefault?: boolean };
 type Data = {
@@ -100,6 +101,10 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "templateId",
       "highlight",
       "logo",
+      // XML export
+      "xmlProfileId",
+  "embedXmlInPdf",
+  "embedXmlInHtml",
       // Defaults for taxes
       "defaultTaxRate",
       "defaultPricesIncludeTax",
@@ -109,10 +114,24 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       // Toggle to enable/disable advanced invoice numbering pattern
       "invoiceNumberingEnabled",
     ];
+    // Collect values; handle duplicate hidden + checkbox pattern (want last value = actual state)
     for (const f of fields) {
-      const v = String(form.get(f) ?? "");
-      if (v !== "") payload[f] = v;
+      const all = form.getAll(f).map((v) => String(v));
+      if (all.length === 0) continue;
+      // Take the last non-empty value (e.g., hidden "false" then checkbox "true")
+      let chosen = "";
+      for (let i = all.length - 1; i >= 0; i--) {
+        if (all[i] !== "") { chosen = all[i]; break; }
+      }
+      if (chosen !== "") payload[f] = chosen;
     }
+    // Normalize boolean-style toggles to explicit "true"/"false" strings
+    ["embedXmlInPdf", "embedXmlInHtml", "invoiceNumberingEnabled"].forEach((k) => {
+      if (k in payload) {
+        const v = String(payload[k]).toLowerCase();
+        payload[k] = v === "true" ? "true" : "false";
+      }
+    });
     // Normalize aliases back to stored keys
     if (payload.email && !payload.companyEmail) {
       payload.companyEmail = payload.email;
@@ -148,6 +167,9 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const selectedTemplateId = (s.templateId as string) ||
     (templates.find((t) => t.isDefault)?.id) ||
     "minimalist-clean";
+  const xmlProfileId = (s.xmlProfileId as string) || 'ubl21';
+  const embedXmlInPdf = String(s.embedXmlInPdf || 'false').toLowerCase() === 'true';
+  const embedXmlInHtml = String(s.embedXmlInHtml || 'false').toLowerCase() === 'true';
   // Use demoMode from backend /demo-mode route
   const demoMode = props.data.demoMode;
   return (
@@ -304,6 +326,41 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
             </p>
             <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
           </form>
+        </div>
+
+        {/* XML Export */}
+        <input type="radio" role="tab" name="settings_tabs" class="tab [--tab-border:theme(colors.base-300)]" aria-label="XML Export" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4">
+          <form method="post" data-writable>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="form-control">
+                <div class="label"><span class="label-text">Default XML Profile</span></div>
+                <select name="xmlProfileId" class="select select-bordered w-full" value={xmlProfileId}>
+                  <option value="ubl21">UBL 2.1 (PEPPOL BIS)</option>
+                  <option value="facturx22">Factur‑X / ZUGFeRD 2.2</option>
+                  <option value="stub-generic">Generic Stub (experimental)</option>
+                </select>
+              </label>
+              <label class="form-control">
+                <div class="label flex justify-between"><span class="label-text">Embed XML in PDF</span></div>
+                <div class="flex items-center gap-3 mt-1">
+                  <input type="hidden" name="embedXmlInPdf" value="false" />
+                  <input type="checkbox" name="embedXmlInPdf" value="true" class="toggle toggle-primary" checked={embedXmlInPdf} />
+                  <span class="text-xs opacity-70">Adds selected XML as a PDF attachment</span>
+                </div>
+              </label>
+              <label class="form-control">
+                <div class="label flex justify-between"><span class="label-text">Embed XML in HTML</span></div>
+                <div class="flex items-center gap-3 mt-1">
+                  <input type="hidden" name="embedXmlInHtml" value="false" />
+                  <input type="checkbox" name="embedXmlInHtml" value="true" class="toggle toggle-primary" checked={embedXmlInHtml} />
+                  <span class="text-xs opacity-70">Adds selected XML as an HTML attachment</span>
+                </div>
+              </label>
+            </div>
+            <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+          </form>
+          <p class="text-xs mt-3 opacity-70">Profiles are currently built-in only. UBL 2.1 is the default and preferred for e-invoicing networks (PEPPOL). The stub profile is for internal testing.</p>
         </div>
       </div>
       <script>

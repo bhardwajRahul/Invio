@@ -36,7 +36,8 @@ import {
   updateCustomer,
 } from "../controllers/customers.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
-import { generateUBLInvoiceXML } from "../utils/ubl.ts";
+import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
+import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
 
@@ -682,11 +683,14 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     selectedTemplateId === "minimalist-clean"
   ) selectedTemplateId = "minimalist-clean";
 
+  const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
+  const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
   const pdfBuffer = await generatePDF(
     invoice,
     businessSettings,
     selectedTemplateId,
     highlight,
+    { embedXml, embedXmlProfileId: xmlProfileId },
   );
   return new Response(pdfBuffer, {
     headers: {
@@ -745,6 +749,65 @@ adminRoutes.get("/invoices/:id/ubl.xml", async (c) => {
       }.xml"`,
     },
   });
+});
+
+// Generic XML export selecting an internal profile (?profile=ubl21 or stub-generic)
+adminRoutes.get("/invoices/:id/xml", async (c) => {
+  const id = c.req.param("id");
+  const invoice = getInvoiceById(id);
+  if (!invoice) return c.json({ message: "Invoice not found" }, 404);
+
+  const settings = await getSettings();
+  const map = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const businessSettings = {
+    companyName: map.companyName || "Your Company",
+    companyAddress: map.companyAddress || "",
+    companyEmail: map.companyEmail || "",
+    companyPhone: map.companyPhone || "",
+    companyTaxId: map.companyTaxId || "",
+    currency: map.currency || "USD",
+    logo: map.logo,
+    paymentMethods: map.paymentMethods || "Bank Transfer",
+    bankAccount: map.bankAccount || "",
+    paymentTerms: map.paymentTerms || "Due in 30 days",
+    defaultNotes: map.defaultNotes || "",
+    companyCountryCode: map.companyCountryCode || "",
+  };
+
+  const url = new URL(c.req.url);
+  const profileParam = url.searchParams.get("profile") || map.xmlProfileId || undefined;
+  const { xml, profile } = generateInvoiceXML(profileParam, invoice, businessSettings, {
+    sellerEndpointId: map.peppolSellerEndpointId,
+    sellerEndpointSchemeId: map.peppolSellerEndpointSchemeId,
+    buyerEndpointId: map.peppolBuyerEndpointId,
+    buyerEndpointSchemeId: map.peppolBuyerEndpointSchemeId,
+    sellerCountryCode: map.companyCountryCode,
+    buyerCountryCode: invoice.customer.countryCode,
+  });
+
+  return new Response(xml, {
+    headers: {
+      "Content-Type": `${profile.mediaType}; charset=utf-8`,
+      "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber || id}.${profile.fileExtension}"`,
+    },
+  });
+});
+
+// List built-in XML profiles
+adminRoutes.get("/xml-profiles", (c) => {
+  const profiles = listXMLProfiles().map((p) => ({
+    id: p.id,
+    name: p.name,
+    mediaType: p.mediaType,
+    fileExtension: p.fileExtension,
+    experimental: !!p.experimental,
+    builtIn: true,
+  }));
+  return c.json(profiles);
 });
 
 export { adminRoutes };

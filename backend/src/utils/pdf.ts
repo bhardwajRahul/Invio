@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
+import { generateInvoiceXML } from "./xmlProfiles.ts";
 import {
   BusinessSettings,
   InvoiceWithDetails,
@@ -327,6 +328,7 @@ export async function generateInvoicePDF(
   businessSettings?: BusinessSettings,
   templateId?: string,
   customHighlightColor?: string,
+  opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown> },
 ): Promise<Uint8Array> {
   // Inline remote logo when possible for robust wkhtmltopdf rendering
   const inlined = await inlineLogoIfPossible(businessSettings);
@@ -337,13 +339,36 @@ export async function generateInvoicePDF(
     customHighlightColor,
   );
   const wk = await tryWkhtmlToPdf(html);
-  if (wk) return wk;
-  return await generateStyledPDF(
+  let pdfBytes = wk;
+  if (!pdfBytes) {
+    pdfBytes = await generateStyledPDF(
     invoiceData,
     inlined,
     customHighlightColor,
     templateId,
   );
+  }
+
+  // Optionally embed XML profile as an attachment if requested and we have a PDF (wkhtmltopdf or fallback)
+  if (pdfBytes && opts?.embedXml) {
+    try {
+      const profileId = opts.embedXmlProfileId || "ubl21";
+      const { xml, profile } = generateInvoiceXML(profileId, invoiceData, inlined || ({} as BusinessSettings));
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      // Attach as a file spec
+      const fileName = `invoice-${invoiceData.invoiceNumber || invoiceData.id}.${profile.fileExtension}`;
+      await pdfDoc.attach(xml, fileName, {
+        mimeType: profile.mediaType || "application/xml",
+        description: `${profile.name} export embedded by Invio`,
+        creationDate: new Date(),
+        modificationDate: new Date(),
+      });
+      pdfBytes = await pdfDoc.save();
+    } catch (_e) {
+      // Silently ignore embedding failures to avoid breaking download
+    }
+  }
+  return pdfBytes as Uint8Array;
 }
 
 export function buildInvoiceHTML(

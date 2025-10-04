@@ -159,7 +159,9 @@ Invoice payload (trimmed):
 - GET `/api/v1/public/invoices/:share_token` → JSON invoice
 - GET `/api/v1/public/invoices/:share_token/html` → HTML page
 - GET `/api/v1/public/invoices/:share_token/pdf` → PDF download
-- GET `/api/v1/public/invoices/:share_token/ubl.xml` → UBL XML download
+- GET `/api/v1/public/invoices/:share_token/ubl.xml` → UBL XML download (legacy path)
+- GET `/api/v1/public/invoices/:share_token/xml` → XML download (select profile via `?profile=ubl21` etc.)
+- GET `/api/v1/public/xml-profiles` → list built-in XML profiles
 
 Query params: none (generation now uses saved Settings only)
 
@@ -172,8 +174,11 @@ curl -s "http://localhost:3000/api/v1/public/invoices/<token>/html" > invoice.ht
 # PDF download
 curl -s "http://localhost:3000/api/v1/public/invoices/<token>/pdf" -o invoice.pdf
 
-# UBL XML download
+# UBL XML download (legacy)
 curl -s "http://localhost:3000/api/v1/public/invoices/<token>/ubl.xml" -o invoice.xml
+
+# Generic XML (select profile)
+curl -s "http://localhost:3000/api/v1/public/invoices/<token>/xml?profile=ubl21" -o invoice.xml
 ```
 
 ## Rendering
