@@ -89,24 +89,30 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     selectedTemplateId = "minimalist-clean";
   }
 
-  const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
-  const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
-  const pdfBuffer = await generatePDF(
-    invoice,
-    businessSettings,
-    selectedTemplateId,
-    highlight,
-    { embedXml, embedXmlProfileId: xmlProfileId },
-  );
-  return new Response(pdfBuffer, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="invoice-${
-        invoice.invoiceNumber || shareToken
-      }.pdf"`,
-      "X-Robots-Tag": "noindex",
-    },
-  });
+  try {
+    const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
+    const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
+    const pdfBuffer = await generatePDF(
+      invoice,
+      businessSettings,
+      selectedTemplateId,
+      highlight,
+      { embedXml, embedXmlProfileId: xmlProfileId },
+    );
+    return new Response(pdfBuffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="invoice-${
+          invoice.invoiceNumber || shareToken
+        }.pdf"`,
+        "X-Robots-Tag": "noindex",
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("/public/invoices/:share_token/pdf failed:", msg);
+    return c.json({ error: "Failed to generate PDF", details: msg }, 500);
+  }
 });
 
 // Return invoice as HTML (same options as PDF, but no PDF generation)

@@ -683,23 +683,29 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     selectedTemplateId === "minimalist-clean"
   ) selectedTemplateId = "minimalist-clean";
 
-  const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
-  const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
-  const pdfBuffer = await generatePDF(
-    invoice,
-    businessSettings,
-    selectedTemplateId,
-    highlight,
-    { embedXml, embedXmlProfileId: xmlProfileId },
-  );
-  return new Response(pdfBuffer, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="invoice-${
-        invoice.invoiceNumber || id
-      }.pdf"`,
-    },
-  });
+  try {
+    const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
+    const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
+    const pdfBuffer = await generatePDF(
+      invoice,
+      businessSettings,
+      selectedTemplateId,
+      highlight,
+      { embedXml, embedXmlProfileId: xmlProfileId },
+    );
+    return new Response(pdfBuffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="invoice-${
+          invoice.invoiceNumber || id
+        }.pdf"`,
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("/invoices/:id/pdf failed:", msg);
+    return c.json({ error: "Failed to generate PDF", details: msg }, 500);
+  }
 });
 
 // UBL (PEPPOL BIS Billing 3.0) XML for an invoice by ID
