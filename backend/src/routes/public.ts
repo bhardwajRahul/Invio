@@ -99,6 +99,18 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
       highlight,
       { embedXml, embedXmlProfileId: xmlProfileId },
     );
+    // Detect embedded attachments for diagnostics
+    let hasAttachment = false;
+    let attachmentNames: string[] = [];
+    try {
+      const { PDFDocument } = await import("pdf-lib");
+      const doc = await PDFDocument.load(pdfBuffer);
+      const maybe = (doc as unknown as { getAttachments?: () => Record<string, Uint8Array> }).getAttachments?.();
+      if (maybe && typeof maybe === "object") {
+        attachmentNames = Object.keys(maybe);
+        hasAttachment = attachmentNames.length > 0;
+      }
+    } catch (_e) { /* ignore */ }
     return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
@@ -106,6 +118,7 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
           invoice.invoiceNumber || shareToken
         }.pdf"`,
         "X-Robots-Tag": "noindex",
+        ...(hasAttachment ? { "X-Embedded-XML": "true", "X-Embedded-XML-Names": attachmentNames.join(",") } : { "X-Embedded-XML": "false" }),
       },
     });
   } catch (e) {

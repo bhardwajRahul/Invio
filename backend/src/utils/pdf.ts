@@ -352,26 +352,95 @@ export async function generateInvoicePDF(
     );
   }
 
-  // Optionally embed XML profile as an attachment if requested and we have a PDF (wkhtmltopdf or fallback)
+  // Optionally embed XML profile as an attachment if requested and we have a PDF (browser or fallback)
   if (pdfBytes && opts?.embedXml) {
     try {
       const profileId = opts.embedXmlProfileId || "ubl21";
       const { xml, profile } = generateInvoiceXML(profileId, invoiceData, inlined || ({} as BusinessSettings));
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      // Attach as a file spec
       const fileName = `invoice-${invoiceData.invoiceNumber || invoiceData.id}.${profile.fileExtension}`;
-      await pdfDoc.attach(xml, fileName, {
-        mimeType: profile.mediaType || "application/xml",
-        description: `${profile.name} export embedded by Invio`,
-        creationDate: new Date(),
-        modificationDate: new Date(),
-      });
-      pdfBytes = await pdfDoc.save();
+      const viaPdfcpu = await tryPdfcpuAttach(pdfBytes, new TextEncoder().encode(xml), fileName);
+      if (viaPdfcpu) {
+        pdfBytes = viaPdfcpu;
+      } else {
+        // Fallback: embed using pdf-lib attach API
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        await pdfDoc.attach(xml, fileName, {
+          mimeType: profile.mediaType || "application/xml",
+          description: `${profile.name} export embedded by Invio`,
+          creationDate: new Date(),
+          modificationDate: new Date(),
+        });
+        pdfBytes = await pdfDoc.save();
+      }
+      // Ensure visible metadata hints via standard Info fields
+      try {
+        const doc2 = await PDFDocument.load(pdfBytes);
+        doc2.setSubject(`Embedded XML: ${fileName}`);
+        doc2.setKeywords(["Invoice", "Embedded XML", fileName]);
+        pdfBytes = await doc2.save();
+      } catch { /* ignore */ }
     } catch (_e) {
       // Silently ignore embedding failures to avoid breaking download
     }
   }
   return pdfBytes as Uint8Array;
+}
+
+async function tryPdfcpuAttach(
+  pdfBytes: Uint8Array,
+  xmlBytes: Uint8Array,
+  xmlFileName: string,
+): Promise<Uint8Array | null> {
+  try {
+    // Write temp files
+    const pdfPath = await Deno.makeTempFile({ prefix: "invio-", suffix: ".pdf" });
+    const xmlPath = await Deno.makeTempFile({ prefix: "invio-", suffix: `-${xmlFileName}` });
+    await Deno.writeFile(pdfPath, pdfBytes);
+    await Deno.writeFile(xmlPath, xmlBytes);
+
+    // Run pdfcpu attachments add in place
+    const cmd = new Deno.Command("pdfcpu", {
+      args: ["attachments", "add", pdfPath, xmlPath],
+      stdout: "piped",
+      stderr: "piped",
+    });
+    const { success, stderr } = await cmd.output();
+    if (!success) {
+      console.error("pdfcpu attach failed:", new TextDecoder().decode(stderr));
+      try { await Deno.remove(pdfPath); } catch { /* ignore */ }
+      try { await Deno.remove(xmlPath); } catch { /* ignore */ }
+      return null;
+    }
+    // Add document properties so metadata visibly reflects the embedded XML
+    try {
+      const propCmd = new Deno.Command("pdfcpu", {
+        args: [
+          "properties",
+          "add",
+          pdfPath,
+          `EmbeddedXML=true`,
+          `EmbeddedXMLNames=${xmlFileName}`,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const propOut = await propCmd.output();
+      if (!propOut.success) {
+        console.warn(
+          "pdfcpu properties add failed:",
+          new TextDecoder().decode(propOut.stderr),
+        );
+      }
+    } catch (e) {
+      console.warn("pdfcpu properties add error:", e instanceof Error ? e.message : String(e));
+    }
+    const updated = await Deno.readFile(pdfPath);
+    try { await Deno.remove(pdfPath); } catch { /* ignore */ }
+    try { await Deno.remove(xmlPath); } catch { /* ignore */ }
+    return updated;
+  } catch (_e) {
+    return null;
+  }
 }
 
 export function buildInvoiceHTML(
