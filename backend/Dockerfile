@@ -1,25 +1,26 @@
-# Runtime with Google Chrome (headless) for Puppeteer PDF rendering
-FROM ubuntu:22.04
+# Runtime with Chromium (headless) for Puppeteer PDF rendering
+FROM debian:12-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Google Chrome Stable and fonts
+# Install Chromium and fonts (works across architectures in buildx)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    gnupg \
     curl \
     fontconfig \
+    tar \
+    chromium \
     fonts-dejavu \
     fonts-liberation \
     fonts-noto \
     fonts-noto-cjk \
     fonts-noto-color-emoji \
-  && rm -rf /var/lib/apt/lists/* && \
-  mkdir -p /etc/apt/keyrings && \
-  curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-linux.gpg && \
-  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
-  apt-get update && apt-get install -y --no-install-recommends google-chrome-stable && \
-  rm -rf /var/lib/apt/lists/*
+    git \
+    golang \
+  && GOBIN=/usr/local/bin go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v0.4.1 || \
+     GOBIN=/usr/local/bin go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest \
+  && apt-get purge -y --auto-remove git golang \
+  && rm -rf /var/lib/apt/lists/* /root/go
 
 # Install a Deno version that supports lockfile v5
 COPY --from=denoland/deno:bin-2.4.5 /deno /usr/local/bin/deno
@@ -30,7 +31,7 @@ RUN mkdir -p /app/data
 
 ENV PORT=3000 \
   DATABASE_PATH=/app/data/invio.db \
-  PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 EXPOSE 3000
 CMD ["deno", "task", "start"]
