@@ -42,7 +42,7 @@ export function InvoiceEditor(props: {
   <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div class="form-control">
           <div class="label">
-            <span class="label-text">Customer</span>
+            <span class="label-text">Customer <span aria-hidden="true" class="text-error">*</span></span>
           </div>
           {props.mode === "create" && props.customers?.length
             ? (
@@ -51,6 +51,8 @@ export function InvoiceEditor(props: {
                 class="select select-bordered w-full"
                 required
                 value={props.selectedCustomerId || ""}
+                aria-required="true"
+                aria-describedby="customer-error"
               >
                 <option value="">Select customer</option>
                 {props.customers.map((c) => (
@@ -65,6 +67,7 @@ export function InvoiceEditor(props: {
                 class="input input-bordered w-full"
               />
             )}
+          <div id="customer-error" class="text-error text-xs mt-1 hidden"></div>
         </div>
         <div class="form-control">
           <div class="label">
@@ -139,11 +142,12 @@ export function InvoiceEditor(props: {
       {/* Items */}
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="block text-sm">Items</label>
+          <label class="block text-sm">Items <span aria-hidden="true" class="text-error">*</span></label>
           <button type="button" id="add-item" class="btn btn-sm" data-writable disabled={props.demoMode}>
             <i data-lucide="plus" class="w-4 h-4"></i>Add item
           </button>
         </div>
+        <div id="items-error" class="text-error text-xs mb-2 hidden">Add at least one item with a description.</div>
         <div id="items-container" class="space-y-2">
           {items.map((it) => (
             <div class="item-row flex flex-col sm:flex-row sm:flex-nowrap items-center gap-2">
@@ -154,6 +158,7 @@ export function InvoiceEditor(props: {
                 class="input input-bordered flex-1 min-w-0"
                 data-writable
                 disabled={props.demoMode}
+                aria-describedby="items-error"
               />
               <input
                 type="number"
@@ -215,6 +220,7 @@ export function InvoiceEditor(props: {
               class="input input-bordered flex-1 min-w-0"
               data-writable
               disabled={props.demoMode}
+              aria-describedby="items-error"
             />
             <input
               type="number"

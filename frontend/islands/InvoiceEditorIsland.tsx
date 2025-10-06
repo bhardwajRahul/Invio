@@ -7,6 +7,11 @@ export default function InvoiceEditorIsland() {
     const tpl = document.getElementById('item-template') as HTMLTemplateElement | null;
     const taxModeSelect = document.getElementById('tax-mode-select') as HTMLSelectElement | null;
     const invoiceTaxInput = document.getElementById('invoice-tax-rate-input') as HTMLInputElement | null;
+    const form = (addBtn?.closest('form')) as HTMLFormElement | null;
+    const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    const itemsError = document.getElementById('items-error');
+    const customerError = document.getElementById('customer-error');
+    const customerSelect = document.querySelector('select[name="customerId"]') as HTMLSelectElement | null;
     if (!addBtn || !container || !tpl) return;
 
     function bindRemove(el: Element) {
@@ -38,7 +43,8 @@ export default function InvoiceEditorIsland() {
 
     function applyTaxMode() {
       const mode = taxModeSelect ? (taxModeSelect.value || 'invoice') : 'invoice';
-  const perLineInputs = (container as HTMLElement).querySelectorAll('.per-line-tax-input');
+      if (!container) return;
+      const perLineInputs = (container as HTMLElement).querySelectorAll('.per-line-tax-input');
       perLineInputs.forEach((inp) => {
         if (!(inp instanceof HTMLElement)) return;
         if (mode === 'line') {
@@ -64,9 +70,64 @@ export default function InvoiceEditorIsland() {
     if (taxModeSelect) taxModeSelect.addEventListener('change', applyTaxMode);
     applyTaxMode();
 
+    // Simple client-side validation
+    function validate(): boolean {
+      if (!container) return false;
+      let valid = true;
+      // Customer required
+      if (customerSelect) {
+        if (!customerSelect.value) {
+          valid = false;
+          if (customerError) {
+            customerError.textContent = 'Please select a customer.';
+            customerError.classList.remove('hidden');
+          }
+          customerSelect.classList.add('input-error', 'select-error');
+        } else {
+          if (customerError) customerError.classList.add('hidden');
+          customerSelect.classList.remove('input-error', 'select-error');
+        }
+      }
+
+      // At least one item with non-empty description
+  const rows = container.querySelectorAll('.item-row');
+      let hasDescription = false;
+      rows.forEach((row) => {
+        const desc = row.querySelector('input[name="item_description"]') as HTMLInputElement | null;
+        if (desc && desc.value.trim()) hasDescription = true;
+      });
+      if (!hasDescription) {
+        valid = false;
+        if (itemsError) itemsError.classList.remove('hidden');
+      } else {
+        if (itemsError) itemsError.classList.add('hidden');
+      }
+
+      // Disable submit if invalid
+      if (submitBtn) submitBtn.disabled = !valid;
+      return valid;
+    }
+
+    // Validate on load and when inputs change
+    validate();
+    customerSelect?.addEventListener('change', validate);
+    form?.addEventListener('input', (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.matches('input[name="item_description"]') || t.matches('select[name="customerId"]'))) {
+        validate();
+      }
+    });
+    form?.addEventListener('submit', (e) => {
+      if (!validate()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
     return () => {
       addBtn.removeEventListener('click', onAdd);
       if (taxModeSelect) taxModeSelect.removeEventListener('change', applyTaxMode);
+      customerSelect?.removeEventListener('change', validate);
     };
   }, []);
   return null;
