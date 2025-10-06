@@ -1,6 +1,7 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
 import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
+import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
 import {
   backendGet,
   backendPatch,
@@ -174,6 +175,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const demoMode = props.data.demoMode;
   return (
     <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
+      <SettingsEnhancements />
       <h1 class="text-2xl font-semibold mb-4">Settings</h1>
       {demoMode && (
         <div class="alert alert-warning mb-4">
@@ -363,59 +365,6 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           <p class="text-xs mt-3 opacity-70">Profiles are currently built-in only. UBL 2.1 is the default and preferred for e-invoicing networks (PEPPOL). The stub profile is for internal testing.</p>
         </div>
       </div>
-      <script>
-        {`(function(){
-        function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }
-        onReady(function(){
-          // Theme removed (forced to light). No-op here.
-
-          // Highlight color sync
-          var input = document.getElementById('highlight-input');
-          var swatch = document.getElementById('highlight-swatch');
-          function applyColor(val){
-            if (!val) return;
-            if (swatch) swatch.style.background = val;
-          }
-          if (input) {
-            input.addEventListener('input', function(){
-              var val = input.value || '';
-              if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
-                applyColor(val);
-              }
-            });
-          }
-
-          // Logo URL validation and preview
-          var logoInput = document.getElementById('logo-input');
-          var logoErr = document.getElementById('logo-error');
-          function isValidLogo(v){
-            if (!v) return false;
-            if (v.startsWith('data:image/')) return true;
-            try {
-              var u = new URL(v);
-              return u.protocol === 'http:' || u.protocol === 'https:';
-            } catch(_e) { return false; }
-          }
-          function updateLogo(){
-            var v = (logoInput && logoInput.value) ? logoInput.value.trim() : '';
-            if (!isValidLogo(v)) {
-              if (logoErr) logoErr.classList.remove('hidden');
-              return;
-            }
-            if (logoErr) logoErr.classList.add('hidden');
-          }
-          if (logoInput) {
-            logoInput.addEventListener('change', updateLogo);
-            logoInput.addEventListener('input', function(){
-              // hide error while typing until next check
-              if (logoErr) logoErr.classList.add('hidden');
-            });
-            // Run once on load if there is an initial value
-            if (logoInput.value) updateLogo();
-          }
-        });
-      })();`}
-      </script>
     </Layout>
   );
 }

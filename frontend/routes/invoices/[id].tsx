@@ -1,5 +1,7 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
+import ConfirmOnSubmit from "../../islands/ConfirmOnSubmit.tsx";
+import CopyPublicLink from "../../islands/CopyPublicLink.tsx";
 import {
   backendDelete,
   backendGet,
@@ -175,6 +177,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
   })();
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+      <ConfirmOnSubmit />
       {props.data.showPublishedBanner && props.data.invoice?.shareToken && (
         <div class="alert alert-success mb-4 shadow">
           <i data-lucide="check-circle-2" class="w-5 h-5"></i>
@@ -212,6 +215,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               Download PDF
             </a>
           </div>
+          <CopyPublicLink />
         </div>
       )}
       <div class="flex items-center justify-between mb-4 gap-2">
@@ -495,37 +499,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
           </div>
         </div>
       )}
-      {/* Attach confirm behavior for delete safely on the client */}
-      <script>
-        {`(function(){
-        function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }
-        onReady(function(){
-          document.addEventListener('submit', function(e){
-            var t = e.target;
-            if (t && t.matches && t.matches('form[data-confirm]')) {
-              var msg = t.getAttribute('data-confirm') || 'Are you sure?';
-              if(!confirm(msg)) e.preventDefault();
-            }
-          }, true);
-        });
-      })();`}
-      </script>
-      {props.data.showPublishedBanner && props.data.invoice?.shareToken && (
-        <script>
-          {`(function(){
-          function onReady(fn){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', fn); } else { fn(); } }
-          onReady(function(){
-            var btn = document.getElementById('copy-public-link');
-            var urlEl = document.getElementById('public-link-url');
-            if(btn && urlEl){
-              btn.addEventListener('click', async function(){
-                try { await navigator.clipboard.writeText(urlEl.textContent || ''); btn.innerText = 'Copied!'; setTimeout(function(){ btn.innerText='Copy link'; }, 1200); } catch(_e){}
-              });
-            }
-          });
-        })();`}
-        </script>
-      )}
+      {/* islands above handle confirm + copy link */}
     </Layout>
   );
 }

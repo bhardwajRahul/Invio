@@ -1,4 +1,5 @@
 import { JSX } from "preact/jsx-runtime";
+import InvoiceEditorIsland from "../islands/InvoiceEditorIsland.tsx";
 
 type Customer = { id: string; name: string };
 type Item = {
@@ -354,69 +355,7 @@ export function InvoiceEditor(props: {
         </label>
       </div>
 
-      {/* Minimal inline script to add/remove item rows & toggle tax modes */}
-      <script>
-        {`(() => {
-        const addBtn = document.getElementById('add-item');
-        const container = document.getElementById('items-container');
-        const tpl = document.getElementById('item-template');
-        const taxModeSelect = document.getElementById('tax-mode-select');
-        const invoiceTaxInput = document.getElementById('invoice-tax-rate-input');
-        if (!addBtn || !container || !tpl) return;
-        function bindRemove(el) {
-          const btn = el.querySelector('.remove-item');
-          if (btn) {
-            btn.addEventListener('click', () => {
-              const rows = container.querySelectorAll('.item-row');
-              if (rows.length > 1) el.remove();
-            });
-          }
-        }
-        Array.prototype.forEach.call(container.querySelectorAll('.item-row'), bindRemove);
-        addBtn.addEventListener('click', () => {
-          let row = null;
-          if (tpl instanceof HTMLTemplateElement) {
-            const first = tpl.content.firstElementChild;
-            if (first) row = first.cloneNode(true);
-          }
-          if (row) {
-            container.appendChild(row);
-            bindRemove(row);
-            applyTaxMode();
-          }
-        });
-
-        function applyTaxMode(){
-          const mode = taxModeSelect ? (taxModeSelect.value || 'invoice') : 'invoice';
-          const perLineInputs = container.querySelectorAll('.per-line-tax-input');
-          perLineInputs.forEach((inp) => {
-            if (!(inp instanceof HTMLElement)) return;
-            if (mode === 'line') {
-              inp.removeAttribute('disabled');
-              // Show the per-line tax input itself (previously we un-hid the whole row)
-              inp.classList.remove('hidden');
-            } else {
-              inp.setAttribute('disabled','disabled');
-              // Clear value safely without TypeScript-only syntax (cast would break in runtime JS string)
-              if (inp instanceof HTMLInputElement) inp.value = '';
-              // Hide only the tax input (before: hid parent .item-row which removed the entire item)
-              inp.classList.add('hidden');
-            }
-          });
-          if (invoiceTaxInput) {
-            if (mode === 'invoice') {
-              invoiceTaxInput.removeAttribute('disabled');
-              invoiceTaxInput.parentElement?.classList.remove('hidden');
-            } else {
-              invoiceTaxInput.setAttribute('disabled','disabled');
-              invoiceTaxInput.parentElement?.classList.add('hidden');
-            }
-          }
-        }
-        if (taxModeSelect) taxModeSelect.addEventListener('change', applyTaxMode);
-        applyTaxMode();
-      })();`}
-      </script>
+      <InvoiceEditorIsland />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
+import ConfirmOnSubmit from "../../islands/ConfirmOnSubmit.tsx";
 import {
   backendDelete,
   backendGet,
@@ -67,6 +68,7 @@ export default function CustomerDetail(props: PageProps<Data>) {
   const c = props.data.customer;
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
+      <ConfirmOnSubmit />
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customer {c?.name || c?.id}</h1>
         {c && (
@@ -112,17 +114,6 @@ export default function CustomerDetail(props: PageProps<Data>) {
           )}
         </div>
       )}
-      <script>
-        {`(function(){
-        document.addEventListener('submit', function(e){
-          var t = e.target;
-          if (t && t.matches && t.matches('form[data-confirm]')) {
-            var msg = t.getAttribute('data-confirm') || 'Are you sure?';
-            if(!confirm(msg)) e.preventDefault();
-          }
-        }, true);
-      })();`}
-      </script>
     </Layout>
   );
 }

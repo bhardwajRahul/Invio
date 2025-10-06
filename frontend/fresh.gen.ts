@@ -28,7 +28,13 @@ import * as $public_invoices_share_token_xml from "./routes/public/invoices/[sha
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
+import * as $ConfirmOnSubmit from "./islands/ConfirmOnSubmit.tsx";
+import * as $CopyPublicLink from "./islands/CopyPublicLink.tsx";
+import * as $DemoModeDisabler from "./islands/DemoModeDisabler.tsx";
 import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
+import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
+import * as $LucideInit from "./islands/LucideInit.tsx";
+import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
@@ -66,7 +72,13 @@ const manifest = {
   },
   islands: {
     "./islands/Breadcrumbs.tsx": $Breadcrumbs,
+    "./islands/ConfirmOnSubmit.tsx": $ConfirmOnSubmit,
+    "./islands/CopyPublicLink.tsx": $CopyPublicLink,
+    "./islands/DemoModeDisabler.tsx": $DemoModeDisabler,
     "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
+    "./islands/InvoiceEditorIsland.tsx": $InvoiceEditorIsland,
+    "./islands/LucideInit.tsx": $LucideInit,
+    "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;
