@@ -1,5 +1,5 @@
 import { Handlers } from "$fresh/server.ts";
-import { backendPost, getAuthHeaderFromCookie } from "../../../utils/backend.ts";
+import { getAuthHeaderFromCookie } from "../../../utils/backend.ts";
 
 export const handler: Handlers = {
   async POST(req) {
@@ -13,8 +13,16 @@ export const handler: Handlers = {
           headers: { "Content-Type": "application/json" },
         });
       }
-      const data = await backendPost("/api/v1/templates/install-from-manifest", auth, { url });
-      return new Response(JSON.stringify(data), {
+      // Proxy the backend response including status codes to avoid masking errors as 500s
+      const res = await fetch(`${Deno.env.get("BACKEND_URL") || "http://localhost:3000"}/api/v1/templates/install-from-manifest`, {
+        method: "POST",
+        headers: { Authorization: auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const text = await res.text();
+      const body = text && text.trim().startsWith("{") ? text : JSON.stringify({ ok: res.ok, status: res.status, body: text });
+      return new Response(body, {
+        status: res.status,
         headers: { "Content-Type": "application/json" },
       });
     } catch (e) {

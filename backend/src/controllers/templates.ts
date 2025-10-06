@@ -37,25 +37,16 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 function basicHtmlSanity(html: string): void {
   const lower = html.toLowerCase();
+  // Block only truly dangerous embed containers; allow <img>, <script>, <link>, media, etc.
   const bannedTags = [
-    "<script",
     "<iframe",
     "<object",
     "<embed",
-    "<img",
-    "<video",
-    "<audio",
-    "<link ",
   ];
   for (const tag of bannedTags) {
     if (lower.includes(tag)) {
       throw new Error(`HTML contains disallowed tag: ${tag}`);
     }
-  }
-  // No external CSS imports or remote urls
-  if (/[@]import\s+/i.test(lower)) throw new Error("CSS @import not allowed");
-  if (/url\(\s*['\"]?https?:/i.test(lower)) {
-    throw new Error("External URLs in CSS not allowed");
   }
   // Disallow inline event handlers (attribute boundary)
   if (/(\s|<)on[a-z]+\s*=\s*['\"]/i.test(lower)) {

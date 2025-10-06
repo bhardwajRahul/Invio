@@ -35,7 +35,16 @@ export default function InstallTemplateForm({ demoMode }: Props) {
             },
             body: JSON.stringify({ url: u }),
           });
-          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          if (!res.ok) {
+            let message = `${res.status} ${res.statusText}`;
+            try {
+              const data = await res.json();
+              if (data && (data.error || data.message)) {
+                message = String(data.error || data.message);
+              }
+            } catch (_) { /* ignore parse issues */ }
+            throw new Error(message);
+          }
           globalThis.location?.reload();
         } catch (e) {
           setErr(String(e));
