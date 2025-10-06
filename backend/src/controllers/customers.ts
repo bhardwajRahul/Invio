@@ -2,7 +2,6 @@ import { getDatabase } from "../database/init.ts";
 import {
   CreateCustomerRequest,
   Customer,
-  UpdateCustomerRequest,
 } from "../types/index.ts";
 import { generateUUID } from "../utils/uuid.ts";
 
@@ -15,22 +14,42 @@ const mapRowToCustomer = (row: unknown[]): Customer => ({
   countryCode: (row[5] ?? undefined) as string | undefined,
   taxId: (row[6] ?? undefined) as string | undefined,
   createdAt: new Date(row[7] as string),
+  // Optional city/postal_code columns if present at the end
+  city: (row[8] ?? undefined) as string | undefined,
+  postalCode: (row[9] ?? undefined) as string | undefined,
 });
 
 export const getCustomers = () => {
   const db = getDatabase();
-  const results = db.query(
-    "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers ORDER BY created_at DESC",
-  );
+  // Select with optional columns city, postal_code if exist; SQLite will ignore missing columns in SELECT list only by error, so use PRAGMA to detect
+  let results: unknown[][] = [];
+  try {
+    results = db.query(
+      "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers ORDER BY created_at DESC",
+    ) as unknown[][];
+  } catch (_e) {
+    // fallback older schema
+    results = db.query(
+      "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers ORDER BY created_at DESC",
+    ) as unknown[][];
+  }
   return results.map((row: unknown[]) => mapRowToCustomer(row));
 };
 
 export const getCustomerById = (id: string): Customer | null => {
   const db = getDatabase();
-  const results = db.query(
-    "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
-    [id],
-  );
+  let results: unknown[][] = [];
+  try {
+    results = db.query(
+      "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
+      [id],
+    ) as unknown[][];
+  } catch (_e) {
+    results = db.query(
+      "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
+      [id],
+    ) as unknown[][];
+  }
   if (results.length === 0) return null;
   return mapRowToCustomer(results[0] as unknown[]);
 };
@@ -51,24 +70,48 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
   const phone = toNullable(data.phone);
   const address = toNullable(data.address);
   const countryCode = toNullable(data.countryCode);
+  const city = toNullable((data as { city?: string }).city);
+  const postal = toNullable((data as { postalCode?: string }).postalCode);
   const taxId = toNullable(data.taxId);
 
-  db.query(
-    `
-    INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-    [
-      customerId,
-      data.name,
-      email,
-      phone,
-      address,
-      countryCode,
-      taxId,
-      now,
-    ],
-  );
+  try {
+    db.query(
+      `
+      INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
+        customerId,
+        data.name,
+        email,
+        phone,
+        address,
+        countryCode,
+        taxId,
+        now,
+        city,
+        postal,
+      ],
+    );
+  } catch (_e) {
+    // fallback older schema
+    db.query(
+      `
+      INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
+        customerId,
+        data.name,
+        email,
+        phone,
+        address,
+        countryCode,
+        taxId,
+        now,
+      ],
+    );
+  }
 
   // Return undefined for missing optional fields
   return {
@@ -80,12 +123,14 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     countryCode: countryCode ?? undefined,
     taxId: taxId ?? undefined,
     createdAt: now,
+    city: city ?? undefined,
+    postalCode: postal ?? undefined,
   };
 };
 
 export const updateCustomer = (
   id: string,
-  data: UpdateCustomerRequest,
+  data: Partial<CreateCustomerRequest>,
 ): Customer | null => {
   const db = getDatabase();
   // Read existing to support partials and normalize empties
@@ -116,23 +161,50 @@ export const updateCustomer = (
   const taxId = data.taxId !== undefined
     ? toNullable(data.taxId)
     : (existing.taxId ?? null);
+  const city = (data as { city?: string }).city !== undefined
+    ? toNullable((data as { city?: string }).city)
+    : (existing.city ?? null);
+  const postal = (data as { postalCode?: string }).postalCode !== undefined
+    ? toNullable((data as { postalCode?: string }).postalCode)
+    : (existing.postalCode ?? null);
 
-  db.query(
-    `
-    UPDATE customers SET 
-      name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?
-    WHERE id = ?
-  `,
-    [
-      next.name,
-      email,
-      phone,
-      address,
-      countryCode,
-      taxId,
-      id,
-    ],
-  );
+  try {
+    db.query(
+      `
+      UPDATE customers SET 
+        name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
+      WHERE id = ?
+    `,
+      [
+        next.name,
+        email,
+        phone,
+        address,
+        countryCode,
+        taxId,
+        city,
+        postal,
+        id,
+      ],
+    );
+  } catch (_e) {
+    db.query(
+      `
+      UPDATE customers SET 
+        name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?
+      WHERE id = ?
+    `,
+      [
+        next.name,
+        email,
+        phone,
+        address,
+        countryCode,
+        taxId,
+        id,
+      ],
+    );
+  }
 
   return getCustomerById(id);
 };

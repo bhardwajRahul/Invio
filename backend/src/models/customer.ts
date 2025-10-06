@@ -6,6 +6,8 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  postalCode?: string;
   taxId?: string;
   createdAt: Date;
 }
@@ -19,13 +21,15 @@ export class CustomerModel {
     const id = crypto.randomUUID();
     const createdAt = new Date();
     await this.db.query(
-      "INSERT INTO customers (id, name, email, phone, address, tax_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO customers (id, name, email, phone, address, city, postal_code, tax_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         id,
         customer.name,
         customer.email,
         customer.phone,
         customer.address,
+        customer.city,
+        customer.postalCode,
         customer.taxId,
         createdAt,
       ],
@@ -43,8 +47,10 @@ export class CustomerModel {
       email: row[2] as string,
       phone: row[3] as string,
       address: row[4] as string,
-      taxId: row[5] as string,
-      createdAt: new Date(row[6] as string),
+      city: row[5] as string,
+      postalCode: row[6] as string,
+      taxId: row[7] as string,
+      createdAt: new Date(row[8] as string),
     }));
   }
 
@@ -60,8 +66,10 @@ export class CustomerModel {
       email: row[2] as string,
       phone: row[3] as string,
       address: row[4] as string,
-      taxId: row[5] as string,
-      createdAt: new Date(row[6] as string),
+      city: row[5] as string,
+      postalCode: row[6] as string,
+      taxId: row[7] as string,
+      createdAt: new Date(row[8] as string),
     };
   }
 
@@ -74,12 +82,14 @@ export class CustomerModel {
 
     const updatedCustomer = { ...existingCustomer, ...customer };
     await this.db.query(
-      "UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, tax_id = ? WHERE id = ?",
+      "UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, city = ?, postal_code = ?, tax_id = ? WHERE id = ?",
       [
         updatedCustomer.name,
         updatedCustomer.email,
         updatedCustomer.phone,
         updatedCustomer.address,
+        updatedCustomer.city,
+        updatedCustomer.postalCode,
         updatedCustomer.taxId,
         id,
       ],

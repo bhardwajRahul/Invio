@@ -4,8 +4,11 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  postalCode?: string;
   countryCode?: string; // ISO 3166-1 alpha-2
   taxId?: string;
+  reference?: string; // BuyerReference or order ref
   createdAt: Date;
 }
 
@@ -171,12 +174,10 @@ export interface CreateCustomerRequest {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  postalCode?: string;
   countryCode?: string; // ISO alpha-2
   taxId?: string;
-}
-
-export interface UpdateCustomerRequest extends Partial<CreateCustomerRequest> {
-  id: string;
 }
 
 export interface InvoiceWithDetails extends Invoice {

@@ -49,6 +49,13 @@ export const handler: Handlers<Data> = {
         `/api/v1/invoices/${id}`,
         auth,
       ) as Invoice;
+      // Disallow editing once invoice is issued or expired (overdue)
+      if (invoice.status && invoice.status !== "draft") {
+        return new Response(null, {
+          status: 303,
+          headers: { Location: `/invoices/${id}` },
+        });
+      }
       return ctx.render({ authed: true, invoice });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });

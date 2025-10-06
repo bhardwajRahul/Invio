@@ -21,6 +21,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   -- Optional default invoice number pattern (tokens: {YYYY} {YY} {MM} {DD} {DATE} {RAND4})
   ('invoiceNumberPattern', ''),
   ('invoiceNumberingEnabled', 'true'),
+  ('embedXmlInHtml', 'false'),
   -- Optional PEPPOL endpoint configuration (leave empty if not applicable)
   ('peppolSellerEndpointId', ''),
   ('peppolSellerEndpointSchemeId', ''),

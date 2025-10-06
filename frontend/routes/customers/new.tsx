@@ -32,8 +32,10 @@ export const handler: Handlers<Data> = {
     const email = String(form.get("email") || "");
     const phone = String(form.get("phone") || "");
     const address = String(form.get("address") || "");
-  const taxId = String(form.get("taxId") || "");
-  const countryCode = String(form.get("countryCode") || "");
+    const city = String(form.get("city") || "");
+    const postalCode = String(form.get("postalCode") || "");
+    const taxId = String(form.get("taxId") || "");
+    const countryCode = String(form.get("countryCode") || "");
 
     if (!name) return new Response("Name is required", { status: 400 });
 
@@ -43,6 +45,8 @@ export const handler: Handlers<Data> = {
         email,
         phone,
         address,
+        city,
+        postalCode,
         taxId,
         countryCode,
       }) as { id: string };
@@ -107,6 +111,20 @@ export default function NewCustomerPage(props: PageProps<Data>) {
             data-writable
           />
         </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">City</span>
+            </div>
+            <input name="city" class="input input-bordered w-full" data-writable />
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Postal Code</span>
+            </div>
+            <input name="postalCode" class="input input-bordered w-full" data-writable />
+          </label>
+        </div>
         <label class="form-control">
           <div class="label">
             <span class="label-text">Tax ID</span>

@@ -14,6 +14,8 @@ type Customer = {
   address?: string;
   taxId?: string;
   countryCode?: string;
+  city?: string;
+  postalCode?: string;
 };
 type Data = { authed: boolean; customer?: Customer; error?: string };
 
@@ -56,8 +58,10 @@ export const handler: Handlers<Data> = {
       email: String(form.get("email") || ""),
       phone: String(form.get("phone") || ""),
       address: String(form.get("address") || ""),
-        taxId: String(form.get("taxId") || ""),
-        countryCode: String(form.get("countryCode") || ""),
+      city: String(form.get("city") || ""),
+      postalCode: String(form.get("postalCode") || ""),
+      taxId: String(form.get("taxId") || ""),
+      countryCode: String(form.get("countryCode") || ""),
     };
     if (!payload.name) return new Response("Name is required", { status: 400 });
     try {
@@ -138,6 +142,30 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               {c.address || ""}
             </textarea>
           </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">City</span>
+              </div>
+              <input
+                name="city"
+                value={c.city || ""}
+                class="input input-bordered w-full"
+                data-writable
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Postal Code</span>
+              </div>
+              <input
+                name="postalCode"
+                value={c.postalCode || ""}
+                class="input input-bordered w-full"
+                data-writable
+              />
+            </label>
+          </div>
           <label class="form-control">
             <div class="label">
               <span class="label-text">Tax ID</span>

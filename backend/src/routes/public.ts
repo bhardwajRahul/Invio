@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { getInvoiceByShareToken } from "../controllers/invoices.ts";
 import { getSettings } from "../controllers/settings.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
-import { generateUBLInvoiceXML } from "../utils/ubl.ts";
+import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import (will be removed after deprecation window)
+import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 
 const publicRoutes = new Hono();
 
@@ -88,21 +89,43 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     selectedTemplateId = "minimalist-clean";
   }
 
-  const pdfBuffer = await generatePDF(
-    invoice,
-    businessSettings,
-    selectedTemplateId,
-    highlight,
-  );
-  return new Response(pdfBuffer, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="invoice-${
-        invoice.invoiceNumber || shareToken
-      }.pdf"`,
-      "X-Robots-Tag": "noindex",
-    },
-  });
+  try {
+    const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
+    const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
+    const pdfBuffer = await generatePDF(
+      invoice,
+      businessSettings,
+      selectedTemplateId,
+      highlight,
+      { embedXml, embedXmlProfileId: xmlProfileId },
+    );
+    // Detect embedded attachments for diagnostics
+    let hasAttachment = false;
+    let attachmentNames: string[] = [];
+    try {
+      const { PDFDocument } = await import("pdf-lib");
+      const doc = await PDFDocument.load(pdfBuffer);
+      const maybe = (doc as unknown as { getAttachments?: () => Record<string, Uint8Array> }).getAttachments?.();
+      if (maybe && typeof maybe === "object") {
+        attachmentNames = Object.keys(maybe);
+        hasAttachment = attachmentNames.length > 0;
+      }
+    } catch (_e) { /* ignore */ }
+    return new Response(pdfBuffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="invoice-${
+          invoice.invoiceNumber || shareToken
+        }.pdf"`,
+        "X-Robots-Tag": "noindex",
+        ...(hasAttachment ? { "X-Embedded-XML": "true", "X-Embedded-XML-Names": attachmentNames.join(",") } : { "X-Embedded-XML": "false" }),
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("/public/invoices/:share_token/pdf failed:", msg);
+    return c.json({ error: "Failed to generate PDF", details: msg }, 500);
+  }
 });
 
 // Return invoice as HTML (same options as PDF, but no PDF generation)
@@ -213,6 +236,67 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
       "X-Robots-Tag": "noindex",
     },
   });
+});
+
+// Generic XML export endpoint selecting a profile (built-in only for now)
+// Query param: ?profile=ubl21 (default) or stub-generic
+publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
+  const shareToken = c.req.param("share_token");
+  const invoice = await getInvoiceByShareToken(shareToken);
+  if (!invoice) return c.json({ message: "Invoice not found" }, 404);
+
+  const settings = getSettings();
+  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
+    acc[s.key] = s.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const businessSettings = {
+    companyName: settingsMap.companyName || "Your Company",
+    companyAddress: settingsMap.companyAddress || "",
+    companyEmail: settingsMap.companyEmail || "",
+    companyPhone: settingsMap.companyPhone || "",
+    companyTaxId: settingsMap.companyTaxId || "",
+    currency: settingsMap.currency || "USD",
+    logo: settingsMap.logo,
+    paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
+    bankAccount: settingsMap.bankAccount || "",
+    paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
+    defaultNotes: settingsMap.defaultNotes || "",
+    companyCountryCode: settingsMap.companyCountryCode || "",
+  };
+
+  const url = new URL(c.req.url);
+  const profileParam = url.searchParams.get("profile") || settingsMap.xmlProfileId || undefined;
+  const { xml, profile } = generateInvoiceXML(profileParam, invoice, businessSettings, {
+    sellerEndpointId: settingsMap.peppolSellerEndpointId,
+    sellerEndpointSchemeId: settingsMap.peppolSellerEndpointSchemeId,
+    buyerEndpointId: settingsMap.peppolBuyerEndpointId,
+    buyerEndpointSchemeId: settingsMap.peppolBuyerEndpointSchemeId,
+    sellerCountryCode: settingsMap.companyCountryCode,
+    buyerCountryCode: invoice.customer.countryCode,
+  });
+
+  return new Response(xml, {
+    headers: {
+      "Content-Type": `${profile.mediaType}; charset=utf-8`,
+      "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber || shareToken}.${profile.fileExtension}"`,
+      "X-Robots-Tag": "noindex",
+    },
+  });
+});
+
+// List available built-in XML profiles (public; could also require auth, but contents are non-sensitive)
+publicRoutes.get("/public/xml-profiles", (c) => {
+  const profiles = listXMLProfiles().map((p) => ({
+    id: p.id,
+    name: p.name,
+    mediaType: p.mediaType,
+    fileExtension: p.fileExtension,
+    experimental: !!p.experimental,
+    builtIn: true,
+  }));
+  return c.json(profiles);
 });
 
 export { publicRoutes };

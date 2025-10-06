@@ -18,6 +18,8 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
   const htmlUrl = `/public/invoices/${token}/html`;
   const pdfUrl = `/public/invoices/${token}/pdf`;
   const ublUrl = `/public/invoices/${token}/ubl.xml`;
+  const xmlUblUrl = `/public/invoices/${token}/xml?profile=ubl21`;
+  const xmlFxUrl = `/public/invoices/${token}/xml?profile=facturx22`;
   return (
     <div class="container mx-auto p-4">
       <div class="flex items-center justify-between mb-3">
@@ -31,6 +33,17 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
             <i data-lucide="file-text" class="w-4 h-4"></i>
             Download UBL XML
           </a>
+          <div class="dropdown dropdown-end">
+            <div tabIndex={0} role="button" class="btn btn-sm btn-outline flex gap-1">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              XML
+              <i data-lucide="chevron-down" class="w-3 h-3"></i>
+            </div>
+            <ul tabIndex={0} class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-2 w-56 p-2 shadow">
+              <li><a href={xmlUblUrl}>UBL 2.1 (PEPPOL)</a></li>
+              <li><a href={xmlFxUrl}>Factur‑X / ZUGFeRD 2.2</a></li>
+            </ul>
+          </div>
           <a class="btn btn-sm btn-ghost" href={htmlUrl} target="_blank">
             <i data-lucide="external-link" class="w-4 h-4"></i>
             Open HTML

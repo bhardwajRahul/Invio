@@ -3,6 +3,7 @@
 // This file is automatically updated during development when running `dev.ts`.
 
 import * as $_app from "./routes/_app.tsx";
+import * as $api_admin_export_full from "./routes/api/admin/export/full.ts";
 import * as $api_templates_install from "./routes/api/templates/install.ts";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
 import * as $customers_id_cannot_delete from "./routes/customers/[id]/cannot-delete.tsx";
@@ -15,6 +16,7 @@ import * as $invoices_id_ from "./routes/invoices/[id].tsx";
 import * as $invoices_id_edit from "./routes/invoices/[id]/edit.tsx";
 import * as $invoices_id_html from "./routes/invoices/[id]/html.ts";
 import * as $invoices_id_pdf from "./routes/invoices/[id]/pdf.ts";
+import * as $invoices_id_xml from "./routes/invoices/[id]/xml.ts";
 import * as $invoices_index from "./routes/invoices/index.tsx";
 import * as $invoices_new from "./routes/invoices/new.tsx";
 import * as $login from "./routes/login.tsx";
@@ -23,15 +25,24 @@ import * as $public_invoices_share_token_html from "./routes/public/invoices/[sh
 import * as $public_invoices_share_token_index from "./routes/public/invoices/[share_token]/index.tsx";
 import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[share_token]/pdf.ts";
 import * as $public_invoices_share_token_ubl_xml from "./routes/public/invoices/[share_token]/ubl.xml.ts";
+import * as $public_invoices_share_token_xml from "./routes/public/invoices/[share_token]/xml.ts";
 import * as $settings from "./routes/settings.tsx";
 import * as $templates_index from "./routes/templates/index.tsx";
 import * as $Breadcrumbs from "./islands/Breadcrumbs.tsx";
+import * as $ConfirmOnSubmit from "./islands/ConfirmOnSubmit.tsx";
+import * as $CopyPublicLink from "./islands/CopyPublicLink.tsx";
+import * as $DemoModeDisabler from "./islands/DemoModeDisabler.tsx";
+import * as $ExportAll from "./islands/ExportAll.tsx";
 import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
+import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
+import * as $LucideInit from "./islands/LucideInit.tsx";
+import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
+    "./routes/api/admin/export/full.ts": $api_admin_export_full,
     "./routes/api/templates/install.ts": $api_templates_install,
     "./routes/customers/[id].tsx": $customers_id_,
     "./routes/customers/[id]/cannot-delete.tsx": $customers_id_cannot_delete,
@@ -44,6 +55,7 @@ const manifest = {
     "./routes/invoices/[id]/edit.tsx": $invoices_id_edit,
     "./routes/invoices/[id]/html.ts": $invoices_id_html,
     "./routes/invoices/[id]/pdf.ts": $invoices_id_pdf,
+    "./routes/invoices/[id]/xml.ts": $invoices_id_xml,
     "./routes/invoices/index.tsx": $invoices_index,
     "./routes/invoices/new.tsx": $invoices_new,
     "./routes/login.tsx": $login,
@@ -56,12 +68,21 @@ const manifest = {
       $public_invoices_share_token_pdf,
     "./routes/public/invoices/[share_token]/ubl.xml.ts":
       $public_invoices_share_token_ubl_xml,
+    "./routes/public/invoices/[share_token]/xml.ts":
+      $public_invoices_share_token_xml,
     "./routes/settings.tsx": $settings,
     "./routes/templates/index.tsx": $templates_index,
   },
   islands: {
     "./islands/Breadcrumbs.tsx": $Breadcrumbs,
+    "./islands/ConfirmOnSubmit.tsx": $ConfirmOnSubmit,
+    "./islands/CopyPublicLink.tsx": $CopyPublicLink,
+    "./islands/DemoModeDisabler.tsx": $DemoModeDisabler,
+    "./islands/ExportAll.tsx": $ExportAll,
     "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
+    "./islands/InvoiceEditorIsland.tsx": $InvoiceEditorIsland,
+    "./islands/LucideInit.tsx": $LucideInit,
+    "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

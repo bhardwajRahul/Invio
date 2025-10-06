@@ -1,4 +1,7 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
+// Use Puppeteer (headless Chrome) for HTML -> PDF rendering instead of wkhtmltopdf
+import puppeteer from "puppeteer-core";
+import { generateInvoiceXML } from "./xmlProfiles.ts";
 import {
   BusinessSettings,
   InvoiceWithDetails,
@@ -327,8 +330,9 @@ export async function generateInvoicePDF(
   businessSettings?: BusinessSettings,
   templateId?: string,
   customHighlightColor?: string,
+  opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown> },
 ): Promise<Uint8Array> {
-  // Inline remote logo when possible for robust wkhtmltopdf rendering
+  // Inline remote logo when possible for robust HTML rendering
   const inlined = await inlineLogoIfPossible(businessSettings);
   const html = buildInvoiceHTML(
     invoiceData,
@@ -336,14 +340,107 @@ export async function generateInvoicePDF(
     templateId,
     customHighlightColor,
   );
-  const wk = await tryWkhtmlToPdf(html);
-  if (wk) return wk;
-  return await generateStyledPDF(
-    invoiceData,
-    inlined,
-    customHighlightColor,
-    templateId,
-  );
+  // First, attempt Puppeteer-based rendering
+  let pdfBytes = await tryPuppeteerPdf(html);
+  // Fallback to pdf-lib rendered styles if browser rendering fails
+  if (!pdfBytes) {
+    pdfBytes = await generateStyledPDF(
+      invoiceData,
+      inlined,
+      customHighlightColor,
+      templateId,
+    );
+  }
+
+  // Optionally embed XML profile as an attachment if requested and we have a PDF (browser or fallback)
+  if (pdfBytes && opts?.embedXml) {
+    try {
+      const profileId = opts.embedXmlProfileId || "ubl21";
+      const { xml, profile } = generateInvoiceXML(profileId, invoiceData, inlined || ({} as BusinessSettings));
+      const fileName = `invoice-${invoiceData.invoiceNumber || invoiceData.id}.${profile.fileExtension}`;
+      const viaPdfcpu = await tryPdfcpuAttach(pdfBytes, new TextEncoder().encode(xml), fileName);
+      if (viaPdfcpu) {
+        pdfBytes = viaPdfcpu;
+      } else {
+        // Fallback: embed using pdf-lib attach API
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        await pdfDoc.attach(xml, fileName, {
+          mimeType: profile.mediaType || "application/xml",
+          description: `${profile.name} export embedded by Invio`,
+          creationDate: new Date(),
+          modificationDate: new Date(),
+        });
+        pdfBytes = await pdfDoc.save();
+      }
+      // Ensure visible metadata hints via standard Info fields
+      try {
+        const doc2 = await PDFDocument.load(pdfBytes);
+        doc2.setSubject(`Embedded XML: ${fileName}`);
+        doc2.setKeywords(["Invoice", "Embedded XML", fileName]);
+        pdfBytes = await doc2.save();
+      } catch { /* ignore */ }
+    } catch (_e) {
+      // Silently ignore embedding failures to avoid breaking download
+    }
+  }
+  return pdfBytes as Uint8Array;
+}
+
+async function tryPdfcpuAttach(
+  pdfBytes: Uint8Array,
+  xmlBytes: Uint8Array,
+  xmlFileName: string,
+): Promise<Uint8Array | null> {
+  try {
+    // Write temp files
+    const pdfPath = await Deno.makeTempFile({ prefix: "invio-", suffix: ".pdf" });
+    const xmlPath = await Deno.makeTempFile({ prefix: "invio-", suffix: `-${xmlFileName}` });
+    await Deno.writeFile(pdfPath, pdfBytes);
+    await Deno.writeFile(xmlPath, xmlBytes);
+
+    // Run pdfcpu attachments add in place
+    const cmd = new Deno.Command("pdfcpu", {
+      args: ["attachments", "add", pdfPath, xmlPath],
+      stdout: "piped",
+      stderr: "piped",
+    });
+    const { success, stderr } = await cmd.output();
+    if (!success) {
+      console.error("pdfcpu attach failed:", new TextDecoder().decode(stderr));
+      try { await Deno.remove(pdfPath); } catch { /* ignore */ }
+      try { await Deno.remove(xmlPath); } catch { /* ignore */ }
+      return null;
+    }
+    // Add document properties so metadata visibly reflects the embedded XML
+    try {
+      const propCmd = new Deno.Command("pdfcpu", {
+        args: [
+          "properties",
+          "add",
+          pdfPath,
+          `EmbeddedXML=true`,
+          `EmbeddedXMLNames=${xmlFileName}`,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const propOut = await propCmd.output();
+      if (!propOut.success) {
+        console.warn(
+          "pdfcpu properties add failed:",
+          new TextDecoder().decode(propOut.stderr),
+        );
+      }
+    } catch (e) {
+      console.warn("pdfcpu properties add error:", e instanceof Error ? e.message : String(e));
+    }
+    const updated = await Deno.readFile(pdfPath);
+    try { await Deno.remove(pdfPath); } catch { /* ignore */ }
+    try { await Deno.remove(xmlPath); } catch { /* ignore */ }
+    return updated;
+  } catch (_e) {
+    return null;
+  }
 }
 
 export function buildInvoiceHTML(
@@ -500,45 +597,60 @@ export function buildInvoiceHTML(
   return baseHtml;
 }
 
-async function tryWkhtmlToPdf(html: string): Promise<Uint8Array | null> {
+async function tryPuppeteerPdf(html: string): Promise<Uint8Array | null> {
   try {
-    // Attempt to run wkhtmltopdf; if missing, this will throw
-    const cmd = new Deno.Command("wkhtmltopdf", {
-      args: [
-        "-q",
-        "--enable-local-file-access",
-        "--disable-javascript",
-        "-s",
-        "A4",
-        "--margin-top",
-        "15mm",
-        "--margin-bottom",
-        "15mm",
-        "--margin-left",
-        "15mm",
-        "--margin-right",
-        "15mm",
-        "-",
-        "-",
-      ],
-      stdin: "piped",
-      stdout: "piped",
-      stderr: "piped",
-    });
-    const child = cmd.spawn();
-    // Write HTML to stdin
-    const writer = child.stdin.getWriter();
-    const enc = new TextEncoder();
-    await writer.write(enc.encode(html));
-    await writer.close();
-    const { success, stdout, stderr } = await child.output();
-    if (!success) {
-      console.error("wkhtmltopdf failed:", new TextDecoder().decode(stderr));
-      return null;
+    // Resolve Chrome executable path (env wins, otherwise common defaults)
+    const envPath = Deno.env.get("PUPPETEER_EXECUTABLE_PATH");
+    const candidates = [
+      envPath,
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/google-chrome",
+      "/usr/bin/chromium",
+      "/usr/bin/chromium-browser",
+    ].filter((p): p is string => !!p);
+    let executablePath: string | undefined = undefined;
+    for (const p of candidates) {
+      try {
+        const info = await Deno.stat(p);
+        if (info && info.isFile) {
+          executablePath = p;
+          break;
+        }
+      } catch (_) { /* not found */ }
     }
-    return new Uint8Array(stdout);
-  } catch (_e) {
-    // wkhtmltopdf not installed or disallowed (missing --allow-run)
+
+    const launchOptions: Parameters<typeof puppeteer.launch>[0] = {
+      executablePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--font-render-hinting=medium",
+        "--disable-dev-shm-usage",
+      ],
+    };
+    if (!executablePath) {
+      // Provide a channel hint if executable path wasn't found
+      (launchOptions as unknown as { channel?: string }).channel = "chrome";
+    }
+    const browser = await puppeteer.launch(launchOptions);
+    try {
+      const page = await browser.newPage();
+      // Prefer CSS @page size in our HTML; use reasonable timeout for assets
+      await page.setContent(html, { waitUntil: "networkidle0" });
+      const buf = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        preferCSSPageSize: true,
+        margin: { top: "15mm", bottom: "15mm", left: "15mm", right: "15mm" },
+      });
+      return new Uint8Array(buf);
+    } finally {
+      await browser.close();
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("Puppeteer PDF render failed:", msg);
     return null;
   }
 }

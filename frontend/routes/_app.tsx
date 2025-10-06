@@ -11,8 +11,6 @@ export default function App({ Component }: AppProps) {
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         {/* Tailwind CDN for utilities */}
         <script src="https://cdn.tailwindcss.com"></script>
-        {/* App init (theme + icons) */}
-        <script src="/app-init.js"></script>
         {/* daisyUI precompiled CSS */}
         <link
           rel="stylesheet"
