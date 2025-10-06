@@ -40,6 +40,7 @@ import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
+import { getDatabase } from "../database/init.ts";
 
 const adminRoutes = new Hono();
 
@@ -148,6 +149,15 @@ adminRoutes.use(
 // Protect admin alias routes as well
 adminRoutes.use(
   "/admin/*",
+  basicAuth({
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
+  }),
+);
+
+// Protect export routes
+adminRoutes.use(
+  "/export/*",
   basicAuth({
     username: ADMIN_USER,
     password: ADMIN_PASS,
@@ -831,3 +841,154 @@ adminRoutes.get("/xml-profiles", (c) => {
 });
 
 export { adminRoutes };
+
+// Export all data (DB file, JSON dump, installed template assets) as a tar.gz
+adminRoutes.get("/export/full", async (c) => {
+  // Parse options: includeDb (default true), includeJson (default true), includeAssets (default true)
+  const url = new URL(c.req.url);
+  const includeDb = (url.searchParams.get("includeDb") ?? "true").toLowerCase() !== "false";
+  const includeJson = (url.searchParams.get("includeJson") ?? "true").toLowerCase() !== "false";
+  const includeAssets = (url.searchParams.get("includeAssets") ?? "true").toLowerCase() !== "false";
+
+  // Resolve active DB path
+  const dbPath = Deno.env.get("DATABASE_PATH") || "./invio.db";
+
+  // Create a staging temp dir
+  let tmpDir = "";
+  let outPath = "";
+  try {
+    tmpDir = await Deno.makeTempDir({ prefix: "invio-export-" });
+    // Optionally copy DB file
+    if (includeDb) {
+      try {
+        await Deno.copyFile(dbPath, `${tmpDir}/invio.db`);
+      } catch (e) {
+        console.warn("Export: could not copy DB file:", e);
+      }
+    }
+
+    // Optionally dump JSON
+    if (includeJson) {
+      try {
+        const db = getDatabase();
+        const q = (sql: string, params: unknown[] = []) => db.query(sql, params) as unknown[][];
+        // settings as map
+        const settingsRows = q("SELECT key, value FROM settings");
+        const settings: Record<string, string> = {};
+        for (const r of settingsRows) settings[String(r[0])] = String(r[1] ?? "");
+
+        const customers = q("SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers ORDER BY created_at DESC").map((r) => ({
+          id: String(r[0]), name: String(r[1]), email: r[2] ?? null, phone: r[3] ?? null, address: r[4] ?? null, countryCode: r[5] ?? null, taxId: r[6] ?? null, createdAt: r[7],
+        }));
+        const invoices = q("SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status, subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total, payment_terms, notes, share_token, created_at, updated_at, prices_include_tax, rounding_mode FROM invoices ORDER BY created_at DESC").map((r) => ({
+          id: r[0], invoiceNumber: r[1], customerId: r[2], issueDate: r[3], dueDate: r[4], currency: r[5], status: r[6], subtotal: r[7], discountAmount: r[8], discountPercentage: r[9], taxRate: r[10], taxAmount: r[11], total: r[12], paymentTerms: r[13], notes: r[14], shareToken: r[15], createdAt: r[16], updatedAt: r[17], pricesIncludeTax: r[18], roundingMode: r[19],
+        }));
+        const items = q("SELECT id, invoice_id, description, quantity, unit_price, line_total, notes, sort_order FROM invoice_items ORDER BY invoice_id, sort_order").map((r) => ({
+          id: r[0], invoiceId: r[1], description: r[2], quantity: r[3], unitPrice: r[4], lineTotal: r[5], notes: r[6], sortOrder: r[7],
+        }));
+        const itemTaxes = q("SELECT id, invoice_item_id, tax_definition_id, percent, taxable_amount, amount, included, sequence, note, created_at FROM invoice_item_taxes ORDER BY created_at").map((r) => ({
+          id: r[0], invoiceItemId: r[1], taxDefinitionId: r[2], percent: r[3], taxableAmount: r[4], amount: r[5], included: r[6], sequence: r[7], note: r[8], createdAt: r[9],
+        }));
+        const invoiceTaxes = q("SELECT id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at FROM invoice_taxes ORDER BY created_at").map((r) => ({
+          id: r[0], invoiceId: r[1], taxDefinitionId: r[2], percent: r[3], taxableAmount: r[4], taxAmount: r[5], createdAt: r[6],
+        }));
+        const templates = q("SELECT id, name, html, is_default, created_at FROM templates ORDER BY created_at DESC").map((r) => ({
+          id: r[0], name: r[1], html: r[2], isDefault: r[3], createdAt: r[4],
+        }));
+
+        const json = {
+          exportedAt: new Date().toISOString(),
+          settings,
+          customers,
+          invoices,
+          invoiceItems: items,
+          invoiceItemTaxes: itemTaxes,
+          invoiceTaxes,
+          templates,
+        };
+        await Deno.writeTextFile(`${tmpDir}/data.json`, JSON.stringify(json, null, 2));
+      } catch (e) {
+        console.warn("Export: JSON dump failed:", e);
+      }
+    }
+
+    // Optionally copy installed template assets directory
+    if (includeAssets) {
+      const src = "./data/templates";
+      const dest = `${tmpDir}/templates`;
+      try {
+        // Only copy if exists
+        const s = await Deno.stat(src).catch(() => null);
+        if (s && s.isDirectory) {
+          await copyDirRecursive(src, dest);
+        }
+      } catch (e) {
+        console.warn("Export: copying template assets failed:", e);
+      }
+    }
+
+    // Create tar.gz from tmpDir contents. Important: write the archive OUTSIDE tmpDir
+    // to avoid tar including its own output ("file changed as we read it").
+    const ts = new Date();
+    const y = String(ts.getFullYear());
+    const m = String(ts.getMonth() + 1).padStart(2, "0");
+    const d = String(ts.getDate()).padStart(2, "0");
+    const hh = String(ts.getHours()).padStart(2, "0");
+    const mm = String(ts.getMinutes()).padStart(2, "0");
+    const ss = String(ts.getSeconds()).padStart(2, "0");
+    const fileName = `invio-export-${y}${m}${d}-${hh}${mm}${ss}.tar.gz`;
+    outPath = await Deno.makeTempFile({ prefix: "invio-export-", suffix: ".tar.gz" });
+    const cmd = new Deno.Command("tar", {
+      args: ["-czf", outPath, "-C", tmpDir, "."],
+      stdout: "piped",
+      stderr: "piped",
+    });
+    const result = await cmd.output();
+    if (result.code !== 0) {
+      const err = new TextDecoder().decode(result.stderr);
+      throw new Error(`tar failed: ${err}`);
+    }
+
+    // Read and return the tar.gz
+    const bytes = await Deno.readFile(outPath);
+    return new Response(bytes, {
+      headers: {
+        "Content-Type": "application/gzip",
+        "Content-Disposition": `attachment; filename=\"${fileName}\"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (e) {
+    console.error("/export/full failed:", e);
+    return c.json({ error: "Failed to export data", details: String(e) }, 500);
+  } finally {
+    // Best-effort cleanup; keep tar result inside tmpDir so removal takes it too
+    if (tmpDir) {
+      try { await Deno.remove(tmpDir, { recursive: true }); } catch { /* ignore */ }
+    }
+    if (outPath) {
+      try { await Deno.remove(outPath); } catch { /* ignore */ }
+    }
+  }
+});
+
+// Recursive directory copy helper
+async function copyDirRecursive(src: string, dest: string) {
+  await Deno.mkdir(dest, { recursive: true });
+  for await (const entry of Deno.readDir(src)) {
+    const from = `${src}/${entry.name}`;
+    const to = `${dest}/${entry.name}`;
+    if (entry.isDirectory) {
+      await copyDirRecursive(from, to);
+    } else if (entry.isFile) {
+      await Deno.copyFile(from, to);
+    } else if (entry.isSymlink) {
+      try {
+        const target = await Deno.readLink(from);
+        await Deno.symlink(target, to);
+      } catch {
+        // skip problematic symlinks
+      }
+    }
+  }
+}
