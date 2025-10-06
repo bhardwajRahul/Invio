@@ -8,6 +8,7 @@ import {
   backendGet,
   backendPatch,
   backendDelete,
+  backendPost,
   getAuthHeaderFromCookie,
 } from "../utils/backend.ts";
 
@@ -18,7 +19,7 @@ type Settings = Record<string, unknown> & {
   taxId?: string;
   embedXmlInHtml?: string;
 };
-type Template = { id: string; name: string; isDefault?: boolean };
+type Template = { id: string; name: string; isDefault?: boolean; updatable?: boolean };
 type Data = {
   authed: boolean;
   settings?: Settings;
@@ -74,7 +75,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       });
     }
     const form = await req.formData();
-    const payload: Record<string, string> = {};
+  const payload: Record<string, string> = {};
     // Handle delete template action early
     const deleteId = String(form.get("deleteTemplateId") ?? "").trim();
     if (deleteId) {
@@ -83,6 +84,19 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
         return new Response(null, {
           status: 303,
           headers: { Location: "/settings" },
+        });
+      } catch (e) {
+        return new Response(String(e), { status: 500 });
+      }
+    }
+    // Handle template update action
+    const updateId = String(form.get("updateTemplateId") ?? "").trim();
+    if (updateId) {
+      try {
+        await backendPost(`/api/v1/templates/${updateId}/update`, auth, {});
+        return new Response(null, {
+          status: 303,
+          headers: { Location: "/settings?section=templates" },
         });
       } catch (e) {
         return new Response(String(e), { status: 500 });
@@ -318,22 +332,51 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                 <h2 class="card-title">Templates</h2>
                 <InstallTemplateForm demoMode={demoMode} />
               </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {templates.map((t) => (
-                  <div class="flex items-center justify-between p-2 border rounded-box" key={t.id}>
-                    <div><div class="font-medium">{t.name}</div><div class="text-xs opacity-60">{t.id}</div></div>
-                    <div class="flex items-center gap-2">
-                      {selectedTemplateId === t.id ? <span class="badge badge-primary">Default</span> : (
-                        <form method="post" data-writable><input type="hidden" name="templateId" value={t.id} /><button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>Set as default</button></form>
-                      )}
-                      {t.id !== "professional-modern" && t.id !== "minimalist-clean" && selectedTemplateId !== t.id && (
-                        <form method="post" data-writable><input type="hidden" name="deleteTemplateId" value={t.id} /><button class="btn btn-sm btn-error" type="submit" disabled={demoMode} data-writable>Delete</button></form>
-                      )}
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {templates.map((t) => {
+                  const builtIn = t.id === "professional-modern" || t.id === "minimalist-clean";
+                  return (
+                    <div class="card bg-base-200 shadow-sm" key={t.id}>
+                      <div class="card-body p-3">
+                        <div class="flex items-start justify-between">
+                          <div>
+                            <div class="font-medium">{t.name}</div>
+                            <div class="text-xs opacity-60">{t.id}</div>
+                          </div>
+                          {selectedTemplateId === t.id && <span class="badge badge-primary">Default</span>}
+                        </div>
+                        <div class="card-actions justify-end mt-2 gap-2">
+                          {selectedTemplateId !== t.id && (
+                            <form method="post" data-writable>
+                              <input type="hidden" name="templateId" value={t.id} />
+                              <button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>
+                                Set default
+                              </button>
+                            </form>
+                          )}
+                          {!builtIn && t.updatable && (
+                            <form method="post" data-writable>
+                              <input type="hidden" name="updateTemplateId" value={t.id} />
+                              <button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>
+                                Update
+                              </button>
+                            </form>
+                          )}
+                          {!builtIn && selectedTemplateId !== t.id && (
+                            <form method="post" data-writable>
+                              <input type="hidden" name="deleteTemplateId" value={t.id} />
+                              <button class="btn btn-sm btn-error" type="submit" disabled={demoMode} data-writable>
+                                Delete
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <p class="text-xs opacity-60">Built-in templates are protected and cannot be deleted.</p>
+              <p class="text-xs opacity-60 mt-2">Built-in templates are protected and cannot be deleted. Update is available for templates installed from a manifest.</p>
             </div>
           )}
 

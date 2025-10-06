@@ -271,7 +271,7 @@ adminRoutes.post("/invoices/:id/duplicate", async (c) => {
 // Template routes
 adminRoutes.get("/templates", async (c) => {
   let templates = await getTemplates();
-  // Overlay the default from settings if present to avoid stale display
+  // Overlay the default from settings if present; also compute 'updatable' flag when a manifest source exists
   try {
     const settings = await getSettings();
     const map = settings.reduce((acc: Record<string, string>, s) => {
@@ -280,7 +280,16 @@ adminRoutes.get("/templates", async (c) => {
     }, {} as Record<string, string>);
     const current = map.templateId;
     if (current) {
-      templates = templates.map((t) => ({ ...t, isDefault: t.id === current }));
+      templates = templates.map((t) => ({
+        ...t,
+        isDefault: t.id === current,
+        updatable: !!map[`templateSource:${t.id}`],
+      }));
+    } else {
+      templates = templates.map((t) => ({
+        ...t,
+        updatable: !!map[`templateSource:${t.id}`],
+      }));
     }
   } catch { /* ignore */ }
   return c.json(templates);
@@ -300,7 +309,29 @@ adminRoutes.post("/templates/install-from-manifest", async (c) => {
       return c.json({ error: "Missing 'url'" }, 400);
     }
     const t = await installTemplateFromManifest(url);
+    try {
+      // Remember the source manifest used for this template id to enable future updates
+      setSetting(`templateSource:${t.id}`, url);
+    } catch (_e) { /* non-fatal */ }
     return c.json(t);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+// Update a template by id using its stored source manifest URL
+adminRoutes.post("/templates/:id/update", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const src = await getSetting(`templateSource:${id}`);
+    if (!src || typeof src !== "string") {
+      return c.json({ error: "No stored manifest URL for this template" }, 404);
+    }
+    const updated = await installTemplateFromManifest(src);
+    if (!updated || updated.id !== id) {
+      return c.json({ error: "Manifest ID does not match template id" }, 400);
+    }
+    return c.json({ ok: true, template: updated });
   } catch (e) {
     return c.json({ error: String(e) }, 400);
   }

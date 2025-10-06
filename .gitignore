@@ -11,3 +11,5 @@
 **/_fresh
 
 .env
+
+/frontend/static/dev
