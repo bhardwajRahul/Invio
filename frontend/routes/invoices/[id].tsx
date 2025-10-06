@@ -237,10 +237,12 @@ export default function InvoiceDetail(props: PageProps<Data>) {
         </div>
         {inv && (
           <div class="flex items-center gap-2">
-            <a href={`/invoices/${inv.id}/edit`} class="btn btn-sm">
-              <i data-lucide="pencil" class="w-4 h-4"></i>
-              Edit
-            </a>
+            {(inv.status === "draft" && !isOverdue) && (
+              <a href={`/invoices/${inv.id}/edit`} class="btn btn-sm">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+                Edit
+              </a>
+            )}
             {/* Contextual primary action */}
             {inv.status === "draft" && (
               <form method="post">
