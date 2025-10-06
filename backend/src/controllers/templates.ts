@@ -102,14 +102,14 @@ export async function installTemplateFromManifest(manifestUrl: string) {
       throw new Error("HTML sha256 mismatch");
     }
   }
-  const html = new TextDecoder().decode(htmlBuf);
+  let html = new TextDecoder().decode(htmlBuf);
   basicHtmlSanity(html);
 
   // Persist to filesystem under data/templates/{id}/{version}/
   const baseDir = `./data/templates/${manifest.id}/${manifest.version}`;
   const outPath = `${baseDir}/${manifest.html.path}`;
   await Deno.mkdir(baseDir, { recursive: true });
-  await Deno.writeFile(outPath, htmlBuf);
+  await Deno.writeTextFile(outPath, html);
 
   // Upsert by provided id, keep single default truth elsewhere. Store HTML in DB for current renderer.
   const saved = upsertTemplateWithId(manifest.id, {
