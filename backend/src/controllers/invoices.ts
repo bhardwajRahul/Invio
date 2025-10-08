@@ -152,9 +152,11 @@ export const createInvoice = (
   } else {
     // If advanced numbering pattern with {SEQ} is active, allocate real number now; else draft placeholder
     try {
-      const rows = db.query("SELECT value FROM settings WHERE key = 'invoiceNumberPattern' LIMIT 1");
+      const rows = db.query(
+        "SELECT value FROM settings WHERE key = 'invoiceNumberPattern' LIMIT 1",
+      );
       if (rows.length > 0) {
-        const pattern = String((rows[0] as unknown[])[0] || '').trim();
+        const pattern = String((rows[0] as unknown[])[0] || "").trim();
         if (pattern && /\{SEQ\}/.test(pattern)) {
           invoiceNumber = getNextInvoiceNumber();
         } else {
@@ -163,7 +165,7 @@ export const createInvoice = (
       } else {
         invoiceNumber = generateDraftInvoiceNumber();
       }
-    } catch(_e) {
+    } catch (_e) {
       invoiceNumber = generateDraftInvoiceNumber();
     }
   }
@@ -946,7 +948,6 @@ export const publishInvoice = async (
   // Validate minimal required fields before issuing
   const missing: string[] = [];
   if (!invoice.customer?.name) missing.push("customer.name");
-  if (!invoice.customer?.address) missing.push("customer.address");
   if (!invoice.items || invoice.items.length === 0) missing.push("items");
   if (!invoice.currency) missing.push("currency");
   if (!invoice.issueDate) missing.push("issueDate");
