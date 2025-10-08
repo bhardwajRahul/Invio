@@ -2,6 +2,7 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
 import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
 import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
+import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
 // Using official Lucide icons via <i data-lucide="..."> (initialized in Layout's LucideInit)
 import {
@@ -181,6 +182,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const allowed = new Set([
     "company",
     "branding",
+    "appearance",
     "templates",
     "payments",
     "tax",
@@ -218,6 +220,12 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               <a href={link("branding")} class={section === "branding" ? "active" : undefined}>
                 <i data-lucide="palette" class="w-5 h-5 mr-2"></i>
                 Branding
+              </a>
+            </li>
+            <li>
+              <a href={link("appearance")} class={section === "appearance" ? "active" : undefined}>
+                <i data-lucide="sun" class="w-5 h-5 mr-2"></i>
+                Appearance
               </a>
             </li>
             {hasTemplates && (
@@ -310,6 +318,20 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               </div>
               <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
             </form>
+          )}
+
+          {section === "appearance" && (
+            <div class="grid gap-3">
+              <div class="card bg-base-100 border-base-300">
+                <div class="card-body p-4">
+                  <h2 class="card-title mb-2">Theme</h2>
+                  <div class="flex items-center gap-3">
+                    <ThemeToggle size="md" label="Toggle light/dark theme" />
+                    <span class="text-sm opacity-70">Switch between Light and Dark (DaisyUI)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {section === "templates" && hasTemplates && (

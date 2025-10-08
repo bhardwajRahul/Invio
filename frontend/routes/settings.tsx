@@ -2,6 +2,7 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
 import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
 import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
+import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
 // Using official Lucide icons via <i data-lucide="..."> (initialized in Layout's LucideInit)
 import {
@@ -74,6 +75,9 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
         headers: { Location: "/login" },
       });
     }
+    // Preserve the current tab by reading the section from the request URL
+    const url = new URL(req.url);
+    const sectionParam = url.searchParams.get("section") || "company";
     const form = await req.formData();
   const payload: Record<string, string> = {};
     // Handle delete template action early
@@ -83,7 +87,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
         await backendDelete(`/api/v1/templates/${deleteId}`, auth);
         return new Response(null, {
           status: 303,
-          headers: { Location: "/settings" },
+          headers: { Location: `/settings?section=${encodeURIComponent(sectionParam)}` },
         });
       } catch (e) {
         return new Response(String(e), { status: 500 });
@@ -96,7 +100,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
         await backendPost(`/api/v1/templates/${updateId}/update`, auth, {});
         return new Response(null, {
           status: 303,
-          headers: { Location: "/settings?section=templates" },
+          headers: { Location: `/settings?section=${encodeURIComponent(sectionParam || "templates")}` },
         });
       } catch (e) {
         return new Response(String(e), { status: 500 });
@@ -170,7 +174,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       await backendPatch("/api/v1/settings", auth, payload);
       return new Response(null, {
         status: 303,
-        headers: { Location: "/settings" },
+        headers: { Location: `/settings?section=${encodeURIComponent(sectionParam)}` },
       });
     } catch (e) {
       return new Response(String(e), { status: 500 });
@@ -195,6 +199,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const allowed = new Set([
     "company",
     "branding",
+    "appearance",
     "templates",
     "payments",
     "tax",
@@ -232,6 +237,12 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               <a href={link("branding")} class={section === "branding" ? "active" : undefined}>
                 <i data-lucide="palette" class="w-5 h-5 mr-2"></i>
                 Branding
+              </a>
+            </li>
+            <li>
+              <a href={link("appearance")} class={section === "appearance" ? "active" : undefined}>
+                <i data-lucide="sun" class="w-5 h-5 mr-2"></i>
+                Appearance
               </a>
             </li>
             {hasTemplates && (
@@ -274,7 +285,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
             </li>
           </ul>
         </aside>
-        <section class="bg-base-100 border-base-300 rounded-box p-4">
+  <section class="bg-base-100 border border-base-300 rounded-box p-4">
           {section === "company" && (
             <form method="post" data-writable>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -324,6 +335,20 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               </div>
               <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
             </form>
+          )}
+
+          {section === "appearance" && (
+            <div class="grid gap-3">
+              <div class="card bg-base-100 border-base-300">
+                <div class="card-body p-4">
+                  <h2 class="card-title mb-2">Theme</h2>
+                  <div class="flex items-center gap-3">
+                    <ThemeToggle size="md" label="Toggle light/dark theme" />
+                    <span class="text-sm opacity-70">Switch between Light and Dark (DaisyUI)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {section === "templates" && hasTemplates && (

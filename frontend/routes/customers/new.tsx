@@ -72,7 +72,7 @@ export default function NewCustomerPage(props: PageProps<Data>) {
       )}
       <form
         method="post"
-        class="space-y-3 max-w-xl bg-base-100 border p-4 rounded-box"
+  class="space-y-3 max-w-xl bg-base-100 border border-base-300 p-4 rounded-box"
         data-writable
       >
         <label class="form-control">

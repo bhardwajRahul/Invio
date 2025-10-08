@@ -38,17 +38,22 @@ export const handler: Handlers<Data> = {
         "/api/v1/invoices",
         auth,
       ) as Invoice[];
-      const qLower = q.toLowerCase();
+      // Normalize for case/diacritics-insensitive search
+      const norm = (s: unknown) =>
+        String(s || "")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "");
+      const qLower = norm(q);
       const statusLower = status.toLowerCase();
       const invoices = invoicesAll.filter((inv) => {
         const st = String(inv.status || "").toLowerCase();
         const okStatus = !statusLower || st === statusLower;
         if (!qLower) return okStatus;
-        const id = String(inv.id || "").toLowerCase();
-        const cust = String(inv.customer?.name || "").toLowerCase();
+        const id = norm(inv.id);
+        const cust = norm(inv.customer?.name);
         // Optionally include invoice number if present on list payloads
-        const num = (inv as unknown as { invoiceNumber?: string }).invoiceNumber
-          ?.toLowerCase?.() || "";
+        const num = norm((inv as unknown as { invoiceNumber?: string }).invoiceNumber);
         const okText = id.includes(qLower) || cust.includes(qLower) ||
           num.includes(qLower);
         return okStatus && okText;
@@ -164,7 +169,7 @@ export default function Invoices(props: PageProps<Data>) {
         Showing <span class="font-medium">{list.length}</span> of{" "}
         <span class="font-medium">{totalCount}</span> invoices
       </div>
-      <div class="overflow-x-auto rounded-box bg-base-100 border">
+  <div class="overflow-x-auto rounded-box bg-base-100 border border-base-300">
         <table class="table table-sm w-full text-sm">
           <thead class="bg-base-200 text-base-content">
             <tr class="font-medium">

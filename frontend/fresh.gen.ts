@@ -37,6 +37,7 @@ import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
 import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
 import * as $LucideInit from "./islands/LucideInit.tsx";
 import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
+import * as $ThemeToggle from "./islands/ThemeToggle.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
@@ -83,6 +84,7 @@ const manifest = {
     "./islands/InvoiceEditorIsland.tsx": $InvoiceEditorIsland,
     "./islands/LucideInit.tsx": $LucideInit,
     "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
+    "./islands/ThemeToggle.tsx": $ThemeToggle,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

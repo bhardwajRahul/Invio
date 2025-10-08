@@ -113,7 +113,7 @@ export default function Dashboard(props: PageProps<Data>) {
 
       {props.data.counts && (
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Invoices</div>
               <div class="text-3xl font-extrabold">
@@ -121,7 +121,7 @@ export default function Dashboard(props: PageProps<Data>) {
               </div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Customers</div>
               <div class="text-3xl font-extrabold">
@@ -129,7 +129,7 @@ export default function Dashboard(props: PageProps<Data>) {
               </div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Templates</div>
               <div class="text-3xl font-extrabold">
@@ -137,7 +137,7 @@ export default function Dashboard(props: PageProps<Data>) {
               </div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Open Invoices</div>
               <div class="text-3xl font-extrabold">
@@ -151,7 +151,7 @@ export default function Dashboard(props: PageProps<Data>) {
 
       {props.data.money && (
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Total Billed</div>
               <div class="text-2xl font-bold">
@@ -159,7 +159,7 @@ export default function Dashboard(props: PageProps<Data>) {
               </div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Outstanding</div>
               <div class="text-2xl font-bold">
@@ -167,7 +167,7 @@ export default function Dashboard(props: PageProps<Data>) {
               </div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Paid</div>
               <div class="text-2xl font-bold">
@@ -180,25 +180,25 @@ export default function Dashboard(props: PageProps<Data>) {
 
       {props.data.status && (
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Draft</div>
               <div class="text-xl font-semibold">{props.data.status.draft}</div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Sent</div>
               <div class="text-xl font-semibold">{props.data.status.sent}</div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Paid</div>
               <div class="text-xl font-semibold">{props.data.status.paid}</div>
             </div>
           </div>
-          <div class="card bg-base-100 border rounded-box">
+          <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
               <div class="text-sm opacity-70">Overdue</div>
               <div class="text-xl font-semibold text-error">
@@ -210,8 +210,8 @@ export default function Dashboard(props: PageProps<Data>) {
       )}
 
       {props.data.recent && props.data.recent.length > 0 && (
-        <div class="bg-base-100 border rounded-box overflow-hidden">
-          <div class="p-4 border-b flex items-center justify-between">
+        <div class="bg-base-100 border border-base-300 rounded-box overflow-hidden">
+          <div class="p-4 border-b border-base-300 flex items-center justify-between">
             <h2 class="font-semibold">Recent Invoices</h2>
             <a href="/invoices" class="btn btn-sm btn-ghost">View all</a>
           </div>

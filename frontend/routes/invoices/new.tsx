@@ -225,7 +225,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
       )}
       <form
         method="post"
-        class="space-y-4 w-full bg-base-100 border p-4 rounded-box"
+  class="space-y-4 w-full bg-base-100 border border-base-300 p-4 rounded-box"
         data-writable
       >
         <InvoiceEditor

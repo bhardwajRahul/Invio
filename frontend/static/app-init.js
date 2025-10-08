@@ -1,8 +1,14 @@
 (function () {
+  // Set data-theme ASAP from localStorage or prefers-color-scheme
   try {
     const root = document.documentElement;
-    root.setAttribute("data-theme", "light");
-  try { globalThis.localStorage && localStorage.removeItem("theme"); } catch(_e) { /* ignore */ }
+    const KEY = "theme";
+    let stored = null;
+    try { stored = globalThis.localStorage ? localStorage.getItem(KEY) : null; } catch(_) { stored = null; }
+    let prefersDark = false;
+    try { prefersDark = !!(globalThis.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); } catch(_) { prefersDark = false; }
+    const theme = (stored === 'light' || stored === 'dark') ? stored : (prefersDark ? 'dark' : 'light');
+    root.setAttribute('data-theme', theme);
   } catch (_err) {
     // ignore theme init errors
   }

@@ -25,7 +25,7 @@ export default function CannotDeleteCustomer(props: PageProps<Data>) {
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="max-w-2xl mx-auto">
-        <div class="card bg-base-100 border">
+  <div class="card bg-base-100 border border-base-300">
           <div class="card-body">
             <h1 class="card-title text-2xl">Cannot delete this customer</h1>
             <p>

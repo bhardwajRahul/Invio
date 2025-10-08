@@ -44,7 +44,7 @@ export default function Customers(props: PageProps<Data>) {
           <span>{props.data.error}</span>
         </div>
       )}
-      <div class="overflow-x-auto rounded-box bg-base-100 border">
+  <div class="overflow-x-auto rounded-box bg-base-100 border border-base-300">
         <table class="table table-zebra w-full text-sm">
           <thead class="bg-base-200 text-base-content">
             <tr class="font-medium">

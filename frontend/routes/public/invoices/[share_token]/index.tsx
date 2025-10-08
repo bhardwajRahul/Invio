@@ -55,7 +55,7 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
           <span>{props.data.error}</span>
         </div>
       )}
-      <div class="bg-base-100 border rounded-box overflow-hidden">
+  <div class="bg-base-100 border border-base-300 rounded-box overflow-hidden">
         <iframe
           src={htmlUrl}
           class="w-full"

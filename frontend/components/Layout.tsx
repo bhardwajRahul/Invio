@@ -15,7 +15,7 @@ export function Layout(
   return (
     <div class="min-h-screen bg-base-200">
       <LucideInit />
-  <div class="navbar bg-base-100 border-b" data-demo={props.demoMode ? "true" : "false"}>
+  <div class="navbar bg-base-100 border-b border-base-300" data-demo={props.demoMode ? "true" : "false"}>
         <div class="container mx-auto flex items-center">
           {/* Left: Logo only */}
           <div class="navbar-start flex-1">
