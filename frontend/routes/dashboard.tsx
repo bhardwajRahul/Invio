@@ -139,9 +139,10 @@ export default function Dashboard(props: PageProps<Data>) {
           </div>
           <div class="card bg-base-100 border rounded-box">
             <div class="card-body">
-              <div class="text-sm opacity-70">Overdue</div>
-              <div class="text-3xl font-extrabold text-error">
-                {props.data.status?.overdue || 0}
+              <div class="text-sm opacity-70">Open Invoices</div>
+              <div class="text-3xl font-extrabold">
+                {(props.data.status?.sent || 0) +
+                  (props.data.status?.overdue || 0)}
               </div>
             </div>
           </div>
