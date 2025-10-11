@@ -3,8 +3,8 @@
 </p>
 <p align="center"><b>Self-hosted invoicing without the bloat. Fast, transparent, and fully yours.</b></p>
 <p align="center">
-  <a href="https://invio-demo.codingkitten.hackclub.app">Live Demo</a> •
-  <a href="https://invio.codingkitten.dev/">Documentation</a> •
+  <a href="https://demo.invio.dev">Live Demo</a> •
+  <a href="https://github.com/kittendevv/Invio/wiki">Documentation</a> •
   <a href="https://ko-fi.com/codingkitten">Support</a>
 </p>
 
@@ -17,20 +17,13 @@
 - Fast & dependable — Deno + Fresh on the frontend and Hono + SQLite on the backend keep things simple and quick.
 - Client‑friendly — share a secure public link—no accounts or passwords required to view invoices.
 
-## 📚 More info
-
-Please go to the docs for more info: https://invio.codingkitten.dev/
-To log in to the demo, the username and password is demo/demo.
-
 ## 🤝 Contributing
-
-Invio thrives on community contributions!
 
 - Found a bug or have an idea? Open an issue.
 - Want to add a feature or fix something? Fork and submit a PR.
 - All experience levels welcome — we’re excited to build with you.
 
-## ☕ Support the Creator
+## ☕ Support me
 
 If you like Invio and want to support development:
 - Buy me a coffee: https://ko-fi.com/codingkitten
