@@ -20,6 +20,11 @@
 - Fast & dependable — Deno + Fresh on the frontend and Hono + SQLite on the backend keep things simple and quick.
 - Client‑friendly — share a secure public link—no accounts or passwords required to view invoices.
 
+## 🖼️ Screenshots
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kittendevv/Invio/refs/heads/main/assets/inviodashboard.webp" alt="Invio Dashboard" width="100%" />
+</p>
+
 ## 🤝 Contributing
 
 - Found a bug or have an idea? Open an issue.
