@@ -2,7 +2,7 @@ name: invio
 
 services:
   backend:
-    image: ghcr.io/kittendevv/invio-backend:main
+    image: ghcr.io/kittendevv/invio-backend:latest
     env_file:
       - .env
     environment:
@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/kittendevv/invio-frontend:main
+    image: ghcr.io/kittendevv/invio-frontend:latest
     env_file:
       - .env
     environment:
