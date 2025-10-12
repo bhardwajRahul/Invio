@@ -7,6 +7,9 @@
   <a href="https://github.com/kittendevv/Invio/wiki">Documentation</a> •
   <a href="https://ko-fi.com/codingkitten">Support</a>
 </p>
+<p align="center">
+  <a href="https://www.producthunt.com/products/invio-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-invio&#0045;2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1025437&theme=dark&t=1760267997318" alt="Invio - Self&#0045;Hosted&#0032;invoicing&#0032;without&#0032;the&#0032;bloat | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+</p>
 
 ---
 
