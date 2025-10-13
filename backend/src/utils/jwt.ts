@@ -1,7 +1,6 @@
 import { create, decode, verify } from "djwt";
 
-const secretKey = Deno.env.get("JWT_SECRET") ||
-  "your-secret-key-change-this-in-production";
+const secretKey = Deno.env.get("JWT_SECRET")
 
 async function getKey(): Promise<CryptoKey> {
   const key = await crypto.subtle.importKey(

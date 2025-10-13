@@ -5,6 +5,7 @@
 import { BusinessSettings, InvoiceWithDetails } from "../types/index.ts";
 import { generateUBLInvoiceXML } from "./ubl.ts";
 import { generateFacturX22XML } from "./facturx.ts";
+import { generateFatturaXML } from "./fatturapa.ts";
 
 export interface XMLProfileGenerateOptions {
   // Optional PEPPOL / endpoint IDs etc. Pass ed through to UBL generator where relevant.
@@ -57,6 +58,19 @@ const PROFILES: Record<string, XMLProfile> = {
         buyerCountryCode: opts?.buyerCountryCode,
       }),
   },
+  "fatturapa": {
+  id: "fatturapa",
+  name: "FatturaPA (Italian eInvoice)",
+  mediaType: "application/xml",
+  fileExtension: "xml",
+  generate: (invoice, business, opts) =>
+    generateFatturaXML(invoice, business, {
+      sellerCountryCode: opts?.sellerCountryCode,
+      buyerCountryCode: opts?.buyerCountryCode,
+      buyerIsPA: false, // configurable
+      transmissionFormat: "FPA12",
+    }),
+},
 };
 
 export function listXMLProfiles(): XMLProfile[] {

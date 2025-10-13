@@ -114,36 +114,41 @@ export function generateFacturX22XML(
     ${invoice.notes ? `<ram:IncludedNote><ram:Content>${xmlEscape(invoice.notes)}</ram:Content></ram:IncludedNote>` : ""}
   </rsm:ExchangedDocument>`;
 
+  // FIXED: Party structure for BASIC profile - only allow specific elements in specific order
   const sellerParty = `
     <ram:SellerTradeParty>
-      ${isLikelyVatId(business.companyTaxId) ? `<ram:ID>${xmlEscape(business.companyTaxId!)}</ram:ID>` : ""}
       <ram:Name>${xmlEscape(business.companyName)}</ram:Name>
-      ${isLikelyVatId(business.companyTaxId) ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${xmlEscape(business.companyTaxId!)}</ram:ID></ram:SpecifiedTaxRegistration>` : ""}
+      ${isLikelyVatId(business.companyTaxId) ? `
+      <ram:SpecifiedTaxRegistration>
+        <ram:ID schemeID="VA">${xmlEscape(business.companyTaxId!)}</ram:ID>
+      </ram:SpecifiedTaxRegistration>` : ""}
       <ram:PostalTradeAddress>
-        ${sellerAddr.postal ? `<ram:PostcodeCode>${xmlEscape(sellerAddr.postal)}</ram:PostcodeCode>` : ""}
         ${sellerAddr.street ? `<ram:LineOne>${xmlEscape(sellerAddr.street)}</ram:LineOne>` : ""}
         ${sellerAddr.city ? `<ram:CityName>${xmlEscape(sellerAddr.city)}</ram:CityName>` : ""}
         <ram:CountryID>${xmlEscape(sellerAddr.country || "DE")}</ram:CountryID>
+        ${sellerAddr.postal ? `<ram:PostcodeCode>${xmlEscape(sellerAddr.postal)}</ram:PostcodeCode>` : ""}
       </ram:PostalTradeAddress>
-      ${business.companyEmail ? `<ram:URIUniversalCommunication><ram:URIID>${xmlEscape(business.companyEmail)}</ram:URIID></ram:URIUniversalCommunication>` : ""}
     </ram:SellerTradeParty>`;
 
   const buyer = invoice.customer;
   // Prefer explicit city/postalCode fields if present, fallback to parsed address
   const buyerCity = buyer.city || buyerAddr.city;
   const buyerPostal = buyer.postalCode || buyerAddr.postal;
+  
+  // FIXED: Party structure for BASIC profile - only allow specific elements in specific order
   const buyerParty = `
     <ram:BuyerTradeParty>
-      ${isLikelyVatId(buyer.taxId) ? `<ram:ID>${xmlEscape(buyer.taxId!)}</ram:ID>` : ""}
       <ram:Name>${xmlEscape(buyer.name)}</ram:Name>
-      ${isLikelyVatId(buyer.taxId) ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID=\"VA\">${xmlEscape(buyer.taxId!)}</ram:ID></ram:SpecifiedTaxRegistration>` : ""}
+      ${isLikelyVatId(buyer.taxId) ? `
+      <ram:SpecifiedTaxRegistration>
+        <ram:ID schemeID="VA">${xmlEscape(buyer.taxId!)}</ram:ID>
+      </ram:SpecifiedTaxRegistration>` : ""}
       <ram:PostalTradeAddress>
-        ${buyerPostal ? `<ram:PostcodeCode>${xmlEscape(buyerPostal)}</ram:PostcodeCode>` : ""}
         ${buyerAddr.street ? `<ram:LineOne>${xmlEscape(buyerAddr.street)}</ram:LineOne>` : ""}
         ${buyerCity ? `<ram:CityName>${xmlEscape(buyerCity)}</ram:CityName>` : ""}
         <ram:CountryID>${xmlEscape(buyerAddr.country || "DE")}</ram:CountryID>
+        ${buyerPostal ? `<ram:PostcodeCode>${xmlEscape(buyerPostal)}</ram:PostcodeCode>` : ""}
       </ram:PostalTradeAddress>
-      ${buyer.email ? `<ram:URIUniversalCommunication><ram:URIID>${xmlEscape(buyer.email)}</ram:URIID></ram:URIUniversalCommunication>` : ""}
     </ram:BuyerTradeParty>`;
 
   const headerAgreement = `
@@ -157,33 +162,33 @@ export function generateFacturX22XML(
   const paymentTerms = business.paymentTerms || invoice.paymentTerms;
   const headerTaxes = (taxes.length > 0 ? taxes : [{ percent: 0, taxable: Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)), amount: 0 }]);
 
+  // FIXED: Correct element order and names for BASIC profile
   const headerSettlement = `
   <ram:ApplicableHeaderTradeSettlement>
     <ram:InvoiceCurrencyCode>${xmlEscape(currency)}</ram:InvoiceCurrencyCode>
-    <ram:PaymentReference>${xmlEscape(invoice.invoiceNumber)}</ram:PaymentReference>
-    ${paymentTerms ? `<ram:SpecifiedTradePaymentTerms><ram:Description>${xmlEscape(paymentTerms)}</ram:Description></ram:SpecifiedTradePaymentTerms>` : ""}
     ${business.bankAccount ? `
-    <ram:SpecifiedTradePaymentMeans>
+    <ram:SpecifiedTradeSettlementPaymentMeans>
       <ram:TypeCode>58</ram:TypeCode>
       <ram:PayeePartyCreditorFinancialAccount>
         <ram:IBANID>${xmlEscape(business.bankAccount)}</ram:IBANID>
       </ram:PayeePartyCreditorFinancialAccount>
-    </ram:SpecifiedTradePaymentMeans>` : ""}
+    </ram:SpecifiedTradeSettlementPaymentMeans>` : ""}
     ${headerTaxes.map((t) => `
     <ram:ApplicableTradeTax>
+      <ram:CalculatedAmount currencyID="${xmlEscape(currency)}">${decimals(t.amount)}</ram:CalculatedAmount>
       <ram:TypeCode>VAT</ram:TypeCode>
+      <ram:BasisAmount currencyID="${xmlEscape(currency)}">${decimals(t.taxable)}</ram:BasisAmount>
       <ram:CategoryCode>${taxCategoryId(t.percent)}</ram:CategoryCode>
       <ram:RateApplicablePercent>${decimals(t.percent)}</ram:RateApplicablePercent>
-      <ram:BasisAmount currencyID="${xmlEscape(currency)}">${decimals(t.taxable)}</ram:BasisAmount>
-      <ram:CalculatedAmount currencyID="${xmlEscape(currency)}">${decimals(t.amount)}</ram:CalculatedAmount>
     </ram:ApplicableTradeTax>`).join("")}
-    <ram:SpecifiedTradeSettlementMonetarySummation>
+    ${paymentTerms ? `<ram:SpecifiedTradePaymentTerms><ram:Description>${xmlEscape(paymentTerms)}</ram:Description></ram:SpecifiedTradePaymentTerms>` : ""}
+    <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
       <ram:LineTotalAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.subtotal)}</ram:LineTotalAmount>
       <ram:TaxBasisTotalAmount currencyID="${xmlEscape(currency)}">${decimals(Math.max(0, invoice.subtotal - invoice.discountAmount))}</ram:TaxBasisTotalAmount>
       <ram:TaxTotalAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.taxAmount)}</ram:TaxTotalAmount>
       <ram:GrandTotalAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.total)}</ram:GrandTotalAmount>
       <ram:DuePayableAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.total)}</ram:DuePayableAmount>
-    </ram:SpecifiedTradeSettlementMonetarySummation>
+    </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
   </ram:ApplicableHeaderTradeSettlement>`;
 
   const linesXml = invoice.items.map((it, idx) => {
@@ -193,11 +198,16 @@ export function generateFacturX22XML(
     const lineRate = (it.taxes && it.taxes.length > 0) ? Number(it.taxes[0].percent) || 0 : (Number(invoice.taxRate) || 0);
     return `
     <ram:IncludedSupplyChainTradeLineItem>
-      <ram:AssociatedDocumentLineDocument><ram:LineID>${idx + 1}</ram:LineID></ram:AssociatedDocumentLineDocument>
-      <ram:SpecifiedTradeProduct><ram:Name>${xmlEscape(it.description)}</ram:Name></ram:SpecifiedTradeProduct>
+      <ram:AssociatedDocumentLineDocument>
+        <ram:LineID>${idx + 1}</ram:LineID>
+      </ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct>
+        <ram:Name>${xmlEscape(it.description)}</ram:Name>
+      </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
-        <ram:GrossPriceProductTradePrice><ram:ChargeAmount currencyID="${xmlEscape(currency)}">${decimals(unit)}</ram:ChargeAmount></ram:GrossPriceProductTradePrice>
-        <ram:NetPriceProductTradePrice><ram:ChargeAmount currencyID="${xmlEscape(currency)}">${decimals(unit)}</ram:ChargeAmount></ram:NetPriceProductTradePrice>
+        <ram:NetPriceProductTradePrice>
+          <ram:ChargeAmount currencyID="${xmlEscape(currency)}">${decimals(unit)}</ram:ChargeAmount>
+        </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
         <ram:BilledQuantity unitCode="C62">${decimals(qty)}</ram:BilledQuantity>
@@ -215,12 +225,13 @@ export function generateFacturX22XML(
     </ram:IncludedSupplyChainTradeLineItem>`;
   }).join("");
 
+  // FIXED: Correct element order in SupplyChainTradeTransaction
   const trx = `
   <rsm:SupplyChainTradeTransaction>
+    ${linesXml}
     ${headerAgreement}
     <ram:ApplicableHeaderTradeDelivery />
     ${headerSettlement}
-    ${linesXml}
   </rsm:SupplyChainTradeTransaction>`;
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
