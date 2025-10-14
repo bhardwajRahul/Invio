@@ -48,7 +48,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            name=ghcr.io/${{ github.repository }}-${{ matrix.image }}
+            name=ghcr.io/${{ github.repository }}-${{ matrix.image }},enable=true
 
       - name: Build and push image
         uses: docker/build-push-action@v6.18.0
@@ -56,12 +56,12 @@ jobs:
           context: ${{ matrix.image }}
           platforms: linux/amd64,linux/arm64
           push: ${{ !github.event.pull_request.head.repo.fork }}
-          # Use registry cache for faster builds
+          # Use registry cache with lowercase repository name
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository }}-${{ matrix.image }}:buildcache
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-${{ matrix.image }}:buildcache
             type=gha
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository }}-${{ matrix.image }}:buildcache,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-${{ matrix.image }}:buildcache,mode=max
             type=gha,mode=max
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
