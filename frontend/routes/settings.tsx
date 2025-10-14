@@ -330,8 +330,25 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                 </label>
               </div>
               <div class="grid grid-cols-1 gap-3 mt-2">
-                <label class="form-control"><div class="label"><span class="label-text">Logo</span></div><input id="logo-input" name="logo" value={(s.logo as string) || (s.logoUrl as string) || ""} class="input input-bordered w-full" placeholder="https://example.com/logo.png or data:image/png;base64,..." /></label>
-                <div class="flex items-center gap-3"><span id="logo-error" class="text-error text-sm hidden">Invalid logo URL or data URI</span></div>
+                <label class="form-control">
+                  <div class="label"><span class="label-text">Logo</span></div>
+                  <input id="logo-input" name="logo" value={(s.logo as string) || (s.logoUrl as string) || ""} class="input input-bordered w-full" placeholder="https://example.com/logo.png or data:image/png;base64,..." />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text">Upload Logo Image</span></div>
+                  <input id="logo-file" type="file" accept="image/*,.svg" class="file-input file-input-bordered w-full" />
+                  <div class="label"><span class="label-text-alt">Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB</span></div>
+                </label>
+                <div class="flex items-center gap-3">
+                  <span id="logo-error" class="text-error text-sm hidden">Invalid logo URL or data URI</span>
+                  <div id="logo-preview" class="hidden">
+                    <img id="logo-preview-img" class="max-h-16 max-w-32 object-contain border rounded" alt="Logo preview" />
+                  </div>
+                </div>
+                <div id="color-suggestions" class="hidden">
+                  <div class="label"><span class="label-text">Suggested accent colors from logo:</span></div>
+                  <div class="flex gap-2 mt-1"></div>
+                </div>
               </div>
               <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
             </form>
