@@ -1,5 +1,5 @@
-// Generator for Factur-X / ZUGFeRD 2.2 (EN 16931) using UN/CEFACT CII syntax
-// Scope: minimal yet standards-aligned subset for common exchange.
+// Generator for Factur-X / ZUGFeRD 2.2 BASIC profile
+// Perfect for uncluttered, self-hosted invoicing without the bloat
 import { BusinessSettings, InvoiceWithDetails } from "../types/index.ts";
 
 type Maybe<T> = T | undefined | null;
@@ -30,33 +30,9 @@ function safeCurrency(biz?: BusinessSettings, invCurrency?: string): string {
   return (invCurrency || biz?.currency || "EUR").toUpperCase();
 }
 
-function splitAddress(addr?: string): { street?: string; city?: string; postal?: string; country?: string } {
-  if (!addr) return {};
-  const parts = addr.split(",").map((s) => s.trim()).filter(Boolean);
-  const out: { street?: string; city?: string; postal?: string; country?: string } = {};
-  if (parts.length > 0) out.street = parts[0];
-  const part1 = parts[1] || "";
-  if (part1 && !/[0-9]/.test(part1)) out.city = part1;
-  const tail = parts.slice(out.city ? 2 : 1).join(" ");
-  if (tail) {
-    const tokens = tail.split(/\s+/).filter(Boolean);
-    for (let i = tokens.length - 1; i >= 0; i--) {
-      const t = tokens[i];
-      if (/[0-9]/.test(t)) { out.postal = t.replace(/[^A-Za-z0-9\-]/g, ""); break; }
-    }
-    if (!out.city && tokens.length > 0) {
-      const pIdx = out.postal ? tokens.lastIndexOf(out.postal) : -1;
-      const pre = pIdx > 0 ? tokens.slice(0, pIdx).join(" ") : tokens.join(" ");
-      if (pre && !/[0-9]/.test(pre)) out.city = pre;
-    }
-  }
-  const last = parts[parts.length - 1] || "";
-  const cc = last.trim().toUpperCase();
-  if (/^[A-Z]{2,3}$/.test(cc)) out.country = cc.length === 3 ? cc.slice(0, 2) : cc;
-  return out;
+function taxCategoryId(rate: number): string { 
+  return rate > 0 ? "S" : "Z"; 
 }
-
-function taxCategoryId(rate: number): string { return rate > 0 ? "S" : "Z"; }
 
 function isLikelyVatId(v?: string): boolean {
   if (!v) return false;
@@ -69,7 +45,6 @@ function isLikelyVatId(v?: string): boolean {
 export interface FacturXOptions {
   sellerCountryCode?: string;
   buyerCountryCode?: string;
-  profileUrn?: string; // e.g., urn:factur-x.eu:2p2:en16931 | ...:basic | ...:basicwl | ...:extended
   orderReferenceId?: string; // optional
 }
 
@@ -80,17 +55,11 @@ export function generateFacturX22XML(
 ): string {
   const currency = safeCurrency(business, invoice.currency);
   const issue = fmtDateYYYYMMDD(invoice.issueDate) || fmtDateYYYYMMDD(new Date()) || "";
-  const profileUrn = (opts.profileUrn?.trim()) || "urn:factur-x.eu:2p2:en16931";
+  
+  // BASIC profile - minimal yet compliant
+  const profileUrn = "urn:factur-x.eu:1p0:basic";
 
-  // Parties
-  const sellerAddr = splitAddress(business.companyAddress);
-  if (!sellerAddr.country && business.companyCountryCode) sellerAddr.country = business.companyCountryCode.toUpperCase();
-  if (!sellerAddr.country && opts.sellerCountryCode) sellerAddr.country = opts.sellerCountryCode.toUpperCase();
-  const buyerAddr = splitAddress(invoice.customer.address);
-  if (!buyerAddr.country && invoice.customer.countryCode) buyerAddr.country = invoice.customer.countryCode.toUpperCase();
-  if (!buyerAddr.country && opts.buyerCountryCode) buyerAddr.country = opts.buyerCountryCode.toUpperCase();
-
-  // Tax summary: prefer normalized invoice.taxes if provided
+  // Tax summary
   const taxes = (invoice.taxes && invoice.taxes.length > 0)
     ? invoice.taxes.map((t) => ({ percent: Number(t.percent) || 0, taxable: Number(t.taxableAmount) || 0, amount: Number(t.taxAmount) || 0 }))
     : ((invoice.taxAmount || 0) > 0 ? [{
@@ -114,41 +83,31 @@ export function generateFacturX22XML(
     ${invoice.notes ? `<ram:IncludedNote><ram:Content>${xmlEscape(invoice.notes)}</ram:Content></ram:IncludedNote>` : ""}
   </rsm:ExchangedDocument>`;
 
-  // FIXED: Party structure for BASIC profile - only allow specific elements in specific order
+  // BASIC WL: Simplified seller party - only essential elements
   const sellerParty = `
     <ram:SellerTradeParty>
       <ram:Name>${xmlEscape(business.companyName)}</ram:Name>
+      <ram:PostalTradeAddress>
+        <ram:CountryID>${xmlEscape(business.companyCountryCode || opts.sellerCountryCode || "DE")}</ram:CountryID>
+      </ram:PostalTradeAddress>
       ${isLikelyVatId(business.companyTaxId) ? `
       <ram:SpecifiedTaxRegistration>
         <ram:ID schemeID="VA">${xmlEscape(business.companyTaxId!)}</ram:ID>
       </ram:SpecifiedTaxRegistration>` : ""}
-      <ram:PostalTradeAddress>
-        ${sellerAddr.street ? `<ram:LineOne>${xmlEscape(sellerAddr.street)}</ram:LineOne>` : ""}
-        ${sellerAddr.city ? `<ram:CityName>${xmlEscape(sellerAddr.city)}</ram:CityName>` : ""}
-        <ram:CountryID>${xmlEscape(sellerAddr.country || "DE")}</ram:CountryID>
-        ${sellerAddr.postal ? `<ram:PostcodeCode>${xmlEscape(sellerAddr.postal)}</ram:PostcodeCode>` : ""}
-      </ram:PostalTradeAddress>
     </ram:SellerTradeParty>`;
 
+  // BASIC WL: Simplified buyer party - only essential elements
   const buyer = invoice.customer;
-  // Prefer explicit city/postalCode fields if present, fallback to parsed address
-  const buyerCity = buyer.city || buyerAddr.city;
-  const buyerPostal = buyer.postalCode || buyerAddr.postal;
-  
-  // FIXED: Party structure for BASIC profile - only allow specific elements in specific order
   const buyerParty = `
     <ram:BuyerTradeParty>
       <ram:Name>${xmlEscape(buyer.name)}</ram:Name>
+      <ram:PostalTradeAddress>
+        <ram:CountryID>${xmlEscape(buyer.countryCode || opts.buyerCountryCode || "DE")}</ram:CountryID>
+      </ram:PostalTradeAddress>
       ${isLikelyVatId(buyer.taxId) ? `
       <ram:SpecifiedTaxRegistration>
         <ram:ID schemeID="VA">${xmlEscape(buyer.taxId!)}</ram:ID>
       </ram:SpecifiedTaxRegistration>` : ""}
-      <ram:PostalTradeAddress>
-        ${buyerAddr.street ? `<ram:LineOne>${xmlEscape(buyerAddr.street)}</ram:LineOne>` : ""}
-        ${buyerCity ? `<ram:CityName>${xmlEscape(buyerCity)}</ram:CityName>` : ""}
-        <ram:CountryID>${xmlEscape(buyerAddr.country || "DE")}</ram:CountryID>
-        ${buyerPostal ? `<ram:PostcodeCode>${xmlEscape(buyerPostal)}</ram:PostcodeCode>` : ""}
-      </ram:PostalTradeAddress>
     </ram:BuyerTradeParty>`;
 
   const headerAgreement = `
@@ -162,7 +121,7 @@ export function generateFacturX22XML(
   const paymentTerms = business.paymentTerms || invoice.paymentTerms;
   const headerTaxes = (taxes.length > 0 ? taxes : [{ percent: 0, taxable: Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)), amount: 0 }]);
 
-  // FIXED: Correct element order and names for BASIC profile
+  // BASIC WL: Simplified settlement with correct element order
   const headerSettlement = `
   <ram:ApplicableHeaderTradeSettlement>
     <ram:InvoiceCurrencyCode>${xmlEscape(currency)}</ram:InvoiceCurrencyCode>
@@ -191,11 +150,13 @@ export function generateFacturX22XML(
     </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
   </ram:ApplicableHeaderTradeSettlement>`;
 
+  // BASIC WL: Essential line items only
   const linesXml = invoice.items.map((it, idx) => {
     const qty = Number(it.quantity) || 0;
     const unit = Number(it.unitPrice) || 0;
     const lineTotal = Number(it.lineTotal) || (qty * unit);
     const lineRate = (it.taxes && it.taxes.length > 0) ? Number(it.taxes[0].percent) || 0 : (Number(invoice.taxRate) || 0);
+    
     return `
     <ram:IncludedSupplyChainTradeLineItem>
       <ram:AssociatedDocumentLineDocument>
@@ -225,21 +186,21 @@ export function generateFacturX22XML(
     </ram:IncludedSupplyChainTradeLineItem>`;
   }).join("");
 
-  // FIXED: Correct element order in SupplyChainTradeTransaction
+  // Correct element order for BASIC WL
   const trx = `
   <rsm:SupplyChainTradeTransaction>
-    ${linesXml}
     ${headerAgreement}
     <ram:ApplicableHeaderTradeDelivery />
     ${headerSettlement}
+    ${linesXml}
   </rsm:SupplyChainTradeTransaction>`;
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice
   xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
   xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
-  xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
+  xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100">
   ${docContext}
   ${docHeader}
   ${trx}
