@@ -211,19 +211,27 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const hasTemplates = templates.length > 0;
   const link = (key: string) => `/settings?section=${encodeURIComponent(key)}`;
   return (
-    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
       <SettingsEnhancements />
-      <h1 class="text-2xl font-semibold mb-4">Settings</h1>
+      
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold">Settings</h1>
+      </div>
+
       {demoMode && (
         <div class="alert alert-warning mb-4">
-          Demo mode: the app is still fully functional, however the database of this hosted instance resets every 30 minutes, your changes are not permanent.
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+          <div>
+            <strong>Demo Mode:</strong> The database resets every 30 minutes. Your changes are not permanent.
+          </div>
         </div>
       )}
       {props.data.error && (
-        <div class="alert alert-error mb-3">
+        <div class="alert alert-error mb-4">
           <span>{props.data.error}</span>
         </div>
       )}
+      
       <div class="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-4">
         <aside>
           <ul class="menu bg-base-200 rounded-box w-full">
@@ -285,9 +293,12 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
             </li>
           </ul>
         </aside>
-  <section class="bg-base-100 border border-base-300 rounded-box p-4">
+        
+        <section class="space-y-4">
           {section === "company" && (
-            <form method="post" data-writable>
+            <form method="post" class="space-y-4" data-writable>
+              <h2 class="text-xl font-semibold">Company Information</h2>
+              
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
                   <div class="label"><span class="label-text">Company Name</span></div>
@@ -308,12 +319,20 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                 <label class="form-control"><div class="label"><span class="label-text">Tax ID</span></div><input name="taxId" value={(s.taxId as string) || (s.companyTaxId as string) || ""} class="input input-bordered w-full" data-writable /></label>
                 <label class="form-control"><div class="label"><span class="label-text">Country Code (ISO alpha-2)</span></div><input name="countryCode" value={(s.countryCode as string) || (s.companyCountryCode as string) || ""} class="input input-bordered w-full" placeholder="e.g. US, NL, DE" maxlength={2} data-writable /></label>
               </div>
-              <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+              
+              <div class="flex justify-end">
+                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  Save Changes
+                </button>
+              </div>
             </form>
           )}
 
           {section === "branding" && (
-            <form method="post" data-writable>
+            <form method="post" class="space-y-4" data-writable>
+              <h2 class="text-xl font-semibold">Branding Settings</h2>
+              
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label class="form-control">
                   <div class="label"><span class="label-text">Default Template</span></div>
@@ -350,28 +369,36 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                   <div class="flex gap-2 mt-1"></div>
                 </div>
               </div>
-              <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+              
+              <div class="flex justify-end">
+                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  Save Changes
+                </button>
+              </div>
             </form>
           )}
 
           {section === "appearance" && (
-            <div class="grid gap-3">
-              <div class="card bg-base-100 border-base-300">
-                <div class="card-body p-4">
-                  <h2 class="card-title mb-2">Theme</h2>
-                  <div class="flex items-center gap-3">
-                    <ThemeToggle size="md" label="Toggle light/dark theme" />
-                    <span class="text-sm opacity-70">Switch between Light and Dark (DaisyUI)</span>
-                  </div>
+            <div class="space-y-4">
+              <h2 class="text-xl font-semibold">Appearance</h2>
+              
+              <div class="bg-base-200 rounded-box p-4">
+                <h3 class="font-semibold mb-2">Theme</h3>
+                <div class="flex items-center gap-3">
+                  <ThemeToggle size="md" label="Toggle light/dark theme" />
+                  <span class="text-sm opacity-70">Switch between Light and Dark (DaisyUI)</span>
                 </div>
               </div>
             </div>
           )}
 
           {section === "templates" && hasTemplates && (
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="card-title">Templates</h2>
+            <div class="space-y-4">
+              <h2 class="text-xl font-semibold">Templates</h2>
+              
+              <div class="flex items-center justify-between mb-3">
+                <div class="text-sm opacity-70">Manage your invoice templates</div>
                 <InstallTemplateForm demoMode={demoMode} />
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -423,32 +450,50 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           )}
 
           {section === "payments" && (
-            <form method="post" data-writable>
+            <form method="post" class="space-y-4" data-writable>
+              <h2 class="text-xl font-semibold">Payment Settings</h2>
+              
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">Payment Methods</span></div><input name="paymentMethods" value={(s.paymentMethods as string) || "Bank Transfer"} class="input input-bordered w-full" /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Bank Account</span></div><input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" /></label>
+                <label class="form-control"><div class="label"><span class="label-text">Payment Methods</span></div><input name="paymentMethods" value={(s.paymentMethods as string) || "Bank Transfer"} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
+                <label class="form-control"><div class="label"><span class="label-text">Bank Account</span></div><input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">Payment Terms</span></div><input name="paymentTerms" value={(s.paymentTerms as string) || "Due in 30 days"} class="input input-bordered w-full" /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Default Notes</span></div><input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="input input-bordered w-full" /></label>
+                <label class="form-control"><div class="label"><span class="label-text">Payment Terms</span></div><input name="paymentTerms" value={(s.paymentTerms as string) || "Due in 30 days"} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
+                <label class="form-control"><div class="label"><span class="label-text">Default Notes</span></div><input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
               </div>
-              <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+              
+              <div class="flex justify-end">
+                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  Save Changes
+                </button>
+              </div>
             </form>
           )}
 
           {section === "tax" && (
-            <form method="post" data-writable>
+            <form method="post" class="space-y-4" data-writable>
+              <h2 class="text-xl font-semibold">Tax Settings</h2>
+              
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label class="form-control"><div class="label"><span class="label-text">Default tax rate (%)</span></div><input type="number" step="0.01" min="0" name="defaultTaxRate" value={String((s.defaultTaxRate as number) ?? 0)} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Prices include tax?</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} disabled={demoMode}><option value="false">No</option><option value="true">Yes</option></select></label>
-                <label class="form-control"><div class="label"><span class="label-text">Rounding mode</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} disabled={demoMode}><option value="line">Round per line</option><option value="total">Round on totals</option></select></label>
+                <label class="form-control"><div class="label"><span class="label-text">Prices include tax?</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} disabled={demoMode} data-writable><option value="false">No</option><option value="true">Yes</option></select></label>
+                <label class="form-control"><div class="label"><span class="label-text">Rounding mode</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} disabled={demoMode} data-writable><option value="line">Round per line</option><option value="total">Round on totals</option></select></label>
               </div>
-              <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+              
+              <div class="flex justify-end">
+                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  Save Changes
+                </button>
+              </div>
             </form>
           )}
 
           {section === "numbering" && (
-            <form method="post" data-writable>
+            <form method="post" class="space-y-4" data-writable>
+              <h2 class="text-xl font-semibold">Invoice Numbering</h2>
+              
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
                   <div class="label"><span class="label-text">Enable advanced numbering pattern</span></div>
@@ -469,12 +514,20 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               <p class="text-xs mt-2 opacity-70">
                 Tokens: {`{YYYY}`} full year, {`{YY}`} short year, {`{MM}`} month (01-12), {`{DD}`} day, {`{DATE}`} = {`{YYYY}{MM}{DD}`}, {`{RAND4}`} random alnum 4 chars, {`{SEQ}`} auto-incrementing sequence (resets yearly when pattern includes {`{YYYY}`} ). Leave blank to use legacy prefix/year/padding settings.
               </p>
-              <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+              
+              <div class="flex justify-end">
+                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  Save Changes
+                </button>
+              </div>
             </form>
           )}
 
           {section === "xml" && (
-            <div>
+            <div class="space-y-4">
+              <h2 class="text-xl font-semibold">XML Export Settings</h2>
+              
               <form method="post" data-writable>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <label class="form-control">
@@ -502,9 +555,18 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                     </div>
                   </label>
                 </div>
-                <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+                
+                <div class="flex justify-end">
+                  <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Save Changes
+                  </button>
+                </div>
               </form>
-              <p class="text-xs mt-3 opacity-70">Profiles are currently built-in only. UBL 2.1 is the default and preferred for e-invoicing networks (PEPPOL). The stub profile is for internal testing.</p>
+              
+              <div class="bg-base-200 rounded-box p-3">
+                <p class="text-xs opacity-70">Profiles are currently built-in only. UBL 2.1 is the default and preferred for e-invoicing networks (PEPPOL). The stub profile is for internal testing.</p>
+              </div>
             </div>
           )}
 

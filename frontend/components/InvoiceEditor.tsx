@@ -142,15 +142,40 @@ export function InvoiceEditor(props: {
       {/* Items */}
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="block text-sm">Items <span aria-hidden="true" class="text-error">*</span></label>
+          <label class="block text-sm">
+            Items <span aria-hidden="true" class="text-error">*</span>
+            <span class="ml-2 text-xs text-base-content/50 font-normal">
+              (Ctrl+Enter to add)
+            </span>
+          </label>
           <button type="button" id="add-item" class="btn btn-sm" data-writable disabled={props.demoMode}>
             <i data-lucide="plus" class="w-4 h-4"></i>Add item
           </button>
         </div>
         <div id="items-error" class="text-error text-xs mb-2 hidden">Add at least one item with a description.</div>
+        
+        {/* Column Headers */}
+        <div class="items-header hidden sm:flex flex-row flex-nowrap items-center gap-2 mb-1 text-xs text-base-content/60 font-medium">
+          <div class="w-6 shrink-0"></div>
+          <div class="flex-1 min-w-0 pl-3">Description</div>
+          <div class="w-16 sm:w-20 shrink-0 text-center">Quantity</div>
+          <div class="w-24 shrink-0 text-center">Price</div>
+          <div class="w-24 shrink-0 text-center per-line-tax-input">Tax %</div>
+          <div class="w-40 max-w-xs shrink-0 text-center">Notes</div>
+          <div class="w-8 shrink-0"></div>
+        </div>
+        
         <div id="items-container" class="space-y-2">
           {items.map((it) => (
-            <div class="item-row flex flex-col sm:flex-row sm:flex-nowrap items-center gap-2">
+            <div class="item-row flex flex-col sm:flex-row sm:flex-nowrap items-center gap-2" draggable>
+              <button
+                type="button"
+                class="drag-handle btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100"
+                aria-label="Drag to reorder"
+                tabindex={-1}
+              >
+                <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+              </button>
               <input
                 name="item_description"
                 value={it.description}
@@ -213,7 +238,15 @@ export function InvoiceEditor(props: {
           ))}
         </div>
         <template id="item-template">
-          <div class="item-row flex flex-col sm:flex-row sm:flex-nowrap items-center gap-2">
+          <div class="item-row flex flex-col sm:flex-row sm:flex-nowrap items-center gap-2" draggable>
+            <button
+              type="button"
+              class="drag-handle btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100"
+              aria-label="Drag to reorder"
+              tabindex={-1}
+            >
+              <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+            </button>
             <input
               name="item_description"
               placeholder="Description"
@@ -271,6 +304,32 @@ export function InvoiceEditor(props: {
             </button>
           </div>
         </template>
+      </div>
+
+      {/* Live Totals Preview */}
+      <div id="totals-preview" class="bg-base-200 rounded-box p-3 text-sm">
+        <div class="flex justify-between items-center gap-4">
+          <div class="flex gap-6">
+            <div>
+              <span class="text-base-content/60">Subtotal:</span>
+              <span class="font-semibold ml-2" id="preview-subtotal">—</span>
+            </div>
+            <div id="preview-tax-container">
+              <span class="text-base-content/60">Tax:</span>
+              <span class="font-semibold ml-2" id="preview-tax">—</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-base-content/60">Total:</span>
+            <span class="font-bold text-lg ml-2" id="preview-total">—</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Keyboard Shortcuts Help */}
+      <div class="text-xs text-base-content/50 flex flex-wrap gap-x-4 gap-y-1">
+        <span><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">S</kbd> Save</span>
+        <span><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">Enter</kbd> Add item</span>
       </div>
 
       {/* Tax settings */}

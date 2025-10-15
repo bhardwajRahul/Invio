@@ -12,20 +12,190 @@ export default function InvoiceEditorIsland() {
     const itemsError = document.getElementById('items-error');
     const customerError = document.getElementById('customer-error');
     const customerSelect = document.querySelector('select[name="customerId"]') as HTMLSelectElement | null;
+    const currencyInput = document.querySelector('input[name="currency"]') as HTMLInputElement | null;
+    const pricesIncludeTaxSelect = document.querySelector('select[name="pricesIncludeTax"]') as HTMLSelectElement | null;
+    const roundingModeSelect = document.querySelector('select[name="roundingMode"]') as HTMLSelectElement | null;
     if (!addBtn || !container || !tpl) return;
+
+    // Totals preview elements
+    const previewSubtotal = document.getElementById('preview-subtotal');
+    const previewTax = document.getElementById('preview-tax');
+    const previewTotal = document.getElementById('preview-total');
+    const previewTaxContainer = document.getElementById('preview-tax-container');
+
+    function formatCurrency(amount: number): string {
+      const currency = currencyInput?.value || 'USD';
+      try {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: currency,
+        }).format(amount);
+      } catch {
+        return `${currency} ${amount.toFixed(2)}`;
+      }
+    }
+
+    function calculateTotals() {
+      if (!container || !previewSubtotal || !previewTax || !previewTotal) return;
+
+      const rows = container.querySelectorAll('.item-row');
+      const taxMode = taxModeSelect?.value || 'invoice';
+      const invoiceTaxRate = Number(invoiceTaxInput?.value || 0);
+      const pricesIncludeTax = pricesIncludeTaxSelect?.value === 'true';
+      const roundingMode = roundingModeSelect?.value || 'line';
+
+      let subtotal = 0;
+      let totalTax = 0;
+
+      rows.forEach((row) => {
+        const qtyInput = row.querySelector('input[name="item_quantity"]') as HTMLInputElement | null;
+        const priceInput = row.querySelector('input[name="item_unitPrice"]') as HTMLInputElement | null;
+        const taxInput = row.querySelector('input[name="item_tax_percent"]') as HTMLInputElement | null;
+
+        const qty = Number(qtyInput?.value || 0);
+        const price = Number(priceInput?.value || 0);
+        let lineTotal = qty * price;
+
+        if (roundingMode === 'line') {
+          lineTotal = Math.round(lineTotal * 100) / 100;
+        }
+
+        if (taxMode === 'line' && taxInput) {
+          const lineTaxRate = Number(taxInput.value || 0);
+          if (pricesIncludeTax) {
+            // Extract tax from line total
+            const lineTax = lineTotal - (lineTotal / (1 + lineTaxRate / 100));
+            totalTax += lineTax;
+            subtotal += lineTotal - lineTax;
+          } else {
+            // Add tax to line total
+            const lineTax = lineTotal * (lineTaxRate / 100);
+            totalTax += lineTax;
+            subtotal += lineTotal;
+          }
+        } else {
+          subtotal += lineTotal;
+        }
+      });
+
+      // Apply invoice-level tax
+      if (taxMode === 'invoice' && invoiceTaxRate > 0) {
+        if (pricesIncludeTax) {
+          // Extract tax from subtotal
+          totalTax = subtotal - (subtotal / (1 + invoiceTaxRate / 100));
+          subtotal = subtotal - totalTax;
+        } else {
+          // Add tax to subtotal
+          totalTax = subtotal * (invoiceTaxRate / 100);
+        }
+      }
+
+      // Round totals if needed
+      if (roundingMode === 'total') {
+        subtotal = Math.round(subtotal * 100) / 100;
+        totalTax = Math.round(totalTax * 100) / 100;
+      } else {
+        subtotal = Math.round(subtotal * 100) / 100;
+        totalTax = Math.round(totalTax * 100) / 100;
+      }
+
+      const total = subtotal + totalTax;
+
+      // Update display
+      previewSubtotal.textContent = formatCurrency(subtotal);
+      previewTax.textContent = formatCurrency(totalTax);
+      previewTotal.textContent = formatCurrency(total);
+
+      // Hide tax row if no tax
+      if (previewTaxContainer) {
+        if (totalTax === 0) {
+          previewTaxContainer.classList.add('hidden');
+        } else {
+          previewTaxContainer.classList.remove('hidden');
+        }
+      }
+    }
+
+    // Drag and drop state
+    let draggedItem: HTMLElement | null = null;
+
+    function setupDragAndDrop(row: Element) {
+      const handle = row.querySelector('.drag-handle');
+      if (!handle) return;
+
+      row.addEventListener('dragstart', (e: Event) => {
+        const dragEvent = e as DragEvent;
+        draggedItem = row as HTMLElement;
+        (row as HTMLElement).classList.add('opacity-50');
+        if (dragEvent.dataTransfer) {
+          dragEvent.dataTransfer.effectAllowed = 'move';
+        }
+      });
+
+      row.addEventListener('dragend', () => {
+        (row as HTMLElement).classList.remove('opacity-50');
+        draggedItem = null;
+      });
+
+      row.addEventListener('dragover', (e: Event) => {
+        const dragEvent = e as DragEvent;
+        dragEvent.preventDefault();
+        if (!draggedItem || draggedItem === row) return;
+        
+        const bounding = (row as HTMLElement).getBoundingClientRect();
+        const offset = bounding.y + bounding.height / 2;
+        
+        if (dragEvent.clientY - offset > 0) {
+          (row as HTMLElement).style.borderBottom = '2px solid hsl(var(--p))';
+          (row as HTMLElement).style.borderTop = '';
+        } else {
+          (row as HTMLElement).style.borderTop = '2px solid hsl(var(--p))';
+          (row as HTMLElement).style.borderBottom = '';
+        }
+      });
+
+      row.addEventListener('dragleave', () => {
+        (row as HTMLElement).style.borderTop = '';
+        (row as HTMLElement).style.borderBottom = '';
+      });
+
+      row.addEventListener('drop', (e: Event) => {
+        const dragEvent = e as DragEvent;
+        dragEvent.preventDefault();
+        (row as HTMLElement).style.borderTop = '';
+        (row as HTMLElement).style.borderBottom = '';
+        
+        if (!draggedItem || draggedItem === row) return;
+        
+        const bounding = (row as HTMLElement).getBoundingClientRect();
+        const offset = bounding.y + bounding.height / 2;
+        
+        if (dragEvent.clientY - offset > 0) {
+          row.parentNode?.insertBefore(draggedItem, row.nextSibling);
+        } else {
+          row.parentNode?.insertBefore(draggedItem, row);
+        }
+      });
+    }
 
     function bindRemove(el: Element) {
       const btn = el.querySelector('.remove-item') as HTMLButtonElement | null;
       if (btn) {
         const handler = () => {
           const rows = (container as HTMLElement).querySelectorAll('.item-row');
-          if (rows.length > 1) el.remove();
+          if (rows.length > 1) {
+            el.remove();
+            calculateTotals();
+          }
         };
         btn.addEventListener('click', handler);
       }
     }
 
-    container.querySelectorAll('.item-row').forEach((n) => bindRemove(n));
+    container.querySelectorAll('.item-row').forEach((n) => {
+      bindRemove(n);
+      setupDragAndDrop(n);
+    });
 
     const onAdd = () => {
       let row: Element | null = null;
@@ -36,7 +206,18 @@ export default function InvoiceEditorIsland() {
       if (row) {
         container.appendChild(row);
         bindRemove(row);
+        setupDragAndDrop(row);
         applyTaxMode();
+        calculateTotals();
+        // Initialize lucide icons for the new row
+        try {
+          const lucide = (globalThis as unknown as { lucide?: { createIcons?: () => void } }).lucide;
+          if (lucide && typeof lucide.createIcons === 'function') {
+            lucide.createIcons();
+          }
+        } catch (_e) {
+          // ignore lucide init errors
+        }
       }
     };
     addBtn.addEventListener('click', onAdd);
@@ -56,6 +237,15 @@ export default function InvoiceEditorIsland() {
           inp.classList.add('hidden');
         }
       });
+      // Also toggle column header for per-line tax
+      const taxHeader = document.querySelector('.items-header .per-line-tax-input');
+      if (taxHeader instanceof HTMLElement) {
+        if (mode === 'line') {
+          taxHeader.classList.remove('hidden');
+        } else {
+          taxHeader.classList.add('hidden');
+        }
+      }
       if (invoiceTaxInput) {
         if (mode === 'invoice') {
           invoiceTaxInput.removeAttribute('disabled');
@@ -65,10 +255,59 @@ export default function InvoiceEditorIsland() {
           invoiceTaxInput.parentElement?.classList.add('hidden');
         }
       }
+      calculateTotals();
     }
 
     if (taxModeSelect) taxModeSelect.addEventListener('change', applyTaxMode);
     applyTaxMode();
+
+    // Calculate totals on load and when inputs change
+    calculateTotals();
+    form?.addEventListener('input', (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.matches('input[name="item_description"]') || t.matches('select[name="customerId"]'))) {
+        validate();
+      }
+      // Recalculate totals when relevant inputs change
+      if (t && (
+        t.matches('input[name="item_quantity"]') ||
+        t.matches('input[name="item_unitPrice"]') ||
+        t.matches('input[name="item_tax_percent"]') ||
+        t.matches('input[name="taxRate"]') ||
+        t.matches('input[name="currency"]')
+      )) {
+        calculateTotals();
+      }
+    });
+    
+    // Recalculate when tax settings change
+    taxModeSelect?.addEventListener('change', calculateTotals);
+    invoiceTaxInput?.addEventListener('input', calculateTotals);
+    pricesIncludeTaxSelect?.addEventListener('change', calculateTotals);
+    roundingModeSelect?.addEventListener('change', calculateTotals);
+
+    // Keyboard shortcuts
+    const handleKeyboard = (e: KeyboardEvent) => {
+      // Ctrl+S to save
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        if (submitBtn && !submitBtn.disabled) {
+          submitBtn.click();
+        }
+        return;
+      }
+
+      // Ctrl+Enter to add new item
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        if (addBtn && !(addBtn as HTMLButtonElement).disabled) {
+          addBtn.click();
+        }
+        return;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyboard);
 
     // Simple client-side validation
     function validate(): boolean {
@@ -128,6 +367,7 @@ export default function InvoiceEditorIsland() {
       addBtn.removeEventListener('click', onAdd);
       if (taxModeSelect) taxModeSelect.removeEventListener('change', applyTaxMode);
       customerSelect?.removeEventListener('change', validate);
+      document.removeEventListener('keydown', handleKeyboard);
     };
   }, []);
   return null;

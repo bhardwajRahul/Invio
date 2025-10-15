@@ -63,85 +63,91 @@ export const handler: Handlers<Data> = {
 export default function NewCustomerPage(props: PageProps<Data>) {
   const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   return (
-    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
-      <h1 class="text-2xl font-semibold mb-4">Create Customer</h1>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
       {props.data.error && (
         <div class="alert alert-error mb-3">
           <span>{props.data.error}</span>
         </div>
       )}
-      <form
-        method="post"
-  class="space-y-3 max-w-xl bg-base-100 border border-base-300 p-4 rounded-box"
-        data-writable
-      >
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text">Name</span>
+      <form method="post" class="space-y-4" data-writable>
+        <div class="flex items-center justify-between gap-2">
+          <h1 class="text-2xl font-semibold">Create Customer</h1>
+          <div class="flex items-center gap-2">
+            <a href="/customers" class="btn btn-ghost btn-sm">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              Create Customer
+            </button>
           </div>
-          <input name="name" class="input input-bordered w-full" required data-writable />
-        </label>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        </div>
+
+        <div class="space-y-3">
           <label class="form-control">
             <div class="label">
-              <span class="label-text">Email</span>
+              <span class="label-text">Name <span class="text-error">*</span></span>
             </div>
-            <input
-              type="email"
-              name="email"
-              class="input input-bordered w-full"
+            <input name="name" class="input input-bordered w-full" required data-writable disabled={demoMode} />
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Email</span>
+              </div>
+              <input
+                type="email"
+                name="email"
+                class="input input-bordered w-full"
+                data-writable
+                disabled={demoMode}
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Phone</span>
+              </div>
+              <input name="phone" class="input input-bordered w-full" data-writable disabled={demoMode} />
+            </label>
+          </div>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Address</span>
+            </div>
+            <textarea
+              name="address"
+              class="textarea textarea-bordered"
+              rows={3}
               data-writable
+              disabled={demoMode}
             />
           </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text">Phone</span>
-            </div>
-            <input name="phone" class="input input-bordered w-full" data-writable />
-          </label>
-        </div>
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text">Address</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">City</span>
+              </div>
+              <input name="city" class="input input-bordered w-full" data-writable disabled={demoMode} />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Postal Code</span>
+              </div>
+              <input name="postalCode" class="input input-bordered w-full" data-writable disabled={demoMode} />
+            </label>
           </div>
-          <textarea
-            name="address"
-            class="textarea textarea-bordered"
-            rows={3}
-            data-writable
-          />
-        </label>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="form-control">
             <div class="label">
-              <span class="label-text">City</span>
+              <span class="label-text">Tax ID</span>
             </div>
-            <input name="city" class="input input-bordered w-full" data-writable />
+            <input name="taxId" class="input input-bordered w-full" data-writable disabled={demoMode} />
           </label>
           <label class="form-control">
             <div class="label">
-              <span class="label-text">Postal Code</span>
+              <span class="label-text">Country Code (ISO alpha-2)</span>
             </div>
-            <input name="postalCode" class="input input-bordered w-full" data-writable />
+            <input name="countryCode" class="input input-bordered w-full" maxlength={2} placeholder="e.g. US, NL, DE" data-writable disabled={demoMode} />
           </label>
-        </div>
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text">Tax ID</span>
-          </div>
-          <input name="taxId" class="input input-bordered w-full" data-writable />
-        </label>
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text">Country Code (ISO alpha-2)</span>
-          </div>
-          <input name="countryCode" class="input input-bordered w-full" maxlength={2} placeholder="e.g. US, NL, DE" data-writable />
-        </label>
-        <div class="pt-2">
-          <button type="submit" class="btn btn-primary" data-writable>
-            <i data-lucide="user-plus" class="w-4 h-4"></i>
-            Create Customer
-          </button>
         </div>
       </form>
     </Layout>

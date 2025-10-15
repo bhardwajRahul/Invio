@@ -216,18 +216,26 @@ export default function NewInvoicePage(props: PageProps<Data>) {
   const defaultPricesIncludeTax = props.data.defaultPricesIncludeTax ?? false;
   const defaultRoundingMode = props.data.defaultRoundingMode || 'line';
   return (
-    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
-      <h1 class="text-2xl font-semibold mb-4">Create Invoice</h1>
+    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
       {(props.data.error || props.data.invoiceNumberError) && (
         <div class="alert alert-error mb-3">
           <span>{props.data.invoiceNumberError || props.data.error}</span>
         </div>
       )}
-      <form
-        method="post"
-  class="space-y-4 w-full bg-base-100 border border-base-300 p-4 rounded-box"
-        data-writable
-      >
+      <form method="post" class="space-y-4" data-writable>
+        <div class="flex items-center justify-between gap-2">
+          <h1 class="text-2xl font-semibold">Create Invoice</h1>
+          <div class="flex items-center gap-2">
+            <a href="/invoices" class="btn btn-ghost btn-sm">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+              <i data-lucide="save" class="w-4 h-4"></i>
+              Create Invoice
+            </button>
+          </div>
+        </div>
+
         <InvoiceEditor
           mode="create"
           customers={customers}
@@ -245,9 +253,6 @@ export default function NewInvoicePage(props: PageProps<Data>) {
           taxMode="invoice"
           invoiceNumberError={props.data.invoiceNumberError}
         />
-        <div class="pt-2">
-          <button type="submit" class="btn btn-primary" data-writable>Create Invoice</button>
-        </div>
       </form>
     </Layout>
   );

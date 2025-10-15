@@ -29,13 +29,12 @@ export const handler: Handlers<Data> = {
 };
 
 export default function Customers(props: PageProps<Data>) {
-  const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   const list = props.data.customers ?? [];
   return (
-    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname}>
+    <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customers</h1>
-        <a href="/customers/new" class="btn btn-sm btn-primary" data-writable>
+        <a href="/customers/new" class="btn btn-sm btn-primary">
           <i data-lucide="user-plus" class="w-4 h-4"></i>New Customer
         </a>
       </div>
