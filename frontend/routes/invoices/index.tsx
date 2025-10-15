@@ -4,6 +4,7 @@ import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
 type Invoice = {
   id: string;
+  invoiceNumber?: string;
   customer?: { name?: string };
   issue_date?: string;
   total?: number;
@@ -52,8 +53,7 @@ export const handler: Handlers<Data> = {
         if (!qLower) return okStatus;
         const id = norm(inv.id);
         const cust = norm(inv.customer?.name);
-        // Optionally include invoice number if present on list payloads
-        const num = norm((inv as unknown as { invoiceNumber?: string }).invoiceNumber);
+        const num = norm(inv.invoiceNumber);
         const okText = id.includes(qLower) || cust.includes(qLower) ||
           num.includes(qLower);
         return okStatus && okText;
@@ -173,7 +173,7 @@ export default function Invoices(props: PageProps<Data>) {
         <table class="table table-sm w-full text-sm">
           <thead class="bg-base-200 text-base-content">
             <tr class="font-medium">
-              <th class="w-[22%]">ID</th>
+              <th class="w-[22%]">Invoice #</th>
               <th>Customer</th>
               <th class="w-[16%]">Date</th>
               <th class="w-[14%]">Status</th>
@@ -184,7 +184,9 @@ export default function Invoices(props: PageProps<Data>) {
             {list.map((inv) => (
               <tr class="hover">
                 <td class="cell-id">
-                  <a class="link" href={`/invoices/${inv.id}`}>{inv.id}</a>
+                  <a class="link font-mono" href={`/invoices/${inv.id}`}>
+                    {inv.invoiceNumber || inv.id}
+                  </a>
                 </td>
                 <td class="cell-customer">{inv.customer?.name}</td>
                 <td class="cell-date">{fmtDate(inv.issue_date)}</td>
