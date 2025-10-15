@@ -30,8 +30,17 @@ export const handler: Handlers<Data> = {
     // Validate credentials by hitting a protected GET
     try {
       await backendGet("/api/v1/invoices", basic);
-    } catch (_e) {
-      return ctx.render({ error: "Invalid credentials", username });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      // Check if it's an authentication error (401/403) vs other errors
+      if (errorMessage.includes("401") || errorMessage.includes("403")) {
+        return ctx.render({ error: "Invalid credentials", username });
+      } else if (errorMessage.includes("500") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
+        return ctx.render({ error: "Server error. Please try again later.", username });
+      } else {
+        // Network errors, timeouts, or other connection issues
+        return ctx.render({ error: "Unable to connect to server. Please check your connection and try again.", username });
+      }
     }
     const headers = new Headers({
       ...setAuthCookieHeaders(basic),
