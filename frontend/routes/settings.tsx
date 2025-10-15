@@ -139,12 +139,9 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
     for (const f of fields) {
       const all = form.getAll(f).map((v) => String(v));
       if (all.length === 0) continue;
-      // Take the last non-empty value (e.g., hidden "false" then checkbox "true")
-      let chosen = "";
-      for (let i = all.length - 1; i >= 0; i--) {
-        if (all[i] !== "") { chosen = all[i]; break; }
-      }
-      if (chosen !== "") payload[f] = chosen;
+      // Take the last value, even if empty (to allow clearing optional fields)
+      const chosen = all[all.length - 1];
+      payload[f] = chosen;
     }
     // Normalize boolean-style toggles to explicit "true"/"false" strings
     ["embedXmlInPdf", "embedXmlInHtml", "invoiceNumberingEnabled"].forEach((k) => {
@@ -154,19 +151,19 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       }
     });
     // Normalize aliases back to stored keys
-    if (payload.email && !payload.companyEmail) {
+    if ("email" in payload && !("companyEmail" in payload)) {
       payload.companyEmail = payload.email;
       delete payload.email;
     }
-    if (payload.phone && !payload.companyPhone) {
+    if ("phone" in payload && !("companyPhone" in payload)) {
       payload.companyPhone = payload.phone;
       delete payload.phone;
     }
-    if (payload.taxId && !payload.companyTaxId) {
+    if ("taxId" in payload && !("companyTaxId" in payload)) {
       payload.companyTaxId = payload.taxId;
       delete payload.taxId;
     }
-    if (payload.countryCode && !payload.companyCountryCode) {
+    if ("countryCode" in payload && !("companyCountryCode" in payload)) {
       payload.companyCountryCode = payload.countryCode;
       delete payload.countryCode;
     }

@@ -19,6 +19,12 @@ export const updateSettings = (data: Record<string, string>) => {
     const shouldClear = [
       "companyTaxId",
       "taxId", // alias that may slip through
+      "companyPhone",
+      "phone", // alias
+      "companyEmail",
+      "email", // alias
+      "companyCountryCode",
+      "countryCode", // alias
     ].includes(key) && String(raw).trim() === "";
 
     if (shouldClear) {
