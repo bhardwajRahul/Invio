@@ -531,7 +531,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                     <div class="label"><span class="label-text">Default XML Profile</span></div>
                     <select name="xmlProfileId" class="select select-bordered w-full" value={xmlProfileId}>
                       <option value="ubl21">UBL 2.1 (PEPPOL BIS)</option>
-                      <option value="facturx22">Factur‑X / ZUGFeRD 2.2 (BASIC WL)</option>
+                      <option value="facturx22">Factur‑X / ZUGFeRD 2.2 (BASIC)</option>
                       <option value="fatturapa">FatturaPA 1.9</option>
                     </select>
                   </label>

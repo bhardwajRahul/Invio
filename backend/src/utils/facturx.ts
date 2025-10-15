@@ -57,7 +57,7 @@ export function generateFacturX22XML(
   const issue = fmtDateYYYYMMDD(invoice.issueDate) || fmtDateYYYYMMDD(new Date()) || "";
   
   // BASIC profile - minimal yet compliant
-  const profileUrn = "urn:factur-x.eu:1p0:basic";
+  const profileUrn = "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic";
 
   // Tax summary
   const taxes = (invoice.taxes && invoice.taxes.length > 0)
@@ -83,7 +83,7 @@ export function generateFacturX22XML(
     ${invoice.notes ? `<ram:IncludedNote><ram:Content>${xmlEscape(invoice.notes)}</ram:Content></ram:IncludedNote>` : ""}
   </rsm:ExchangedDocument>`;
 
-  // BASIC WL: Simplified seller party - only essential elements
+  // BASIC: Simplified seller party - only essential elements
   const sellerParty = `
     <ram:SellerTradeParty>
       <ram:Name>${xmlEscape(business.companyName)}</ram:Name>
@@ -92,11 +92,11 @@ export function generateFacturX22XML(
       </ram:PostalTradeAddress>
       ${isLikelyVatId(business.companyTaxId) ? `
       <ram:SpecifiedTaxRegistration>
-        <ram:ID schemeID="VA">${xmlEscape(business.companyTaxId!)}</ram:ID>
+        <ram:ID schemeID="VA">${xmlEscape((business.companyCountryCode || opts.sellerCountryCode || "DE") + business.companyTaxId!)}</ram:ID>
       </ram:SpecifiedTaxRegistration>` : ""}
     </ram:SellerTradeParty>`;
 
-  // BASIC WL: Simplified buyer party - only essential elements
+  // BASIC: Simplified buyer party - only essential elements
   const buyer = invoice.customer;
   const buyerParty = `
     <ram:BuyerTradeParty>
@@ -106,7 +106,7 @@ export function generateFacturX22XML(
       </ram:PostalTradeAddress>
       ${isLikelyVatId(buyer.taxId) ? `
       <ram:SpecifiedTaxRegistration>
-        <ram:ID schemeID="VA">${xmlEscape(buyer.taxId!)}</ram:ID>
+        <ram:ID schemeID="VA">${xmlEscape((buyer.countryCode || opts.buyerCountryCode || "DE") + buyer.taxId!)}</ram:ID>
       </ram:SpecifiedTaxRegistration>` : ""}
     </ram:BuyerTradeParty>`;
 
@@ -121,7 +121,7 @@ export function generateFacturX22XML(
   const paymentTerms = business.paymentTerms || invoice.paymentTerms;
   const headerTaxes = (taxes.length > 0 ? taxes : [{ percent: 0, taxable: Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)), amount: 0 }]);
 
-  // BASIC WL: Simplified settlement with correct element order
+  // BASIC: Simplified settlement with correct element order
   const headerSettlement = `
   <ram:ApplicableHeaderTradeSettlement>
     <ram:InvoiceCurrencyCode>${xmlEscape(currency)}</ram:InvoiceCurrencyCode>
@@ -134,23 +134,23 @@ export function generateFacturX22XML(
     </ram:SpecifiedTradeSettlementPaymentMeans>` : ""}
     ${headerTaxes.map((t) => `
     <ram:ApplicableTradeTax>
-      <ram:CalculatedAmount currencyID="${xmlEscape(currency)}">${decimals(t.amount)}</ram:CalculatedAmount>
+      <ram:CalculatedAmount>${decimals(t.amount)}</ram:CalculatedAmount>
       <ram:TypeCode>VAT</ram:TypeCode>
-      <ram:BasisAmount currencyID="${xmlEscape(currency)}">${decimals(t.taxable)}</ram:BasisAmount>
+      <ram:BasisAmount>${decimals(t.taxable)}</ram:BasisAmount>
       <ram:CategoryCode>${taxCategoryId(t.percent)}</ram:CategoryCode>
       <ram:RateApplicablePercent>${decimals(t.percent)}</ram:RateApplicablePercent>
     </ram:ApplicableTradeTax>`).join("")}
     ${paymentTerms ? `<ram:SpecifiedTradePaymentTerms><ram:Description>${xmlEscape(paymentTerms)}</ram:Description></ram:SpecifiedTradePaymentTerms>` : ""}
     <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-      <ram:LineTotalAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.subtotal)}</ram:LineTotalAmount>
-      <ram:TaxBasisTotalAmount currencyID="${xmlEscape(currency)}">${decimals(Math.max(0, invoice.subtotal - invoice.discountAmount))}</ram:TaxBasisTotalAmount>
+      <ram:LineTotalAmount>${decimals(invoice.subtotal)}</ram:LineTotalAmount>
+      <ram:TaxBasisTotalAmount>${decimals(Math.max(0, invoice.subtotal - invoice.discountAmount))}</ram:TaxBasisTotalAmount>
       <ram:TaxTotalAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.taxAmount)}</ram:TaxTotalAmount>
-      <ram:GrandTotalAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.total)}</ram:GrandTotalAmount>
-      <ram:DuePayableAmount currencyID="${xmlEscape(currency)}">${decimals(invoice.total)}</ram:DuePayableAmount>
+      <ram:GrandTotalAmount>${decimals(invoice.total)}</ram:GrandTotalAmount>
+      <ram:DuePayableAmount>${decimals(invoice.total)}</ram:DuePayableAmount>
     </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
   </ram:ApplicableHeaderTradeSettlement>`;
 
-  // BASIC WL: Essential line items only
+  // BASIC: Essential line items only
   const linesXml = invoice.items.map((it, idx) => {
     const qty = Number(it.quantity) || 0;
     const unit = Number(it.unitPrice) || 0;
@@ -167,7 +167,7 @@ export function generateFacturX22XML(
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount currencyID="${xmlEscape(currency)}">${decimals(unit)}</ram:ChargeAmount>
+          <ram:ChargeAmount>${decimals(unit)}</ram:ChargeAmount>
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
@@ -180,19 +180,19 @@ export function generateFacturX22XML(
           <ram:RateApplicablePercent>${decimals(lineRate)}</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount currencyID="${xmlEscape(currency)}">${decimals(lineTotal)}</ram:LineTotalAmount>
+          <ram:LineTotalAmount>${decimals(lineTotal)}</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>`;
   }).join("");
 
-  // Correct element order for BASIC WL
+  // Correct element order for BASIC
   const trx = `
   <rsm:SupplyChainTradeTransaction>
+    ${linesXml}
     ${headerAgreement}
     <ram:ApplicableHeaderTradeDelivery />
     ${headerSettlement}
-    ${linesXml}
   </rsm:SupplyChainTradeTransaction>`;
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
