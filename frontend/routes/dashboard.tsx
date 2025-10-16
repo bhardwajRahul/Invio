@@ -16,7 +16,7 @@ type Invoice = {
 type Data = {
   authed: boolean;
   error?: string;
-  counts?: { invoices: number; customers: number; templates: number };
+  counts?: { invoices: number; customers: number };
   money?: {
     billed: number;
     paid: number;
@@ -25,6 +25,7 @@ type Data = {
   };
   status?: { draft: number; sent: number; paid: number; overdue: number };
   recent?: Invoice[];
+  version?: string;
 };
 
 export const handler: Handlers<Data> = {
@@ -39,10 +40,9 @@ export const handler: Handlers<Data> = {
       });
     }
     try {
-      const [invoices, customers, templates] = await Promise.all([
+      const [invoices, customers] = await Promise.all([
         backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>,
         backendGet("/api/v1/customers", auth) as Promise<unknown[]>,
-        backendGet("/api/v1/templates", auth) as Promise<unknown[]>,
       ]);
 
       const currency = (invoices[0]?.currency as string) || "USD";
@@ -69,16 +69,28 @@ export const handler: Handlers<Data> = {
         )
         .slice(0, 5);
 
+      // Read version from VERSION file at project root
+      let version = 'unknown';
+      const possiblePaths = ['/app/VERSION', Deno.cwd() + '/../VERSION', Deno.cwd() + '/VERSION'];
+      for (const path of possiblePaths) {
+        try {
+          version = await Deno.readTextFile(path).then(v => v.trim());
+          break;
+        } catch {
+          // Ignore and try next path
+        }
+      }
+
       return ctx.render({
         authed: true,
         counts: {
           invoices: invoices.length,
           customers: customers.length,
-          templates: templates.length,
         },
         money: { billed, paid, outstanding, currency },
         status,
         recent,
+        version,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -131,19 +143,17 @@ export default function Dashboard(props: PageProps<Data>) {
           </div>
           <div class="card bg-base-100 border border-base-300 rounded-box">
             <div class="card-body">
-              <div class="text-sm opacity-70">Templates</div>
-              <div class="text-3xl font-extrabold">
-                {props.data.counts.templates}
-              </div>
-            </div>
-          </div>
-          <div class="card bg-base-100 border border-base-300 rounded-box">
-            <div class="card-body">
               <div class="text-sm opacity-70">Open Invoices</div>
               <div class="text-3xl font-extrabold">
                 {(props.data.status?.sent || 0) +
                   (props.data.status?.overdue || 0)}
               </div>
+            </div>
+          </div>
+          <div class="card bg-base-100 border border-base-300 rounded-box">
+            <div class="card-body">
+              <div class="text-sm opacity-70">Version</div>
+              <div class="text-3xl font-extrabold">{props.data.version}</div>
             </div>
           </div>
         </div>
