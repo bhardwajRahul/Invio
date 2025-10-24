@@ -20,6 +20,9 @@
       const lucide = globalThis.lucide;
       if (lucide && typeof lucide.createIcons === "function") {
         lucide.createIcons();
+      } else {
+        // Retry if lucide isn't loaded yet
+        setTimeout(init, 100);
       }
     } catch (_err) {
       // ignore lucide init errors
@@ -27,5 +30,7 @@
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
-  } else init();
+  } else {
+    init();
+  }
 })();

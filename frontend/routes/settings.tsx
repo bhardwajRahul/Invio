@@ -4,7 +4,19 @@ import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
 import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
 import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
-// Using official Lucide icons via <i data-lucide="..."> (initialized in Layout's LucideInit)
+import {
+  LuAlertTriangle,
+  LuBuilding2,
+  LuPalette,
+  LuSun,
+  LuLayoutTemplate,
+  LuCreditCard,
+  LuPercent,
+  LuHash,
+  LuFileCode2,
+  LuDownload,
+  LuSave,
+} from "../components/icons.tsx";
 import {
   backendGet,
   backendPatch,
@@ -134,6 +146,8 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "invoiceNumberPattern",
       // Toggle to enable/disable advanced invoice numbering pattern
       "invoiceNumberingEnabled",
+      // Date format
+      "dateFormat",
     ];
     // Collect values; handle duplicate hidden + checkbox pattern (want last value = actual state)
     for (const f of fields) {
@@ -217,7 +231,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
 
       {demoMode && (
         <div class="alert alert-warning mb-4">
-          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+          <LuAlertTriangle size={20} />
           <div>
             <strong>Demo Mode:</strong> The database resets every 30 minutes. Your changes are not permanent.
           </div>
@@ -234,57 +248,57 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           <ul class="menu bg-base-200 rounded-box w-full">
             <li>
               <a href={link("company")} class={section === "company" ? "active" : undefined}>
-                <i data-lucide="building-2" class="w-5 h-5 mr-2"></i>
+                <LuBuilding2 size={20} class="mr-2" />
                 Company
               </a>
             </li>
             <li>
               <a href={link("branding")} class={section === "branding" ? "active" : undefined}>
-                <i data-lucide="palette" class="w-5 h-5 mr-2"></i>
+                <LuPalette size={20} class="mr-2" />
                 Branding
               </a>
             </li>
             <li>
               <a href={link("appearance")} class={section === "appearance" ? "active" : undefined}>
-                <i data-lucide="sun" class="w-5 h-5 mr-2"></i>
+                <LuSun size={20} class="mr-2" />
                 Appearance
               </a>
             </li>
             {hasTemplates && (
               <li>
                 <a href={link("templates")} class={section === "templates" ? "active" : undefined}>
-                  <i data-lucide="layout-template" class="w-5 h-5 mr-2"></i>
+                  <LuLayoutTemplate size={20} class="mr-2" />
                   Templates
                 </a>
               </li>
             )}
             <li>
               <a href={link("payments")} class={section === "payments" ? "active" : undefined}>
-                <i data-lucide="credit-card" class="w-5 h-5 mr-2"></i>
+                <LuCreditCard size={20} class="mr-2" />
                 Payments
               </a>
             </li>
             <li>
               <a href={link("tax")} class={section === "tax" ? "active" : undefined}>
-                <i data-lucide="percent" class="w-5 h-5 mr-2"></i>
+                <LuPercent size={20} class="mr-2" />
                 Tax
               </a>
             </li>
             <li>
               <a href={link("numbering")} class={section === "numbering" ? "active" : undefined}>
-                <i data-lucide="hash" class="w-5 h-5 mr-2"></i>
+                <LuHash size={20} class="mr-2" />
                 Numbering
               </a>
             </li>
             <li>
               <a href={link("xml")} class={section === "xml" ? "active" : undefined}>
-                <i data-lucide="file-code-2" class="w-5 h-5 mr-2"></i>
+                <LuFileCode2 size={20} class="mr-2" />
                 XML Export
               </a>
             </li>
             <li>
               <a href={link("export")} class={section === "export" ? "active" : undefined}>
-                <i data-lucide="download" class="w-5 h-5 mr-2"></i>
+                <LuDownload size={20} class="mr-2" />
                 Export
               </a>
             </li>
@@ -319,7 +333,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               
               <div class="flex justify-end">
                 <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <LuSave size={16} />
                   Save Changes
                 </button>
               </div>
@@ -369,7 +383,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               
               <div class="flex justify-end">
                 <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <LuSave size={16} />
                   Save Changes
                 </button>
               </div>
@@ -377,7 +391,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           )}
 
           {section === "appearance" && (
-            <div class="space-y-4">
+            <form method="post" class="space-y-4" data-writable>
               <h2 class="text-xl font-semibold">Appearance</h2>
               
               <div class="bg-base-200 rounded-box p-4">
@@ -387,7 +401,26 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                   <span class="text-sm opacity-70">Switch between Light and Dark (DaisyUI)</span>
                 </div>
               </div>
-            </div>
+
+              <div class="bg-base-200 rounded-box p-4">
+                <h3 class="font-semibold mb-2">Date Format</h3>
+                <label class="form-control">
+                  <div class="label"><span class="label-text">Display dates as</span></div>
+                  <select name="dateFormat" class="select select-bordered w-full" value={(s.dateFormat as string) || "YYYY-MM-DD"}>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD (2025-01-15)</option>
+                    <option value="DD.MM.YYYY">DD.MM.YYYY (15.01.2025)</option>
+                  </select>
+                  <div class="label"><span class="label-text-alt">Choose how dates are displayed in invoices</span></div>
+                </label>
+              </div>
+              
+              <div class="flex justify-end">
+                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <LuSave size={16} />
+                  Save Changes
+                </button>
+              </div>
+            </form>
           )}
 
           {section === "templates" && hasTemplates && (
@@ -461,7 +494,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               
               <div class="flex justify-end">
                 <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <LuSave size={16} />
                   Save Changes
                 </button>
               </div>
@@ -480,7 +513,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               
               <div class="flex justify-end">
                 <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <LuSave size={16} />
                   Save Changes
                 </button>
               </div>
@@ -514,7 +547,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               
               <div class="flex justify-end">
                 <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <LuSave size={16} />
                   Save Changes
                 </button>
               </div>
@@ -555,7 +588,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                 
                 <div class="flex justify-end">
                   <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <LuSave size={16} />
                     Save Changes
                   </button>
                 </div>

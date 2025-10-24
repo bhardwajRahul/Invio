@@ -38,8 +38,6 @@ export default function App({ Component }: AppProps) {
           html[data-theme='dark'] .brand-logo svg{stroke:#d6b4fc !important}
           `}
         </style>
-        {/* lucide icons */}
-        <script src="https://unpkg.com/lucide@latest"></script>
       </Head>
       <body class="min-h-screen bg-base-200 text-base-content">
         <Component />

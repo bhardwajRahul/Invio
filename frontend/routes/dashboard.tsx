@@ -26,6 +26,7 @@ type Data = {
   status?: { draft: number; sent: number; paid: number; overdue: number };
   recent?: Invoice[];
   version?: string;
+  dateFormat?: string;
 };
 
 export const handler: Handlers<Data> = {
@@ -40,12 +41,14 @@ export const handler: Handlers<Data> = {
       });
     }
     try {
-      const [invoices, customers] = await Promise.all([
+      const [invoices, customers, settings] = await Promise.all([
         backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>,
         backendGet("/api/v1/customers", auth) as Promise<unknown[]>,
+        backendGet("/api/v1/settings", auth).catch(() => ({})) as Promise<Record<string, unknown>>,
       ]);
 
       const currency = (invoices[0]?.currency as string) || "USD";
+      const dateFormat = String(settings.dateFormat || "YYYY-MM-DD");
       const billed = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
       const paid = invoices.filter((i) => i.status === "paid").reduce(
         (s, i) => s + (i.total || 0),
@@ -91,6 +94,7 @@ export const handler: Handlers<Data> = {
         status,
         recent,
         version,
+        dateFormat,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -240,7 +244,14 @@ export default function Dashboard(props: PageProps<Data>) {
               <tbody>
                 {props.data.recent.map((inv) => {
                   const d = inv.issueDate ? new Date(inv.issueDate) : undefined;
-                  const date = d ? d.toLocaleDateString() : "";
+                  const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
+                  let date = "";
+                  if (d && !isNaN(d.getTime())) {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    date = dateFormat === "DD.MM.YYYY" ? `${day}.${month}.${year}` : `${year}-${month}-${day}`;
+                  }
                   const badge = inv.status === "paid"
                     ? "badge-success"
                     : inv.status === "overdue"

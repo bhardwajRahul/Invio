@@ -1,6 +1,12 @@
 import { ComponentChildren } from "preact";
 import { Breadcrumbs } from "./Breadcrumbs.tsx";
-import LucideInit from "../islands/LucideInit.tsx";
+import {
+  LuLayoutDashboard,
+  LuReceiptText,
+  LuUsers,
+  LuSettings,
+  LuLogOut,
+} from "./icons.tsx";
 import DemoModeDisabler from "../islands/DemoModeDisabler.tsx";
 
 export function Layout(
@@ -14,7 +20,6 @@ export function Layout(
 ) {
   return (
     <div class="min-h-screen bg-base-200">
-      <LucideInit />
   <div class="navbar bg-base-100 border-b border-base-300" data-demo={props.demoMode ? "true" : "false"}>
         <div class="container mx-auto flex items-center">
           {/* Left: Logo only */}
@@ -46,28 +51,27 @@ export function Layout(
               <ul class="menu menu-horizontal px-1 hidden md:flex">
                 <li>
                   <a href="/dashboard">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4">
-                    </i>Dashboard
+                    <LuLayoutDashboard size={16} />Dashboard
                   </a>
                 </li>
                 <li>
                   <a href="/invoices">
-                    <i data-lucide="receipt-text" class="w-4 h-4"></i>Invoices
+                    <LuReceiptText size={16} />Invoices
                   </a>
                 </li>
                 <li>
                   <a href="/customers">
-                    <i data-lucide="users" class="w-4 h-4"></i>Customers
+                    <LuUsers size={16} />Customers
                   </a>
                 </li>
                 <li>
                   <a href="/settings">
-                    <i data-lucide="settings" class="w-4 h-4"></i>Settings
+                    <LuSettings size={16} />Settings
                   </a>
                 </li>
                 <li>
                   <a href="/logout">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>Logout
+                    <LuLogOut size={16} />Logout
                   </a>
                 </li>
               </ul>
@@ -97,28 +101,27 @@ export function Layout(
                 >
                   <li>
                     <a href="/dashboard">
-                      <i data-lucide="layout-dashboard" class="w-4 h-4">
-                      </i>Dashboard
+                      <LuLayoutDashboard size={16} />Dashboard
                     </a>
                   </li>
                   <li>
                     <a href="/invoices">
-                      <i data-lucide="receipt-text" class="w-4 h-4"></i>Invoices
+                      <LuReceiptText size={16} />Invoices
                     </a>
                   </li>
                   <li>
                     <a href="/customers">
-                      <i data-lucide="users" class="w-4 h-4"></i>Customers
+                      <LuUsers size={16} />Customers
                     </a>
                   </li>
                   <li>
                     <a href="/settings">
-                      <i data-lucide="settings" class="w-4 h-4"></i>Settings
+                      <LuSettings size={16} />Settings
                     </a>
                   </li>
                   <li>
                     <a href="/logout">
-                      <i data-lucide="log-out" class="w-4 h-4"></i>Logout
+                      <LuLogOut size={16} />Logout
                     </a>
                   </li>
                 </ul>

@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../../components/Layout.tsx";
+import { LuList, LuAlertTriangle } from "../../../components/icons.tsx";
 import { getAuthHeaderFromCookie } from "../../../utils/backend.ts";
 
 type Data = { authed: boolean; id: string };
@@ -32,14 +33,14 @@ export default function CannotDeleteCustomer(props: PageProps<Data>) {
               Back to Customer
             </a>
             <a href="/invoices" class="btn btn-primary btn-sm">
-              <i data-lucide="list" class="w-4 h-4"></i>
+              <LuList size={16} />
               Go to Invoices
             </a>
           </div>
         </div>
 
         <div class="alert alert-warning">
-          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+          <LuAlertTriangle size={20} />
           <div>
             <h3 class="font-bold">Customer Has Associated Invoices</h3>
             <div class="text-sm mt-1">

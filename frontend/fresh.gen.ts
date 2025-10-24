@@ -35,7 +35,6 @@ import * as $DemoModeDisabler from "./islands/DemoModeDisabler.tsx";
 import * as $ExportAll from "./islands/ExportAll.tsx";
 import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
 import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
-import * as $LucideInit from "./islands/LucideInit.tsx";
 import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
 import * as $ThemeToggle from "./islands/ThemeToggle.tsx";
 import type { Manifest } from "$fresh/server.ts";
@@ -82,7 +81,6 @@ const manifest = {
     "./islands/ExportAll.tsx": $ExportAll,
     "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
     "./islands/InvoiceEditorIsland.tsx": $InvoiceEditorIsland,
-    "./islands/LucideInit.tsx": $LucideInit,
     "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
     "./islands/ThemeToggle.tsx": $ThemeToggle,
   },

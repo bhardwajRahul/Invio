@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
+import { LuUserPlus } from "../../components/icons.tsx";
 import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
 type Customer = { id: string; name?: string; email?: string };
@@ -35,7 +36,7 @@ export default function Customers(props: PageProps<Data>) {
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Customers</h1>
         <a href="/customers/new" class="btn btn-sm btn-primary">
-          <i data-lucide="user-plus" class="w-4 h-4"></i>New Customer
+          <LuUserPlus size={16} />New Customer
         </a>
       </div>
       {props.data.error && (

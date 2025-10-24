@@ -1,5 +1,6 @@
 import { JSX } from "preact/jsx-runtime";
 import InvoiceEditorIsland from "../islands/InvoiceEditorIsland.tsx";
+import { LuPlus, LuGripVertical } from "./icons.tsx";
 
 type Customer = { id: string; name: string };
 type Item = {
@@ -149,7 +150,7 @@ export function InvoiceEditor(props: {
             </span>
           </label>
           <button type="button" id="add-item" class="btn btn-sm" data-writable disabled={props.demoMode}>
-            <i data-lucide="plus" class="w-4 h-4"></i>Add item
+            <LuPlus size={16} />Add item
           </button>
         </div>
         <div id="items-error" class="text-error text-xs mb-2 hidden">Add at least one item with a description.</div>
@@ -174,7 +175,7 @@ export function InvoiceEditor(props: {
                 aria-label="Drag to reorder"
                 tabindex={-1}
               >
-                <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                <LuGripVertical size={16} />
               </button>
               <input
                 name="item_description"
@@ -245,7 +246,7 @@ export function InvoiceEditor(props: {
               aria-label="Drag to reorder"
               tabindex={-1}
             >
-              <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+              <LuGripVertical size={16} />
             </button>
             <input
               name="item_description"

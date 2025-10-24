@@ -1,4 +1,5 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
+import { LuDownload, LuFileText, LuChevronDown, LuExternalLink } from "../../../../components/icons.tsx";
 
 type Data = { shareToken: string; error?: string };
 
@@ -26,18 +27,18 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
         <h1 class="text-2xl font-semibold">Invoice</h1>
         <div class="flex gap-2">
           <a class="btn btn-sm btn-primary" href={pdfUrl}>
-            <i data-lucide="download" class="w-4 h-4"></i>
+            <LuDownload size={16} />
             Download PDF
           </a>
           <a class="btn btn-sm btn-outline" href={ublUrl}>
-            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <LuFileText size={16} />
             Download UBL XML
           </a>
           <div class="dropdown dropdown-end">
             <div tabIndex={0} role="button" class="btn btn-sm btn-outline flex gap-1">
-              <i data-lucide="file-text" class="w-4 h-4"></i>
+              <LuFileText size={16} />
               XML
-              <i data-lucide="chevron-down" class="w-3 h-3"></i>
+              <LuChevronDown size={12} />
             </div>
             <ul tabIndex={0} class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-2 w-56 p-2 shadow">
               <li><a href={xmlUblUrl}>UBL 2.1 (PEPPOL)</a></li>
@@ -45,7 +46,7 @@ export default function PublicInvoicePage(props: PageProps<Data>) {
             </ul>
           </div>
           <a class="btn btn-sm btn-ghost" href={htmlUrl} target="_blank">
-            <i data-lucide="external-link" class="w-4 h-4"></i>
+            <LuExternalLink size={16} />
             Open HTML
           </a>
         </div>

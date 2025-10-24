@@ -3,6 +3,21 @@ import { Layout } from "../../components/Layout.tsx";
 import ConfirmOnSubmit from "../../islands/ConfirmOnSubmit.tsx";
 import CopyPublicLink from "../../islands/CopyPublicLink.tsx";
 import {
+  LuCheckCircle,
+  LuPencil,
+  LuUpload,
+  LuCheck,
+  LuMoreHorizontal,
+  LuCopy,
+  LuFileText,
+  LuShieldOff,
+  LuSend,
+  LuExternalLink,
+  LuTrash2,
+  LuFileCode2,
+  LuDownload,
+} from "../../components/icons.tsx";
+import {
   backendDelete,
   backendGet,
   backendPost,
@@ -35,6 +50,7 @@ type Data = {
   invoice?: Invoice;
   error?: string;
   showPublishedBanner?: boolean;
+  dateFormat?: string;
 };
 
 export const handler: Handlers<Data> = {
@@ -50,16 +66,18 @@ export const handler: Handlers<Data> = {
     }
     const { id } = ctx.params as { id: string };
     try {
-      const invoice = await backendGet(
-        `/api/v1/invoices/${id}`,
-        auth,
-      ) as Invoice;
+      const [invoice, settings] = await Promise.all([
+        backendGet(`/api/v1/invoices/${id}`, auth) as Promise<Invoice>,
+        backendGet("/api/v1/settings", auth).catch(() => ({})) as Promise<Record<string, unknown>>,
+      ]);
       const url = new URL(req.url);
       const showPublishedBanner = url.searchParams.get("published") === "1";
+      const dateFormat = String(settings.dateFormat || "YYYY-MM-DD");
       return ctx.render({
         authed: true,
         invoice,
         showPublishedBanner,
+        dateFormat,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -161,6 +179,7 @@ export const handler: Handlers<Data> = {
 export default function InvoiceDetail(props: PageProps<Data>) {
   const inv = props.data.invoice;
   const currency = (inv?.currency as string) || "USD";
+  const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
   const fmtMoney = (v?: number) =>
     typeof v === "number"
       ? new Intl.NumberFormat(undefined, { style: "currency", currency })
@@ -170,7 +189,13 @@ export default function InvoiceDetail(props: PageProps<Data>) {
     if (!d) return "";
     const dt = typeof d === "string" ? new Date(d) : d;
     if (Number.isNaN(dt.getTime())) return "";
-    return dt.toLocaleDateString();
+    const year = dt.getFullYear();
+    const month = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    if (dateFormat === "DD.MM.YYYY") {
+      return `${day}.${month}.${year}`;
+    }
+    return `${year}-${month}-${day}`;
   };
   const isOverdue = (() => {
     if (!inv) return false;
@@ -188,7 +213,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
       <ConfirmOnSubmit />
       {props.data.showPublishedBanner && props.data.invoice?.shareToken && (
         <div class="alert alert-success mb-4 shadow">
-          <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+          <LuCheckCircle size={20} />
           <div class="flex-1">
             <div class="font-medium">Invoice published</div>
             <div class="text-sm opacity-80 break-all">
@@ -252,7 +277,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
           <div class="flex items-center gap-2">
             {(inv.status === "draft" && !isOverdue) && (
               <a href={`/invoices/${inv.id}/edit`} class="btn btn-sm">
-                <i data-lucide="pencil" class="w-4 h-4"></i>
+                <LuPencil size={16} />
                 Edit
               </a>
             )}
@@ -265,7 +290,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                   class="btn btn-sm btn-success"
                   title="Make public and mark as sent"
                 >
-                  <i data-lucide="upload" class="w-4 h-4"></i>
+                  <LuUpload size={16} />
                   Publish
                 </button>
               </form>
@@ -278,7 +303,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                   class="btn btn-sm btn-primary"
                   title="Mark as Paid"
                 >
-                  <i data-lucide="check" class="w-4 h-4"></i>
+                  <LuCheck size={16} />
                   Mark as Paid
                 </button>
               </form>
@@ -286,7 +311,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
             {/* Overflow menu for secondary actions */}
             <div class="dropdown dropdown-end">
               <div tabIndex={0} role="button" class="btn btn-ghost btn-sm">
-                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                <LuMoreHorizontal size={16} />
                 More
               </div>
               <ul
@@ -299,7 +324,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     form={`inv-${inv.id}-duplicate`}
                     class="flex items-center gap-2"
                   >
-                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <LuCopy size={16} />
                     Duplicate
                   </button>
                 </li>
@@ -310,7 +335,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     title="Download XML (uses default profile from Settings)"
                     class="flex items-center gap-2"
                   >
-                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <LuFileText size={16} />
                     Download XML
                   </a>
                 </li>
@@ -321,7 +346,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       form={`inv-${inv.id}-unpublish`}
                       class="flex items-center gap-2"
                     >
-                      <i data-lucide="shield-off" class="w-4 h-4"></i>
+                      <LuShieldOff size={16} />
                       Unpublish
                     </button>
                   </li>
@@ -333,7 +358,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       form={`inv-${inv.id}-mark-sent`}
                       class="flex items-center gap-2"
                     >
-                      <i data-lucide="send" class="w-4 h-4"></i>
+                      <LuSend size={16} />
                       Mark as Sent
                     </button>
                   </li>
@@ -345,7 +370,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       target="_blank"
                       class="flex items-center gap-2"
                     >
-                      <i data-lucide="external-link" class="w-4 h-4"></i>
+                      <LuExternalLink size={16} />
                       View public link
                     </a>
                   </li>
@@ -356,7 +381,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     form={`inv-${inv.id}-delete`}
                     class="flex items-center gap-2 text-error"
                   >
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <LuTrash2 size={16} />
                     Delete
                   </button>
                 </li>
@@ -500,14 +525,14 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               href={`/invoices/${inv.id}/html`}
               target="_blank"
             >
-              <i data-lucide="file-code-2" class="w-4 h-4"></i>
+              <LuFileCode2 size={16} />
               View HTML
             </a>
             <a
               class="btn btn-sm btn-primary"
               href={`/invoices/${inv.id}/pdf`}
             >
-              <i data-lucide="download" class="w-4 h-4"></i>
+              <LuDownload size={16} />
               Download PDF
             </a>
             {/* Public share link (visible when published i.e., not draft) */}
@@ -517,7 +542,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                 href={`/public/invoices/${inv.shareToken}`}
                 target="_blank"
               >
-                <i data-lucide="external-link" class="w-4 h-4"></i>
+                <LuExternalLink size={16} />
                 View public link
               </a>
             )}

@@ -1,6 +1,24 @@
 {
-  "build_id": "4cc36e182937dc68ed41e3be39094db31064dde1",
+  "build_id": "f27d0c4b2a31b97504b3fd780db4883ec2f5dcac",
   "files": {
+    "island-installtemplateform.js": [
+      "chunk-BYRZ2NRM.js",
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "island-invoiceeditorisland.js": [
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "island-settingsenhancements.js": [
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "island-themetoggle.js": [
+      "chunk-BYRZ2NRM.js",
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
     "main.js": [
       "chunk-GI7LLYGM.js",
       "chunk-JP5XG2OT.js"
@@ -8,15 +26,36 @@
     "deserializer.js": [],
     "signals.js": [
       "chunk-GI7LLYGM.js",
-      "chunk-EX6SY4DB.js",
+      "chunk-G4CPWP5O.js",
       "chunk-JP5XG2OT.js"
     ],
     "chunk-GI7LLYGM.js": [],
     "island-breadcrumbs.js": [
-      "chunk-EX6SY4DB.js",
+      "chunk-BYRZ2NRM.js",
+      "chunk-G4CPWP5O.js",
       "chunk-JP5XG2OT.js"
     ],
-    "chunk-EX6SY4DB.js": [
+    "island-confirmonsubmit.js": [
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "island-copypubliclink.js": [
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "island-demomodedisabler.js": [
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "island-exportall.js": [
+      "chunk-BYRZ2NRM.js",
+      "chunk-G4CPWP5O.js",
+      "chunk-JP5XG2OT.js"
+    ],
+    "chunk-BYRZ2NRM.js": [
+      "chunk-JP5XG2OT.js"
+    ],
+    "chunk-G4CPWP5O.js": [
       "chunk-JP5XG2OT.js"
     ],
     "chunk-JP5XG2OT.js": [],

@@ -43,8 +43,18 @@ function lighten(hex: string, amount = 0.85): string {
   return `#${rr}${gg}${bb}`;
 }
 
-function formatDate(d?: Date) {
-  return d ? new Date(d).toLocaleDateString() : undefined;
+function formatDate(d?: Date, format: string = "YYYY-MM-DD") {
+  if (!d) return undefined;
+  const date = new Date(d);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  if (format === "DD.MM.YYYY") {
+    return `${day}.${month}.${year}`;
+  }
+  // Default to YYYY-MM-DD
+  return `${year}-${month}-${day}`;
 }
 
 function toMoney(n: number): string {
@@ -232,6 +242,7 @@ function buildContext(
   invoice: InvoiceWithDetails,
   settings?: BusinessSettings & { logoUrl?: string; brandLayout?: string },
   _highlight?: string,
+  dateFormat?: string,
 ): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
   const currency = invoice.currency || settings?.currency || "USD";
   // Build tax summary from normalized taxes if present
@@ -267,8 +278,8 @@ function buildContext(
 
     // Invoice
     invoiceNumber: invoice.invoiceNumber,
-    issueDate: formatDate(invoice.issueDate)!,
-    dueDate: formatDate(invoice.dueDate),
+    issueDate: formatDate(invoice.issueDate, dateFormat)!,
+    dueDate: formatDate(invoice.dueDate, dateFormat),
     currency,
     status: invoice.status,
 
@@ -330,7 +341,7 @@ export async function generateInvoicePDF(
   businessSettings?: BusinessSettings,
   templateId?: string,
   customHighlightColor?: string,
-  opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown> },
+  opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown>; dateFormat?: string },
 ): Promise<Uint8Array> {
   // Inline remote logo when possible for robust HTML rendering
   const inlined = await inlineLogoIfPossible(businessSettings);
@@ -339,6 +350,7 @@ export async function generateInvoicePDF(
     inlined,
     templateId,
     customHighlightColor,
+    opts?.dateFormat,
   );
   // First, attempt Puppeteer-based rendering
   let pdfBytes = await tryPuppeteerPdf(html);
@@ -349,6 +361,7 @@ export async function generateInvoicePDF(
       inlined,
       customHighlightColor,
       templateId,
+      opts?.dateFormat || "YYYY-MM-DD",
     );
   }
 
@@ -448,8 +461,9 @@ export function buildInvoiceHTML(
   settings?: BusinessSettings,
   templateId?: string,
   highlight?: string,
+  dateFormat?: string,
 ): string {
-  const ctx = buildContext(invoice, settings, highlight);
+  const ctx = buildContext(invoice, settings, highlight, dateFormat);
   const hl = normalizeHex(highlight) || "#2563eb";
   const hlLight = lighten(hl, 0.86);
 
@@ -661,6 +675,7 @@ async function generateStyledPDF(
   businessSettings?: BusinessSettings,
   customHighlightColor?: string,
   templateId?: string,
+  dateFormat: string = "YYYY-MM-DD",
 ): Promise<Uint8Array> {
   const highlight = customHighlightColor
     ? hexToRgb(customHighlightColor)
@@ -671,12 +686,14 @@ async function generateStyledPDF(
       invoiceData,
       businessSettings,
       highlight,
+      dateFormat,
     );
   }
   return await generateProfessionalPDF(
     invoiceData,
     businessSettings,
     highlight,
+    dateFormat,
   );
 }
 
@@ -704,6 +721,7 @@ async function generateProfessionalPDF(
   invoiceData: InvoiceWithDetails,
   businessSettings?: BusinessSettings,
   highlightRgb?: ReturnType<typeof rgb>,
+  dateFormat: string = "YYYY-MM-DD",
 ): Promise<Uint8Array> {
   const highlight = highlightRgb || rgb(0.15, 0.39, 0.92);
 
@@ -774,7 +792,7 @@ async function generateProfessionalPDF(
     color: rgb(0.1, 0.1, 0.1),
   });
   ctx.page.drawText(
-    `Date: ${new Date(invoiceData.issueDate).toLocaleDateString()}`,
+    `Date: ${formatDate(invoiceData.issueDate, dateFormat)}`,
     {
       x: boxX + 10,
       y: boxY + boxH - 34,
@@ -785,7 +803,7 @@ async function generateProfessionalPDF(
   );
   if (invoiceData.dueDate) {
     ctx.page.drawText(
-      `Due: ${new Date(invoiceData.dueDate).toLocaleDateString()}`,
+      `Due: ${formatDate(invoiceData.dueDate, dateFormat)}`,
       {
         x: boxX + 10,
         y: boxY + boxH - 50,
@@ -1022,6 +1040,7 @@ async function generateMinimalistPDF(
   invoiceData: InvoiceWithDetails,
   businessSettings?: BusinessSettings,
   highlightRgb?: ReturnType<typeof rgb>,
+  dateFormat: string = "YYYY-MM-DD",
 ): Promise<Uint8Array> {
   const highlight = highlightRgb || rgb(0.05, 0.59, 0.41);
 
@@ -1075,7 +1094,7 @@ async function generateMinimalistPDF(
   drawLabelValue(
     ctx,
     "Issue Date:",
-    new Date(invoiceData.issueDate).toLocaleDateString(),
+    formatDate(invoiceData.issueDate, dateFormat) || "",
     margins.left,
     9,
     70,
@@ -1085,7 +1104,7 @@ async function generateMinimalistPDF(
     drawLabelValue(
       ctx,
       "Due Date:",
-      new Date(invoiceData.dueDate).toLocaleDateString(),
+      formatDate(invoiceData.dueDate, dateFormat) || "",
       margins.left,
       9,
       70,

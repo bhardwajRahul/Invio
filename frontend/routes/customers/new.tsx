@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
+import { LuUserPlus } from "../../components/icons.tsx";
 import { backendPost, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
 type Data = { authed: boolean; error?: string };
@@ -77,7 +78,7 @@ export default function NewCustomerPage(props: PageProps<Data>) {
               Cancel
             </a>
             <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              <LuUserPlus size={16} />
               Create Customer
             </button>
           </div>

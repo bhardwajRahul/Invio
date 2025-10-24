@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../../components/Layout.tsx";
+import { LuSave } from "../../../components/icons.tsx";
 import {
   backendGet,
   backendPut,
@@ -95,7 +96,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
                 Cancel
               </a>
               <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                <i data-lucide="save" class="w-4 h-4"></i>
+                <LuSave size={16} />
                 Save
               </button>
             </div>

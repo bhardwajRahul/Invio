@@ -97,7 +97,7 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
       businessSettings,
       selectedTemplateId,
       highlight,
-      { embedXml, embedXmlProfileId: xmlProfileId },
+      { embedXml, embedXmlProfileId: xmlProfileId, dateFormat: settingsMap.dateFormat },
     );
     // Detect embedded attachments for diagnostics
     let hasAttachment = false;
@@ -180,6 +180,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     businessSettings,
     selectedTemplateId,
     highlight,
+    settingsMap.dateFormat,
   );
   return new Response(html, {
     headers: {

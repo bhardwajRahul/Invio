@@ -4,7 +4,17 @@ import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
 import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
 import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
-// Using official Lucide icons via <i data-lucide="..."> (initialized in Layout's LucideInit)
+import {
+  LuBuilding2,
+  LuPalette,
+  LuSun,
+  LuLayoutTemplate,
+  LuCreditCard,
+  LuPercent,
+  LuHash,
+  LuFileCode2,
+  LuDownload,
+} from "../components/icons.tsx";
 import {
   backendGet,
   backendPatch,
@@ -212,57 +222,57 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           <ul class="menu bg-base-200 rounded-box w-full">
             <li>
               <a href={link("company")} class={section === "company" ? "active" : undefined}>
-                <i data-lucide="building-2" class="w-5 h-5 mr-2"></i>
+                <LuBuilding2 size={20} class="mr-2" />
                 Company
               </a>
             </li>
             <li>
               <a href={link("branding")} class={section === "branding" ? "active" : undefined}>
-                <i data-lucide="palette" class="w-5 h-5 mr-2"></i>
+                <LuPalette size={20} class="mr-2" />
                 Branding
               </a>
             </li>
             <li>
               <a href={link("appearance")} class={section === "appearance" ? "active" : undefined}>
-                <i data-lucide="sun" class="w-5 h-5 mr-2"></i>
+                <LuSun size={20} class="mr-2" />
                 Appearance
               </a>
             </li>
             {hasTemplates && (
               <li>
                 <a href={link("templates")} class={section === "templates" ? "active" : undefined}>
-                  <i data-lucide="layout-template" class="w-5 h-5 mr-2"></i>
+                  <LuLayoutTemplate size={20} class="mr-2" />
                   Templates
                 </a>
               </li>
             )}
             <li>
               <a href={link("payments")} class={section === "payments" ? "active" : undefined}>
-                <i data-lucide="credit-card" class="w-5 h-5 mr-2"></i>
+                <LuCreditCard size={20} class="mr-2" />
                 Payments
               </a>
             </li>
             <li>
               <a href={link("tax")} class={section === "tax" ? "active" : undefined}>
-                <i data-lucide="percent" class="w-5 h-5 mr-2"></i>
+                <LuPercent size={20} class="mr-2" />
                 Tax
               </a>
             </li>
             <li>
               <a href={link("numbering")} class={section === "numbering" ? "active" : undefined}>
-                <i data-lucide="hash" class="w-5 h-5 mr-2"></i>
+                <LuHash size={20} class="mr-2" />
                 Numbering
               </a>
             </li>
             <li>
               <a href={link("xml")} class={section === "xml" ? "active" : undefined}>
-                <i data-lucide="file-code-2" class="w-5 h-5 mr-2"></i>
+                <LuFileCode2 size={20} class="mr-2" />
                 XML Export
               </a>
             </li>
             <li>
               <a href={link("export")} class={section === "export" ? "active" : undefined}>
-                <i data-lucide="download" class="w-5 h-5 mr-2"></i>
+                <LuDownload size={20} class="mr-2" />
                 Export
               </a>
             </li>

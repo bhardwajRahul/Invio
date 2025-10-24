@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
+import { LuPlus } from "../../components/icons.tsx";
 import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
 type Invoice = {
@@ -18,6 +19,7 @@ type Data = {
   q?: string;
   status?: string;
   totalCount?: number;
+  dateFormat?: string;
 };
 
 export const handler: Handlers<Data> = {
@@ -35,10 +37,10 @@ export const handler: Handlers<Data> = {
       const url = new URL(req.url);
       const q = (url.searchParams.get("q") || "").trim();
       const status = (url.searchParams.get("status") || "").trim();
-      const invoicesAll = await backendGet(
-        "/api/v1/invoices",
-        auth,
-      ) as Invoice[];
+      const [invoicesAll, settings] = await Promise.all([
+        backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>,
+        backendGet("/api/v1/settings", auth).catch(() => ({})) as Promise<Record<string, unknown>>,
+      ]);
       // Normalize for case/diacritics-insensitive search
       const norm = (s: unknown) =>
         String(s || "")
@@ -58,12 +60,14 @@ export const handler: Handlers<Data> = {
           num.includes(qLower);
         return okStatus && okText;
       });
+      const dateFormat = String(settings.dateFormat || "YYYY-MM-DD");
       return ctx.render({
         authed: true,
         invoices,
         q,
         status,
         totalCount: invoicesAll.length,
+        dateFormat,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -76,16 +80,19 @@ export default function Invoices(props: PageProps<Data>) {
   const q = props.data.q ?? "";
   const status = props.data.status ?? "";
   const totalCount = props.data.totalCount ?? list.length;
+  const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
   const fmtDate = (s?: string) => {
     if (!s) return "";
     try {
       const d = new Date(s);
       if (isNaN(d.getTime())) return s;
-      return d.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-      });
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      if (dateFormat === "DD.MM.YYYY") {
+        return `${day}.${month}.${year}`;
+      }
+      return `${year}-${month}-${day}`;
     } catch {
       return s || "";
     }
@@ -118,7 +125,7 @@ export default function Invoices(props: PageProps<Data>) {
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-semibold">Invoices</h1>
         <a href="/invoices/new" class="btn btn-sm btn-primary">
-          <i data-lucide="plus" class="w-4 h-4"></i>New Invoice
+          <LuPlus size={16} />New Invoice
         </a>
       </div>
       {props.data.error && (

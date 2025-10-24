@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
+import { LuPencil, LuTrash2 } from "../../components/icons.tsx";
 import ConfirmOnSubmit from "../../islands/ConfirmOnSubmit.tsx";
 import {
   backendDelete,
@@ -74,7 +75,7 @@ export default function CustomerDetail(props: PageProps<Data>) {
         {c && (
           <div class="flex gap-2">
             <a href={`/customers/${c.id}/edit`} class="btn btn-sm">
-              <i data-lucide="pencil" class="w-4 h-4"></i>
+              <LuPencil size={16} />
               Edit
             </a>
             <form
@@ -83,7 +84,7 @@ export default function CustomerDetail(props: PageProps<Data>) {
             >
               <input type="hidden" name="intent" value="delete" />
               <button type="submit" class="btn btn-sm btn-outline btn-error">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <LuTrash2 size={16} />
                 Delete
               </button>
             </form>
