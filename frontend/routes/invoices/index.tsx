@@ -1,6 +1,7 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../components/Layout.tsx";
 import { LuPlus } from "../../components/icons.tsx";
+import { formatMoney, getNumberFormat } from "../../utils/format.ts";
 import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 
 type Invoice = {
@@ -20,6 +21,7 @@ type Data = {
   status?: string;
   totalCount?: number;
   dateFormat?: string;
+  settings?: Record<string, unknown>;
 };
 
 export const handler: Handlers<Data> = {
@@ -68,6 +70,7 @@ export const handler: Handlers<Data> = {
         status,
         totalCount: invoicesAll.length,
         dateFormat,
+        settings,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -81,6 +84,7 @@ export default function Invoices(props: PageProps<Data>) {
   const status = props.data.status ?? "";
   const totalCount = props.data.totalCount ?? list.length;
   const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
+  const numberFormat = getNumberFormat(props.data.settings);
   const fmtDate = (s?: string) => {
     if (!s) return "";
     try {
@@ -97,12 +101,9 @@ export default function Invoices(props: PageProps<Data>) {
       return s || "";
     }
   };
-  const formatMoney = (inv: Invoice) =>
+  const formatInvoiceMoney = (inv: Invoice) =>
     typeof inv.total === "number"
-      ? new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency: inv.currency || "USD",
-      }).format(inv.total)
+      ? formatMoney(inv.total, inv.currency || "USD", numberFormat)
       : "";
   const statusBadge = (st?: Invoice["status"]) => {
     const cls = st === "paid"
@@ -199,7 +200,7 @@ export default function Invoices(props: PageProps<Data>) {
                 <td class="cell-date">{fmtDate(inv.issue_date)}</td>
                 <td class="cell-status">{statusBadge(inv.status)}</td>
                 <td class="cell-total text-right font-medium font-mono tabular-nums">
-                  {formatMoney(inv)}
+                  {formatInvoiceMoney(inv)}
                 </td>
               </tr>
             ))}

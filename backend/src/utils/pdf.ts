@@ -195,8 +195,26 @@ function drawLabelValue(
   ctx.cursorY -= 14;
 }
 
-function formatMoney(code: string, amount: number): string {
-  return `${code} ${amount.toFixed(2)}`;
+function formatMoney(
+  value: number,
+  currency: string,
+  numberFormat: "comma" | "period" = "comma"
+): string {
+  // Create a custom locale based on the number format preference
+  let locale: string;
+  let options: Intl.NumberFormatOptions;
+
+  if (numberFormat === "period") {
+    // European style: 1.000,00
+    locale = "de-DE"; // German locale uses period as thousands separator and comma as decimal
+    options = { style: "currency", currency };
+  } else {
+    // US style: 1,000.00
+    locale = "en-US";
+    options = { style: "currency", currency };
+  }
+
+  return new Intl.NumberFormat(locale, options).format(value);
 }
 
 async function inlineLogoIfPossible(
@@ -243,6 +261,7 @@ function buildContext(
   settings?: BusinessSettings & { logoUrl?: string; brandLayout?: string },
   _highlight?: string,
   dateFormat?: string,
+  numberFormat?: "comma" | "period",
 ): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
   const currency = invoice.currency || settings?.currency || "USD";
   // Build tax summary from normalized taxes if present
@@ -250,8 +269,8 @@ function buildContext(
     ? invoice.taxes.map((t) => ({
       label: `VAT ${t.percent}%`,
       percent: t.percent,
-      taxable: toMoney(t.taxableAmount),
-      amount: toMoney(t.taxAmount),
+      taxable: formatMoney(t.taxableAmount, currency, numberFormat || "comma"),
+      amount: formatMoney(t.taxAmount, currency, numberFormat || "comma"),
     }))
     : undefined;
   // Fallback: synthesize a single-row summary from invoice-level taxRate
@@ -264,8 +283,8 @@ function buildContext(
     taxSummary = [{
       label: `VAT ${percent}%`,
       percent,
-      taxable: toMoney(taxableBase),
-      amount: toMoney(invoice.taxAmount),
+      taxable: formatMoney(taxableBase, currency, numberFormat || "comma"),
+      amount: formatMoney(invoice.taxAmount, currency, numberFormat || "comma"),
     }];
   }
   return {
@@ -294,25 +313,27 @@ function buildContext(
     items: invoice.items.map((i) => ({
       description: i.description,
       quantity: i.quantity,
-      unitPrice: toMoney(i.unitPrice),
-      lineTotal: toMoney(i.lineTotal),
+      unitPrice: formatMoney(i.unitPrice, currency, numberFormat || "comma"),
+      lineTotal: formatMoney(i.lineTotal, currency, numberFormat || "comma"),
       notes: i.notes,
     })),
 
     // Totals
-    subtotal: toMoney(invoice.subtotal),
+    subtotal: formatMoney(invoice.subtotal, currency, numberFormat || "comma"),
     discountAmount: invoice.discountAmount > 0
-      ? toMoney(invoice.discountAmount)
+      ? formatMoney(invoice.discountAmount, currency, numberFormat || "comma")
       : undefined,
     discountPercentage: invoice.discountPercentage || undefined,
     taxRate: invoice.taxRate || undefined,
-    taxAmount: invoice.taxAmount > 0 ? toMoney(invoice.taxAmount) : undefined,
-    total: toMoney(invoice.total),
+    taxAmount: invoice.taxAmount > 0 ? formatMoney(invoice.taxAmount, currency, numberFormat || "comma") : undefined,
+    total: formatMoney(invoice.total, currency, numberFormat || "comma"),
     taxSummary,
     hasTaxSummary: Boolean(taxSummary && taxSummary.length > 0),
     // Net subtotal (taxable base after discount, before tax) for convenience
-    netSubtotal: toMoney(
+    netSubtotal: formatMoney(
       Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)),
+      currency,
+      numberFormat || "comma",
     ),
 
     // Flags
@@ -341,7 +362,7 @@ export async function generateInvoicePDF(
   businessSettings?: BusinessSettings,
   templateId?: string,
   customHighlightColor?: string,
-  opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown>; dateFormat?: string },
+  opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown>; dateFormat?: string; numberFormat?: "comma" | "period" },
 ): Promise<Uint8Array> {
   // Inline remote logo when possible for robust HTML rendering
   const inlined = await inlineLogoIfPossible(businessSettings);
@@ -351,6 +372,7 @@ export async function generateInvoicePDF(
     templateId,
     customHighlightColor,
     opts?.dateFormat,
+    opts?.numberFormat,
   );
   // First, attempt Puppeteer-based rendering
   let pdfBytes = await tryPuppeteerPdf(html);
@@ -362,6 +384,7 @@ export async function generateInvoicePDF(
       customHighlightColor,
       templateId,
       opts?.dateFormat || "YYYY-MM-DD",
+      opts?.numberFormat || "comma",
     );
   }
 
@@ -462,8 +485,9 @@ export function buildInvoiceHTML(
   templateId?: string,
   highlight?: string,
   dateFormat?: string,
+  numberFormat?: "comma" | "period",
 ): string {
-  const ctx = buildContext(invoice, settings, highlight, dateFormat);
+  const ctx = buildContext(invoice, settings, highlight, dateFormat, numberFormat);
   const hl = normalizeHex(highlight) || "#2563eb";
   const hlLight = lighten(hl, 0.86);
 
@@ -566,28 +590,28 @@ export function buildInvoiceHTML(
                 ${i.notes ? `<div class="notes">${i.notes}</div>` : ""}
               </td>
               <td>${i.quantity}</td>
-              <td>${ctx.currency} ${i.unitPrice}</td>
-              <td><strong>${ctx.currency} ${i.lineTotal}</strong></td>
+              <td>${i.unitPrice}</td>
+              <td><strong>${i.lineTotal}</strong></td>
             </tr>
           `).join("")
   }
         </tbody>
       </table>
       <div class="totals">
-        <div class="row"><div>Subtotal:</div><div>${ctx.currency} ${ctx.subtotal}</div></div>
+        <div class="row"><div>Subtotal:</div><div>${ctx.subtotal}</div></div>
         ${
     ctx.hasDiscount
       ? `<div class="row"><div>Discount${
         ctx.discountPercentage ? ` (${ctx.discountPercentage}%)` : ""
-      }:</div><div>-${ctx.currency} ${ctx.discountAmount}</div></div>`
+      }:</div><div>-${ctx.discountAmount}</div></div>`
       : ""
   }
         ${
     ctx.hasTax
-      ? `<div class="row"><div>Tax (${ctx.taxRate}%):</div><div>${ctx.currency} ${ctx.taxAmount}</div></div>`
+      ? `<div class="row"><div>Tax (${ctx.taxRate}%):</div><div>${ctx.taxAmount}</div></div>`
       : ""
   }
-        <div class="row total"><div>Total:</div><div>${ctx.currency} ${ctx.total}</div></div>
+        <div class="row total"><div>Total:</div><div>${ctx.total}</div></div>
       </div>
       <div class="payinfo">
         <h4>Payment Information</h4>
@@ -676,6 +700,7 @@ async function generateStyledPDF(
   customHighlightColor?: string,
   templateId?: string,
   dateFormat: string = "YYYY-MM-DD",
+  numberFormat: "comma" | "period" = "comma",
 ): Promise<Uint8Array> {
   const highlight = customHighlightColor
     ? hexToRgb(customHighlightColor)
@@ -687,6 +712,7 @@ async function generateStyledPDF(
       businessSettings,
       highlight,
       dateFormat,
+      numberFormat,
     );
   }
   return await generateProfessionalPDF(
@@ -694,6 +720,7 @@ async function generateStyledPDF(
     businessSettings,
     highlight,
     dateFormat,
+    numberFormat,
   );
 }
 
@@ -722,6 +749,7 @@ async function generateProfessionalPDF(
   businessSettings?: BusinessSettings,
   highlightRgb?: ReturnType<typeof rgb>,
   dateFormat: string = "YYYY-MM-DD",
+  numberFormat: "comma" | "period" = "comma",
 ): Promise<Uint8Array> {
   const highlight = highlightRgb || rgb(0.15, 0.39, 0.92);
 
@@ -904,14 +932,14 @@ async function generateProfessionalPDF(
       font: regularFont,
       color: rgb(0.2, 0.2, 0.2),
     });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.unitPrice), {
+    ctx.page.drawText(formatMoney(item.unitPrice, invoiceData.currency, numberFormat), {
       x: margins.left + contentWidth * 0.70,
       y: ctx.cursorY,
       size: 9,
       font: regularFont,
       color: rgb(0.2, 0.2, 0.2),
     });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.lineTotal), {
+    ctx.page.drawText(formatMoney(item.lineTotal, invoiceData.currency, numberFormat), {
       x: margins.left + contentWidth * 0.83,
       y: ctx.cursorY,
       size: 9,
@@ -945,17 +973,17 @@ async function generateProfessionalPDF(
     });
     ctx.cursorY -= 14;
   };
-  line("Subtotal:", formatMoney(invoiceData.currency, invoiceData.subtotal));
+  line("Subtotal:", formatMoney(invoiceData.subtotal, invoiceData.currency, numberFormat));
   if (invoiceData.discountAmount > 0) {
     line(
       "Discount:",
-      `-${formatMoney(invoiceData.currency, invoiceData.discountAmount)}`,
+      `-${formatMoney(invoiceData.discountAmount, invoiceData.currency, numberFormat)}`,
     );
   }
   if (invoiceData.taxAmount > 0) {
     line(
       `Tax (${invoiceData.taxRate}%):`,
-      formatMoney(invoiceData.currency, invoiceData.taxAmount),
+      formatMoney(invoiceData.taxAmount, invoiceData.currency, numberFormat),
     );
   }
 
@@ -975,7 +1003,7 @@ async function generateProfessionalPDF(
     font: boldFont,
     color: rgb(1, 1, 1),
   });
-  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.total), {
+  ctx.page.drawText(formatMoney(invoiceData.total, invoiceData.currency, numberFormat), {
     x: totalsX + 85,
     y: ctx.cursorY,
     size: 12,
@@ -1041,6 +1069,7 @@ async function generateMinimalistPDF(
   businessSettings?: BusinessSettings,
   highlightRgb?: ReturnType<typeof rgb>,
   dateFormat: string = "YYYY-MM-DD",
+  numberFormat: "comma" | "period" = "comma",
 ): Promise<Uint8Array> {
   const highlight = highlightRgb || rgb(0.05, 0.59, 0.41);
 
@@ -1187,14 +1216,14 @@ async function generateMinimalistPDF(
       font: regularFont,
       color: rgb(0.4, 0.4, 0.4),
     });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.unitPrice), {
+    ctx.page.drawText(formatMoney(item.unitPrice, invoiceData.currency, numberFormat), {
       x: margins.left + contentWidth * 0.72,
       y: ctx.cursorY,
       size: 9,
       font: regularFont,
       color: rgb(0.4, 0.4, 0.4),
     });
-    ctx.page.drawText(formatMoney(invoiceData.currency, item.lineTotal), {
+    ctx.page.drawText(formatMoney(item.lineTotal, invoiceData.currency, numberFormat), {
       x: margins.left + contentWidth * 0.85,
       y: ctx.cursorY,
       size: 9,
@@ -1220,7 +1249,7 @@ async function generateMinimalistPDF(
     font: regularFont,
     color: rgb(0.45, 0.45, 0.45),
   });
-  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.subtotal), {
+  ctx.page.drawText(formatMoney(invoiceData.subtotal, invoiceData.currency, numberFormat), {
     x: totalsX + 90,
     y: ctx.cursorY,
     size: 10,
@@ -1237,7 +1266,7 @@ async function generateMinimalistPDF(
       color: rgb(0.45, 0.45, 0.45),
     });
     ctx.page.drawText(
-      formatMoney(invoiceData.currency, invoiceData.taxAmount),
+      formatMoney(invoiceData.taxAmount, invoiceData.currency, numberFormat),
       {
         x: totalsX + 90,
         y: ctx.cursorY,
@@ -1261,7 +1290,7 @@ async function generateMinimalistPDF(
     font: regularFont,
     color: highlight,
   });
-  ctx.page.drawText(formatMoney(invoiceData.currency, invoiceData.total), {
+  ctx.page.drawText(formatMoney(invoiceData.total, invoiceData.currency, numberFormat), {
     x: totalsX + 90,
     y: ctx.cursorY,
     size: 14,

@@ -148,6 +148,8 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "invoiceNumberingEnabled",
       // Date format
       "dateFormat",
+      // Number format
+      "numberFormat",
     ];
     // Collect values; handle duplicate hidden + checkbox pattern (want last value = actual state)
     for (const f of fields) {
@@ -411,6 +413,22 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                     <option value="DD.MM.YYYY">DD.MM.YYYY (15.01.2025)</option>
                   </select>
                   <div class="label"><span class="label-text-alt">Choose how dates are displayed in invoices</span></div>
+                </label>
+              </div>
+
+              <div class="bg-base-200 rounded-box p-4">
+                <h3 class="font-semibold mb-2">Number Formatting</h3>
+                <label class="form-control">
+                  <div class="label"><span class="label-text">Thousands separator</span></div>
+                  <select
+                    name="numberFormat"
+                    class="select select-bordered w-full"
+                    value={(s.numberFormat as string) || "comma"}
+                  >
+                    <option value="comma">Comma (1,000.00)</option>
+                    <option value="period">Period (1.000,00)</option>
+                  </select>
+                  <div class="label"><span class="label-text-alt">Controls currency formatting everywhere, including PDFs</span></div>
                 </label>
               </div>
               

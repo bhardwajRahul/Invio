@@ -18,6 +18,7 @@ type Data = {
   defaultTaxRate?: number;
   defaultPricesIncludeTax?: boolean;
   defaultRoundingMode?: string;
+  numberFormat?: string;
   error?: string;
   invoiceNumberError?: string;
   invoiceNumberPrefill?: string;
@@ -48,6 +49,7 @@ export const handler: Handlers<Data> = {
       const defaultTaxRate = Number(settings?.defaultTaxRate || 0) || 0;
       const defaultPricesIncludeTax = String(settings?.defaultPricesIncludeTax || 'false').toLowerCase() === 'true';
       const defaultRoundingMode = settings?.defaultRoundingMode || 'line';
+      const numberFormat = settings?.numberFormat || "comma";
       // Fetch next invoice number (if numbering pattern configured) to prefill
       let invoiceNumberPrefill: string | undefined = undefined;
       try {
@@ -67,6 +69,7 @@ export const handler: Handlers<Data> = {
         defaultTaxRate,
         defaultPricesIncludeTax,
         defaultRoundingMode,
+        numberFormat,
         invoiceNumberPrefill,
       });
     } catch (e) {
@@ -190,6 +193,7 @@ export const handler: Handlers<Data> = {
         const sDefaultTaxRate = Number(settings?.defaultTaxRate || 0) || 0;
         const sDefaultPricesIncludeTax = String(settings?.defaultPricesIncludeTax || 'false').toLowerCase() === 'true';
         const sDefaultRoundingMode = settings?.defaultRoundingMode || 'line';
+        const sNumberFormat = settings?.numberFormat || "comma";
         return ctx.render({
           authed: true,
           customers,
@@ -199,6 +203,7 @@ export const handler: Handlers<Data> = {
           defaultTaxRate: sDefaultTaxRate,
           defaultPricesIncludeTax: sDefaultPricesIncludeTax,
           defaultRoundingMode: sDefaultRoundingMode,
+          numberFormat: sNumberFormat,
           invoiceNumberError: "Invoice number already exists",
         });
       }
@@ -216,6 +221,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
   const defaultTaxRate = props.data.defaultTaxRate ?? 0;
   const defaultPricesIncludeTax = props.data.defaultPricesIncludeTax ?? false;
   const defaultRoundingMode = props.data.defaultRoundingMode || 'line';
+  const numberFormat = props.data.numberFormat || "comma";
   return (
     <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
       {(props.data.error || props.data.invoiceNumberError) && (
@@ -253,6 +259,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
           roundingMode={defaultRoundingMode}
           taxMode="invoice"
           invoiceNumberError={props.data.invoiceNumberError}
+          numberFormat={numberFormat}
         />
       </form>
     </Layout>

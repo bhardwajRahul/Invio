@@ -1,6 +1,20 @@
 import { useEffect } from "preact/hooks";
+import { formatMoney } from "../utils/format.ts";
 
 export default function InvoiceEditorIsland() {
+  type InvoiceEditorGlobals = typeof globalThis & {
+    invoiceEditorSettings?: {
+      numberFormat?: "comma" | "period";
+    };
+    lucide?: {
+      createIcons?: () => void;
+    };
+  };
+
+  const invoiceEditorGlobals = globalThis as InvoiceEditorGlobals;
+
+  // Get numberFormat from global settings
+  const numberFormat = invoiceEditorGlobals.invoiceEditorSettings?.numberFormat || "comma";
   useEffect(() => {
     const addBtn = document.getElementById('add-item');
     const container = document.getElementById('items-container');
@@ -25,14 +39,7 @@ export default function InvoiceEditorIsland() {
 
     function formatCurrency(amount: number): string {
       const currency = currencyInput?.value || 'USD';
-      try {
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: currency,
-        }).format(amount);
-      } catch {
-        return `${currency} ${amount.toFixed(2)}`;
-      }
+      return formatMoney(amount, currency, numberFormat);
     }
 
     function calculateTotals() {
@@ -211,7 +218,7 @@ export default function InvoiceEditorIsland() {
         calculateTotals();
         // Initialize lucide icons for the new row
         try {
-          const lucide = (globalThis as unknown as { lucide?: { createIcons?: () => void } }).lucide;
+          const lucide = invoiceEditorGlobals.lucide;
           if (lucide && typeof lucide.createIcons === 'function') {
             lucide.createIcons();
           }

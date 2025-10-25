@@ -17,6 +17,7 @@ import {
   LuFileCode2,
   LuDownload,
 } from "../../components/icons.tsx";
+import { formatMoney, getNumberFormat } from "../../utils/format.ts";
 import {
   backendDelete,
   backendGet,
@@ -51,6 +52,7 @@ type Data = {
   error?: string;
   showPublishedBanner?: boolean;
   dateFormat?: string;
+  settings?: Record<string, unknown>;
 };
 
 export const handler: Handlers<Data> = {
@@ -78,6 +80,7 @@ export const handler: Handlers<Data> = {
         invoice,
         showPublishedBanner,
         dateFormat,
+        settings,
       });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -180,11 +183,8 @@ export default function InvoiceDetail(props: PageProps<Data>) {
   const inv = props.data.invoice;
   const currency = (inv?.currency as string) || "USD";
   const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
-  const fmtMoney = (v?: number) =>
-    typeof v === "number"
-      ? new Intl.NumberFormat(undefined, { style: "currency", currency })
-        .format(v)
-      : "";
+  const numberFormat = getNumberFormat(props.data.settings);
+  const fmtMoney = (v?: number) => formatMoney(v, currency, numberFormat);
   const fmtDate = (d?: string | Date) => {
     if (!d) return "";
     const dt = typeof d === "string" ? new Date(d) : d;

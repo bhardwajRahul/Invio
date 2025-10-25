@@ -675,6 +675,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     selectedTemplateId,
     highlight,
     settingsMap.dateFormat,
+    settingsMap.numberFormat,
   );
   return new Response(html, {
     headers: {
@@ -738,7 +739,7 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
       businessSettings,
       selectedTemplateId,
       highlight,
-      { embedXml, embedXmlProfileId: xmlProfileId, dateFormat: settingsMap.dateFormat },
+      { embedXml, embedXmlProfileId: xmlProfileId, dateFormat: settingsMap.dateFormat, numberFormat: settingsMap.numberFormat },
     );
     // Detect embedded attachments for diagnostics
     let hasAttachment = false;

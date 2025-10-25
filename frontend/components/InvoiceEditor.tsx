@@ -33,6 +33,7 @@ export function InvoiceEditor(props: {
   dueDate?: string;
   demoMode?: boolean;
   invoiceNumberError?: string;
+  numberFormat?: string;
 }): JSX.Element {
   const items = props.items && props.items.length > 0
     ? props.items
@@ -420,6 +421,11 @@ export function InvoiceEditor(props: {
           </textarea>
         </label>
       </div>
+
+      {/* Pass numberFormat to island */}
+      <script>
+        {`globalThis.invoiceEditorSettings = ${JSON.stringify({ numberFormat: props.numberFormat || "comma" })};`}
+      </script>
 
       <InvoiceEditorIsland />
     </div>

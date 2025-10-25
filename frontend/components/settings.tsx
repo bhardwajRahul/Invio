@@ -341,6 +341,26 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                   </div>
                 </div>
               </div>
+              <form method="post" data-writable>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label class="form-control">
+                    <div class="label"><span class="label-text">Thousands Separator</span></div>
+                    <select name="numberFormat" class="select select-bordered w-full" value={(s.numberFormat as string) || "comma"}>
+                      <option value="comma">Comma (1,000.00)</option>
+                      <option value="period">Period (1.000,00)</option>
+                    </select>
+                  </label>
+                  <label class="form-control">
+                    <div class="label"><span class="label-text">Date Format</span></div>
+                    <select name="dateFormat" class="select select-bordered w-full" value={(s.dateFormat as string) || "YYYY-MM-DD"}>
+                      <option value="YYYY-MM-DD">YYYY-MM-DD (2025-01-15)</option>
+                      <option value="DD.MM.YYYY">DD.MM.YYYY (15.01.2025)</option>
+                    </select>
+                    <div class="label"><span class="label-text-alt">Choose how dates are displayed in invoices</span></div>
+                  </label>
+                </div>
+                <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
+              </form>
             </div>
           )}
 

@@ -31,7 +31,7 @@ type Invoice = {
   status?: "draft" | "sent" | "paid" | "overdue";
   taxes?: Array<{ percent: number; taxableAmount: number; taxAmount: number }>;
 };
-type Data = { authed: boolean; invoice?: Invoice; error?: string };
+type Data = { authed: boolean; invoice?: Invoice; settings?: Record<string, string>; error?: string };
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
@@ -57,7 +57,9 @@ export const handler: Handlers<Data> = {
           headers: { Location: `/invoices/${id}` },
         });
       }
-      return ctx.render({ authed: true, invoice });
+      // Also fetch settings for numberFormat
+      const settings = await backendGet("/api/v1/settings", auth) as Record<string, string>;
+      return ctx.render({ authed: true, invoice, settings });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
     }
@@ -158,6 +160,8 @@ export const handler: Handlers<Data> = {
 export default function EditInvoicePage(props: PageProps<Data>) {
   const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   const inv = props.data.invoice;
+  const settings = props.data.settings || {};
+  const numberFormat = settings.numberFormat || "comma";
   return (
     <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
       {props.data.error && (
@@ -205,6 +209,7 @@ export default function EditInvoicePage(props: PageProps<Data>) {
               })}
             demoMode={demoMode}
             invoiceNumberError={props.data.error}
+            numberFormat={numberFormat}
           />
         </form>
       )}
