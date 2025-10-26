@@ -25,9 +25,33 @@
 - Client‑friendly — share a secure public link—no accounts or passwords required to view invoices.
 
 ## 🖼️ Screenshots
-<p align="center">
-  <img src="https://raw.githubusercontent.com/kittendevv/Invio/refs/heads/main/assets/inviodashboard.webp" alt="Invio Dashboard" width="100%" />
-</p>
+<details>
+<summary>Dashboard</summary>
+  
+<img src="https://hc-cdn.hel1.your-objectstorage.com/s/v3/a6f7621a1f74b0de42507743c78da94c83e82c8a_screenshot_2025-10-26_092947.png" alt="Invio Dashboard" width="100%" />
+  
+</details>
+
+<details>
+<summary>Invoice Creation</summary>
+  
+<img src="https://hc-cdn.hel1.your-objectstorage.com/s/v3/e3ec9ac920db9f4606f9a46096b93acfa59de569_screenshot_2025-10-26_093746.png" alt="Invio Dashboard" width="100%" />
+  
+</details>
+
+<details>
+<summary>Settings</summary>
+  
+<img src="https://hc-cdn.hel1.your-objectstorage.com/s/v3/3e0acb92d7b807c3ca472d5d8f13907d12bee50e_screenshot_2025-10-26_094056.png" alt="Invio Dashboard" width="100%" />
+  
+</details>
+
+<details>
+<summary>Invoices</summary>
+  
+<img src="https://hc-cdn.hel1.your-objectstorage.com/s/v3/5ac9f89da2a86332583027f70630bb772f652836_invoices.png" alt="Invio Dashboard" width="100%" />
+  
+</details>
 
 ## 🤝 Contributing
 
