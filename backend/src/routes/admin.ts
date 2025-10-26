@@ -1,6 +1,5 @@
 // @ts-nocheck: route handlers use Hono context without typings to keep edits minimal
 import { Hono } from "hono";
-import { basicAuth } from "hono/basic-auth";
 import {
   createInvoice,
   deleteInvoice,
@@ -41,6 +40,7 @@ import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
 import { getDatabase } from "../database/init.ts";
+import { requireAdminAuth } from "../middleware/auth.ts";
 
 const adminRoutes = new Hono();
 
@@ -89,34 +89,22 @@ function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
   }
 }
 
-// Basic auth middleware for admin routes
-const ADMIN_USER = Deno.env.get("ADMIN_USER") || "admin";
-const ADMIN_PASS = Deno.env.get("ADMIN_PASS") || "supersecret";
 // Demo mode flag (mutations allowed; periodic resets handle reverting state)
 const DEMO_MODE = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
 
 adminRoutes.use(
   "/invoices/*",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
+  requireAdminAuth,
 );
 
 adminRoutes.use(
   "/customers/*",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
+  requireAdminAuth,
 );
 
 adminRoutes.use(
   "/templates/*",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
+  requireAdminAuth,
 );
 
 // Public dev-only endpoints (no auth) to serve a test manifest and HTML
@@ -140,28 +128,19 @@ adminRoutes.get("/dev/templates/simple/index.html", (_c) => {
 
 adminRoutes.use(
   "/settings/*",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
+  requireAdminAuth,
 );
 
 // Protect admin alias routes as well
 adminRoutes.use(
   "/admin/*",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
+  requireAdminAuth,
 );
 
 // Protect export routes
 adminRoutes.use(
   "/export/*",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
+  requireAdminAuth,
 );
 
 // Demo helper: trigger an immediate reset (only effective when DEMO_MODE=true)

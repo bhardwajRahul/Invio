@@ -3,7 +3,9 @@
 // This file is automatically updated during development when running `dev.ts`.
 
 import * as $_app from "./routes/_app.tsx";
+import * as $_middleware from "./routes/_middleware.ts";
 import * as $api_admin_export_full from "./routes/api/admin/export/full.ts";
+import * as $api_auth_login from "./routes/api/auth/login.ts";
 import * as $api_templates_install from "./routes/api/templates/install.ts";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
 import * as $customers_id_cannot_delete from "./routes/customers/[id]/cannot-delete.tsx";
@@ -42,7 +44,9 @@ import type { Manifest } from "$fresh/server.ts";
 const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
+    "./routes/_middleware.ts": $_middleware,
     "./routes/api/admin/export/full.ts": $api_admin_export_full,
+    "./routes/api/auth/login.ts": $api_auth_login,
     "./routes/api/templates/install.ts": $api_templates_install,
     "./routes/customers/[id].tsx": $customers_id_,
     "./routes/customers/[id]/cannot-delete.tsx": $customers_id_cannot_delete,

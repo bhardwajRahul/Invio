@@ -56,6 +56,10 @@ jobs:
           images: |
             name=ghcr.io/${{ steps.repo.outputs.name }}-${{ matrix.image }},enable=true
 
+      - name: Copy VERSION into frontend build context
+        if: ${{ matrix.image == 'frontend' }}
+        run: cp VERSION frontend/VERSION
+
       - name: Build and push image
         uses: docker/build-push-action@v6.18.0
         with:

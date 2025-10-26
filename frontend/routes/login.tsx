@@ -1,6 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
-import { backendGet, setAuthCookieHeaders, BACKEND_URL } from "../utils/backend.ts";
+import { setAuthCookieHeaders, BACKEND_URL } from "../utils/backend.ts";
 
 type Data = { error: string | null; username?: string; demoMode?: boolean };
 
@@ -26,27 +26,66 @@ export const handler: Handlers<Data> = {
     if (!username || !password) {
       return ctx.render({ error: "Missing credentials", username });
     }
-    const basic = `Basic ${btoa(`${username}:${password}`)}`;
-    // Validate credentials by hitting a protected GET
+    // Attempt to obtain a short-lived JWT session token from the backend
     try {
-      await backendGet("/api/v1/invoices", basic);
+      const resp = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!resp.ok) {
+        let parsedError: unknown = null;
+        try {
+          parsedError = await resp.json();
+        } catch {
+          try {
+            const text = await resp.text();
+            parsedError = text ? { error: text } : null;
+          } catch {
+            parsedError = null;
+          }
+        }
+        if (resp.status === 401) {
+          return ctx.render({ error: "Invalid credentials", username });
+        }
+        let message: string | null = null;
+        if (parsedError && typeof parsedError === "object") {
+          const candidate = (parsedError as { error?: unknown; message?: unknown }).error ??
+            (parsedError as { error?: unknown; message?: unknown }).message;
+          if (typeof candidate === "string" && candidate.trim().length > 0) {
+            message = candidate.trim();
+          }
+        } else if (typeof parsedError === "string" && parsedError.trim().length > 0) {
+          message = parsedError.trim();
+        }
+        const msg = message ?? `${resp.status} ${resp.statusText}`;
+        return ctx.render({ error: msg, username });
+      }
+      const data = await resp.json() as { token?: string; expiresIn?: number };
+      if (!data?.token) {
+        return ctx.render({
+          error: "Login response missing token",
+          username,
+        });
+      }
+      const headers = new Headers({
+        ...setAuthCookieHeaders(data.token, data.expiresIn),
+        Location: "/dashboard",
+      });
+      return new Response(null, { status: 303, headers });
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
-      // Check if it's an authentication error (401/403) vs other errors
-      if (errorMessage.includes("401") || errorMessage.includes("403")) {
+      if (/401|403/.test(errorMessage)) {
         return ctx.render({ error: "Invalid credentials", username });
-      } else if (errorMessage.includes("500") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        return ctx.render({ error: "Server error. Please try again later.", username });
-      } else {
-        // Network errors, timeouts, or other connection issues
-        return ctx.render({ error: "Unable to connect to server. Please check your connection and try again.", username });
       }
+      if (/5\d\d/.test(errorMessage)) {
+        return ctx.render({ error: "Server error. Please try again later.", username });
+      }
+      return ctx.render({
+        error: "Unable to connect to server. Please check your connection and try again.",
+        username,
+      });
     }
-    const headers = new Headers({
-      ...setAuthCookieHeaders(basic),
-      Location: "/dashboard",
-    });
-    return new Response(null, { status: 303, headers });
   },
 };
 

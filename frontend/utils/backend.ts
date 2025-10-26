@@ -1,10 +1,16 @@
 export const BACKEND_URL = Deno.env.get("BACKEND_URL") ||
   "http://localhost:3000";
-const AUTH_COOKIE = "invio_auth";
 
-export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
-  if (!cookieHeader) return null;
-  const cookies = Object.fromEntries(
+const SESSION_COOKIE = "invio_session";
+const DEFAULT_SESSION_MAX_AGE = Math.max(
+  300,
+  Math.min(60 * 60 * 12, parseInt(Deno.env.get("SESSION_TTL_SECONDS") || "3600", 10) || 3600),
+);
+const COOKIE_SECURE = (Deno.env.get("COOKIE_SECURE") || "true").toLowerCase() !== "false";
+
+function parseCookies(cookieHeader?: string): Record<string, string> {
+  if (!cookieHeader) return {};
+  return Object.fromEntries(
     cookieHeader.split(/;\s*/).map((p) => {
       const i = p.indexOf("=");
       if (i === -1) return [p, ""];
@@ -14,26 +20,39 @@ export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
       ];
     }),
   );
-  const b64 = cookies[AUTH_COOKIE];
-  if (!b64) return null;
-  return `Basic ${b64}`;
 }
 
-export function setAuthCookieHeaders(basic: string): HeadersInit {
-  // Expect 'basic' to be 'Basic <base64>' or just base64
-  let b64 = basic;
-  if (basic.startsWith("Basic ")) {
-    b64 = basic.slice("Basic ".length);
+export function getAuthHeaderFromCookie(cookieHeader?: string): string | null {
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies[SESSION_COOKIE];
+  if (!token) return null;
+  return `Bearer ${token}`;
+}
+
+export function setAuthCookieHeaders(token: string, maxAgeSeconds = DEFAULT_SESSION_MAX_AGE): HeadersInit {
+  const attrs = [
+    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Strict",
+  ];
+  if (COOKIE_SECURE) attrs.push("Secure");
+  if (Number.isFinite(maxAgeSeconds) && maxAgeSeconds > 0) {
+    attrs.push(`Max-Age=${Math.floor(maxAgeSeconds)}`);
   }
-  const cookie = `${AUTH_COOKIE}=${
-    encodeURIComponent(b64)
-  }; HttpOnly; Path=/; SameSite=Lax`;
-  return { "Set-Cookie": cookie };
+  return { "Set-Cookie": attrs.join("; ") };
 }
 
 export function clearAuthCookieHeaders(): HeadersInit {
-  const cookie = `${AUTH_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
-  return { "Set-Cookie": cookie };
+  const attrs = [
+    `${SESSION_COOKIE}=`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Strict",
+    "Max-Age=0",
+  ];
+  if (COOKIE_SECURE) attrs.push("Secure");
+  return { "Set-Cookie": attrs.join("; ") };
 }
 
 export async function backendGet(path: string, authHeader: string) {

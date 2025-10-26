@@ -30,6 +30,59 @@ function normalizeHex(hex?: string): string | undefined {
   return undefined;
 }
 
+function escapeHtml(value: unknown): string {
+  const str = value === undefined || value === null ? "" : String(value);
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeHtmlWithBreaks(value: unknown): string {
+  return escapeHtml(value).replace(/\r?\n/g, "<br />");
+}
+
+const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function isPrivateIPv4Host(hostname: string): boolean {
+  const parts = hostname.split(".").map((n) => Number(n));
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
+    return false;
+  }
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  return false;
+}
+
+function isPrivateIPv6Host(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (lower === "::1") return true;
+  if (lower.startsWith("fd") || lower.startsWith("fc")) return true;
+  if (lower.startsWith("fe80")) return true;
+  return false;
+}
+
+function tryParseSafeRemoteUrl(raw: string): URL | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase();
+  if (BLOCKED_HOSTS.has(host)) return null;
+  if (isPrivateIPv4Host(host) || isPrivateIPv6Host(host)) return null;
+  return url;
+}
+
 function lighten(hex: string, amount = 0.85): string {
   const n = normalizeHex(hex) ?? "#2563eb";
   const m = n.replace("#", "");
@@ -55,10 +108,6 @@ function formatDate(d?: Date, format: string = "YYYY-MM-DD") {
   }
   // Default to YYYY-MM-DD
   return `${year}-${month}-${day}`;
-}
-
-function toMoney(n: number): string {
-  return n.toFixed(2);
 }
 
 // Support a single stored 'logo' setting; 'logoUrl' here is a derived, inlined data URL for rendering robustness
@@ -232,8 +281,9 @@ async function inlineLogoIfPossible(
   };
 
   try {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      const res = await fetch(url);
+    const remote = tryParseSafeRemoteUrl(url);
+    if (remote) {
+      const res = await fetch(remote);
       if (!res.ok) return settings;
       const buf = new Uint8Array(await res.arrayBuffer());
       const mime = res.headers.get("content-type") ?? "image/png";
@@ -242,7 +292,10 @@ async function inlineLogoIfPossible(
         logoUrl: toDataUrl(buf, mime),
       } as unknown as BusinessSettings;
     }
-    // Attempt local file read
+    // Attempt local file read (prevent traversal)
+    if (url.includes("..")) {
+      return settings;
+    }
     const file = await Deno.readFile(url);
     let mime = "image/png";
     if (url.endsWith(".jpg") || url.endsWith(".jpeg")) mime = "image/jpeg";
@@ -550,8 +603,8 @@ export function buildInvoiceHTML(
   <body>
     <div class="topbar">
       <div class="brand">
-        ${ctx.logoUrl ? `<img src="${ctx.logoUrl}" alt="logo"/>` : ""}
-        <div>${ctx.companyName}</div>
+        ${ctx.logoUrl ? `<img src="${escapeHtml(ctx.logoUrl)}" alt="logo"/>` : ""}
+        <div>${escapeHtml(ctx.companyName)}</div>
       </div>
       <div class="title">INVOICE</div>
     </div>
@@ -559,15 +612,15 @@ export function buildInvoiceHTML(
       <div class="row">
         <div class="billto">
           <h3>BILL TO:</h3>
-          <div class="name">${ctx.customerName}</div>
-          ${ctx.customerAddress ? `<p>${ctx.customerAddress}</p>` : ""}
-          ${ctx.customerEmail ? `<p>${ctx.customerEmail}</p>` : ""}
-          ${ctx.customerPhone ? `<p>${ctx.customerPhone}</p>` : ""}
+          <div class="name">${escapeHtml(ctx.customerName)}</div>
+          ${ctx.customerAddress ? `<p>${escapeHtmlWithBreaks(ctx.customerAddress)}</p>` : ""}
+          ${ctx.customerEmail ? `<p>${escapeHtml(ctx.customerEmail)}</p>` : ""}
+          ${ctx.customerPhone ? `<p>${escapeHtml(ctx.customerPhone)}</p>` : ""}
         </div>
         <div class="meta">
-          <p><strong>Invoice #:</strong> ${ctx.invoiceNumber}</p>
-          <p><strong>Date:</strong> ${ctx.issueDate}</p>
-          ${ctx.dueDate ? `<p><strong>Due:</strong> ${ctx.dueDate}</p>` : ""}
+          <p><strong>Invoice #:</strong> ${escapeHtml(ctx.invoiceNumber)}</p>
+          <p><strong>Date:</strong> ${escapeHtml(ctx.issueDate)}</p>
+          ${ctx.dueDate ? `<p><strong>Due:</strong> ${escapeHtml(ctx.dueDate)}</p>` : ""}
         </div>
       </div>
       <table class="table">
@@ -586,45 +639,45 @@ export function buildInvoiceHTML(
             <tr>
               
               <td>
-                <div class="desc">${i.description}</div>
-                ${i.notes ? `<div class="notes">${i.notes}</div>` : ""}
+                <div class="desc">${escapeHtml(i.description)}</div>
+                ${i.notes ? `<div class="notes">${escapeHtmlWithBreaks(i.notes)}</div>` : ""}
               </td>
-              <td>${i.quantity}</td>
-              <td>${i.unitPrice}</td>
-              <td><strong>${i.lineTotal}</strong></td>
+              <td>${escapeHtml(i.quantity)}</td>
+              <td>${escapeHtml(i.unitPrice)}</td>
+              <td><strong>${escapeHtml(i.lineTotal)}</strong></td>
             </tr>
           `).join("")
   }
         </tbody>
       </table>
       <div class="totals">
-        <div class="row"><div>Subtotal:</div><div>${ctx.subtotal}</div></div>
+        <div class="row"><div>Subtotal:</div><div>${escapeHtml(ctx.subtotal)}</div></div>
         ${
     ctx.hasDiscount
       ? `<div class="row"><div>Discount${
-        ctx.discountPercentage ? ` (${ctx.discountPercentage}%)` : ""
-      }:</div><div>-${ctx.discountAmount}</div></div>`
+        ctx.discountPercentage ? ` (${escapeHtml(ctx.discountPercentage)}%)` : ""
+      }:</div><div>-${escapeHtml(ctx.discountAmount)}</div></div>`
       : ""
   }
         ${
     ctx.hasTax
-      ? `<div class="row"><div>Tax (${ctx.taxRate}%):</div><div>${ctx.taxAmount}</div></div>`
+      ? `<div class="row"><div>Tax (${escapeHtml(ctx.taxRate)}%):</div><div>${escapeHtml(ctx.taxAmount)}</div></div>`
       : ""
   }
-        <div class="row total"><div>Total:</div><div>${ctx.total}</div></div>
+        <div class="row total"><div>Total:</div><div>${escapeHtml(ctx.total)}</div></div>
       </div>
       <div class="payinfo">
         <h4>Payment Information</h4>
         ${
-    ctx.paymentTerms ? `<p><strong>Terms:</strong> ${ctx.paymentTerms}</p>` : ""
+    ctx.paymentTerms ? `<p><strong>Terms:</strong> ${escapeHtml(ctx.paymentTerms)}</p>` : ""
   }
         ${
     ctx.paymentMethods
-      ? `<p><strong>Methods:</strong> ${ctx.paymentMethods}</p>`
+      ? `<p><strong>Methods:</strong> ${escapeHtml(ctx.paymentMethods)}</p>`
       : ""
   }
         ${
-    ctx.bankAccount ? `<p><strong>Bank:</strong> ${ctx.bankAccount}</p>` : ""
+    ctx.bankAccount ? `<p><strong>Bank:</strong> ${escapeHtml(ctx.bankAccount)}</p>` : ""
   }
       </div>
     </div>
