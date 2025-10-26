@@ -6,6 +6,11 @@ import { adminRoutes } from "./routes/admin.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { authRoutes } from "./routes/auth.ts";
 
+const SECURE_HEADERS_DISABLED = (Deno.env.get("SECURE_HEADERS_DISABLED") || "").toLowerCase() === "true";
+const HSTS_ENABLED = (Deno.env.get("ENABLE_HSTS") || "").toLowerCase() === "true";
+const CONTENT_SECURITY_POLICY = Deno.env.get("CONTENT_SECURITY_POLICY") ||
+  "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; connect-src 'self'";
+
 const app = new Hono();
 
 // Check for required credentials in environment
@@ -56,6 +61,39 @@ app.use(
     allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
+app.use("*", async (c, next) => {
+  await next();
+  if (SECURE_HEADERS_DISABLED) return;
+  const headers = c.res.headers;
+  if (!headers.has("X-Content-Type-Options")) {
+    headers.set("X-Content-Type-Options", "nosniff");
+  }
+  if (!headers.has("X-Frame-Options")) {
+    headers.set("X-Frame-Options", "DENY");
+  }
+  if (!headers.has("Referrer-Policy")) {
+    headers.set("Referrer-Policy", "no-referrer");
+  }
+  if (!headers.has("Permissions-Policy")) {
+    headers.set("Permissions-Policy", "accelerometer=(), autoplay=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()");
+  }
+  if (!headers.has("Cross-Origin-Opener-Policy")) {
+    headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  }
+  if (!headers.has("Cross-Origin-Resource-Policy")) {
+    headers.set("Cross-Origin-Resource-Policy", "same-site");
+  }
+  if (!headers.has("Content-Security-Policy")) {
+    headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  }
+  if (HSTS_ENABLED && !headers.has("Strict-Transport-Security")) {
+    const proto = c.req.header("x-forwarded-proto")?.toLowerCase() || (c.req.url.startsWith("https://") ? "https" : "http");
+    if (proto === "https") {
+      headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+  }
+});
 
 // Routes
 app.route("/api/v1", adminRoutes);

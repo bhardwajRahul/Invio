@@ -6,7 +6,7 @@ download a good‑looking PDF. That’s it.
 ## Highlights
 
 - Simple JSON API (Deno + Hono) at `/api/v1`
-- Admin endpoints behind Basic Auth (ADMIN_USER/ADMIN_PASS)
+- Admin endpoints behind JWT bearer auth (ADMIN_USER/ADMIN_PASS bootstrap)
 - Public share links per invoice (no login)
 - HTML and PDF renderers share the same templates
 - UBL 2.1 (PEPPOL BIS Billing 3.0) XML export for each invoice
@@ -21,6 +21,11 @@ download a good‑looking PDF. That’s it.
 ```
 invio-backend
 ├── src
+JWT_SECRET=...
+# Optional security header toggles
+# SECURE_HEADERS_DISABLED=false
+# ENABLE_HSTS=true
+# CONTENT_SECURITY_POLICY="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; connect-src 'self'"
 │   ├── app.ts
 │   ├── routes
 │   │   ├── admin.ts
@@ -101,7 +106,7 @@ Principles
 
 ### Auth
 
-- Admin routes use Basic Auth (from ENV).
+- Admin routes require a JWT obtained via `/api/v1/auth/login` using the admin credentials from env.
 - Public routes use a share token (no auth).
 
 ### Settings
@@ -119,7 +124,11 @@ Principles
 Example:
 
 ```bash
-curl -u admin:supersecret -H "Content-Type: application/json" \
+TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"supersecret"}' | jq -r '.token')
+
+curl -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
   -X PATCH http://localhost:3000/api/v1/settings \
   -d '{"companyName":"Your Company","logo":"https://example.com/logo.png","templateId":"professional-modern","highlight":"#6B4EFF"}'
 ```

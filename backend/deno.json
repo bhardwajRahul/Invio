@@ -39,6 +39,7 @@
     "puppeteer-core": "npm:puppeteer-core@22.13.1",
     "crypto": "https://deno.land/std@0.224.0/crypto/mod.ts",
     "dotenv": "https://deno.land/std@0.224.0/dotenv/mod.ts",
-    "yaml": "https://deno.land/std@0.224.0/yaml/mod.ts"
+    "yaml": "https://deno.land/std@0.224.0/yaml/mod.ts",
+    "std/path": "https://deno.land/std@0.224.0/path/mod.ts"
   }
 }

@@ -6,6 +6,16 @@ WORKDIR /app
 # Copy frontend source
 COPY . /app
 
+# Ensure VERSION is available in the runtime image. Prefer copying the file from the
+# build context (expected to be synced from the repository root); fall back to the
+# APP_VERSION build arg when the file is absent.
+ARG APP_VERSION=unknown
+RUN if [ -f /app/VERSION ]; then \
+      printf "%s" "$(sed -e 's/\r$//' /app/VERSION)" > /app/VERSION; \
+    else \
+      printf "%s" "${APP_VERSION}" > /app/VERSION; \
+    fi
+
 # Cache imports
 RUN deno cache main.ts dev.ts
 

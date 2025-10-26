@@ -13,5 +13,6 @@
 .env
 
 /frontend/static/dev
+/frontend/VERSION
 
 /Invio.wiki
