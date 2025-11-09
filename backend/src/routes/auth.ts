@@ -1,23 +1,42 @@
 import { Hono } from "hono";
-import { basicAuth } from "hono/basic-auth";
 import { createJWT } from "../utils/jwt.ts";
 import { getAdminCredentials } from "../utils/env.ts";
 
+function getSessionTtlSeconds(): number {
+  const parsed = parseInt(Deno.env.get("SESSION_TTL_SECONDS") || "3600", 10);
+  const candidate = Number.isFinite(parsed) ? parsed : 3600;
+  return Math.max(300, Math.min(60 * 60 * 12, candidate));
+}
+
 const authRoutes = new Hono();
 
-const { username: ADMIN_USER, password: ADMIN_PASS } = getAdminCredentials();
+authRoutes.post("/auth/login", async (c) => {
+  let username: string | undefined;
+  let password: string | undefined;
 
-authRoutes.post(
-  "/auth/login",
-  basicAuth({
-    username: ADMIN_USER,
-    password: ADMIN_PASS,
-  }),
-  async (c) => {
-    // If basic auth succeeds, generate JWT
-    const token = await createJWT({ username: ADMIN_USER });
-    return c.json({ token });
-  },
-);
+  try {
+    const body = await c.req.json();
+    if (body && typeof body.username === "string" && typeof body.password === "string") {
+      username = body.username;
+      password = body.password;
+    }
+  } catch {
+    // ignore parse errors; fall through to missing credentials handling
+  }
+
+  if (!username || !password) {
+    return c.json({ error: "Missing credentials" }, 400);
+  }
+
+  const { username: adminUser, password: adminPass } = getAdminCredentials();
+  if (username !== adminUser || password !== adminPass) {
+    return c.json({ error: "Invalid credentials" }, 401);
+  }
+
+  const sessionTtl = getSessionTtlSeconds();
+  const now = Math.floor(Date.now() / 1000);
+  const token = await createJWT({ username: adminUser, iat: now, exp: now + sessionTtl });
+  return c.json({ token, expiresIn: sessionTtl });
+});
 
 export { authRoutes };

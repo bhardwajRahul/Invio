@@ -8,7 +8,7 @@ function getAuthHeaderFromCookie(cookie: string): string | null {
     if (i === -1) continue;
     const k = decodeURIComponent(p.slice(0, i));
     const v = decodeURIComponent(p.slice(i + 1));
-    if (k === "invio_auth" && v) return `Basic ${v}`;
+    if (k === "invio_session" && v) return `Bearer ${v}`;
   }
   return null;
 }

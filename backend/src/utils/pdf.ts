@@ -32,6 +32,59 @@ function normalizeHex(hex?: string): string | undefined {
   return undefined;
 }
 
+function escapeHtml(value: unknown): string {
+  const str = value === undefined || value === null ? "" : String(value);
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeHtmlWithBreaks(value: unknown): string {
+  return escapeHtml(value).replace(/\r?\n/g, "<br />");
+}
+
+const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function isPrivateIPv4Host(hostname: string): boolean {
+  const parts = hostname.split(".").map((n) => Number(n));
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
+    return false;
+  }
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  return false;
+}
+
+function isPrivateIPv6Host(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (lower === "::1") return true;
+  if (lower.startsWith("fd") || lower.startsWith("fc")) return true;
+  if (lower.startsWith("fe80")) return true;
+  return false;
+}
+
+function tryParseSafeRemoteUrl(raw: string): URL | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase();
+  if (BLOCKED_HOSTS.has(host)) return null;
+  if (isPrivateIPv4Host(host) || isPrivateIPv6Host(host)) return null;
+  return url;
+}
+
 function lighten(hex: string, amount = 0.85): string {
   const n = normalizeHex(hex) ?? "#2563eb";
   const m = n.replace("#", "");
@@ -103,8 +156,9 @@ async function inlineLogoIfPossible(
   };
 
   try {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      const res = await fetch(url);
+    const remote = tryParseSafeRemoteUrl(url);
+    if (remote) {
+      const res = await fetch(remote);
       if (!res.ok) return settings;
       const buf = new Uint8Array(await res.arrayBuffer());
       const mime = res.headers.get("content-type") ?? "image/png";
@@ -113,7 +167,10 @@ async function inlineLogoIfPossible(
         logoUrl: toDataUrl(buf, mime),
       } as unknown as BusinessSettings;
     }
-    // Attempt local file read
+    // Attempt local file read (prevent traversal)
+    if (url.includes("..")) {
+      return settings;
+    }
     const file = await Deno.readFile(url);
     let mime = "image/png";
     if (url.endsWith(".jpg") || url.endsWith(".jpeg")) mime = "image/jpeg";

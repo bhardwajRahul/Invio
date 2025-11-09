@@ -1,5 +1,6 @@
 // @ts-nocheck: simplify handlers without explicit typings
 import { Hono } from "hono";
+import { normalize, relative, resolve } from "std/path";
 import { getInvoiceByShareToken } from "../controllers/invoices.ts";
 import { getSettings } from "../controllers/settings.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
@@ -7,6 +8,10 @@ import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 
 const publicRoutes = new Hono();
+
+function isSafeTemplateIdentifier(value: string): boolean {
+  return /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(value);
+}
 
 // Expose a lightweight public endpoint so unauthenticated clients can
 // detect whether the backend is running in demo (read-only) mode.
@@ -18,10 +23,24 @@ publicRoutes.get("/demo-mode", (c) => {
 // Serve stored template files (fonts, html) for installed templates
 publicRoutes.get("/_template-assets/:id/:version/*", async (c) => {
   const { id, version } = c.req.param();
-  const rest = c.req.param("*");
-  const path = `./data/templates/${id}/${version}/${rest}`;
+  if (!isSafeTemplateIdentifier(id) || !isSafeTemplateIdentifier(version)) {
+    return c.notFound();
+  }
+  const rest = c.req.param("*") || "";
+  const normalizedRest = normalize(rest.replaceAll("\\", "/"));
+  if (!normalizedRest || normalizedRest.startsWith("..")) {
+    return c.notFound();
+  }
+
+  const baseDir = resolve("./data/templates");
+  const candidate = resolve(baseDir, id, version, normalizedRest);
+  const relativePath = relative(baseDir, candidate);
+  if (!relativePath || relativePath.startsWith("..")) {
+    return c.notFound();
+  }
+
   try {
-    const bytes = await Deno.readFile(path);
+    const bytes = await Deno.readFile(candidate);
     return new Response(bytes);
   } catch {
     return c.notFound();
@@ -250,7 +269,7 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
 });
 
 // Generic XML export endpoint selecting a profile (built-in only for now)
-// Query param: ?profile=ubl21 (default) or stub-generic
+// Query param: ?profile=ubl21 (default)
 publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
   const shareToken = c.req.param("share_token");
   const invoice = await getInvoiceByShareToken(shareToken);

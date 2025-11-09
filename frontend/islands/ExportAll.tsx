@@ -23,9 +23,21 @@ export default function ExportAll() {
     setBusy(true);
     setStatus(t("Preparing export..."));
     try {
-      const basic = "Basic " + btoa(`${username}:${password}`);
+      const loginResp = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!loginResp.ok) {
+        const text = await loginResp.text();
+        throw new Error(text || `Login failed (${loginResp.status})`);
+      }
+      const login = await loginResp.json() as { token?: string };
+      if (!login?.token) {
+        throw new Error("Login response missing token");
+      }
       const url = `/api/admin/export/full?includeDb=${encodeURIComponent(includeDb)}&includeJson=${encodeURIComponent(includeJson)}&includeAssets=${encodeURIComponent(includeAssets)}`;
-      const resp = await fetch(url, { headers: { Authorization: basic } });
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${login.token}` } });
       if (!resp.ok) {
         const responseText = await resp.text();
         const fallback = t("Export failed with status {{status}}", { status: String(resp.status) });
