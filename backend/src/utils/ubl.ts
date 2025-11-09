@@ -226,7 +226,7 @@ export function generateUBLInvoiceXML(
   const lines = invoice.items.map((item, idx) => `
     <cac:InvoiceLine>
       <cbc:ID>${idx + 1}</cbc:ID>
-      <cbc:InvoicedQuantity unitCode="EA">${item.quantity}</cbc:InvoicedQuantity>
+  <cbc:InvoicedQuantity unitCode="EA">${decimals(item.quantity)}</cbc:InvoicedQuantity>
       <cbc:LineExtensionAmount currencyID="${xmlEscape(currency)}">${decimals(item.lineTotal)}</cbc:LineExtensionAmount>
       <cac:Item>
         <cbc:Name>${xmlEscape(item.description)}</cbc:Name>

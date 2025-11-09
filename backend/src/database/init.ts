@@ -1,8 +1,5 @@
 import { DB } from "sqlite";
-import { load } from "dotenv";
-
-// Load environment variables
-await load({ export: true });
+import { getEnv, isDemoMode } from "../utils/env.ts";
 
 let db: DB;
 
@@ -23,7 +20,7 @@ function simpleDirname(p: string): string {
 export function initDatabase(): void {
   // In all modes, open the active database at DATABASE_PATH. In demo mode we may
   // periodically copy a pristine DEMO_DB_PATH over this file.
-  const dbPath = resolvePath(Deno.env.get("DATABASE_PATH") || "./invio.db");
+  const dbPath = resolvePath(getEnv("DATABASE_PATH", "./invio.db")!);
 
   // Ensure parent directory exists if using a nested path
   try {
@@ -87,9 +84,9 @@ export function initDatabase(): void {
  * Safe to call at startup and on an interval when DEMO_MODE=true.
  */
 export function resetDatabaseFromDemo(): void {
-  const demoMode = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
-  const demoDb = Deno.env.get("DEMO_DB_PATH");
-  const activePath = resolvePath(Deno.env.get("DATABASE_PATH") || "./invio.db");
+  const demoMode = isDemoMode();
+  const demoDb = getEnv("DEMO_DB_PATH");
+  const activePath = resolvePath(getEnv("DATABASE_PATH", "./invio.db")!);
   if (!demoMode) return; // only meaningful in demo mode
   if (!demoDb) {
     console.warn(

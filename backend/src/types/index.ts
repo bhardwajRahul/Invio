@@ -37,6 +37,9 @@ export interface Invoice {
   paymentTerms?: string;
   notes?: string;
 
+  // Locale overrides
+  locale?: string;
+
   // System fields
   shareToken: string;
   createdAt: Date;
@@ -91,6 +94,7 @@ export interface BusinessSettings {
   bankAccount?: string;
   paymentTerms?: string;
   defaultNotes?: string;
+  locale?: string;
 }
 
 // Normalized tax types
@@ -188,6 +192,8 @@ export interface InvoiceWithDetails extends Invoice {
 }
 
 // Template rendering context
+import type { InvoiceLabels } from "../i18n/translations.ts";
+
 export interface TemplateContext {
   // Company info
   companyName: string;
@@ -246,4 +252,8 @@ export interface TemplateContext {
 
   // Notes
   notes?: string;
+
+  // Internationalization
+  locale: string;
+  labels: InvoiceLabels;
 }

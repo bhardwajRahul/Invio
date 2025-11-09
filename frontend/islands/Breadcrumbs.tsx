@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
+import { useTranslations } from "../i18n/context.tsx";
 
 type Crumb = { label: string; href?: string };
 
@@ -24,6 +25,7 @@ const LABEL_MAP: Record<string, string> = {
 
 export default function Breadcrumbs() {
   const [path, setPath] = useState<string>("/");
+  const { t } = useTranslations();
 
   useEffect(() => {
     setPath(globalThis.location?.pathname || "/");
@@ -37,21 +39,22 @@ export default function Breadcrumbs() {
       const parts: Crumb[] = [];
 
       // Home always present
-      parts.push({ label: "Home", href: "/" });
+      parts.push({ label: t("Home"), href: "/" });
 
       let hrefAcc = "";
       segments.forEach((seg, idx) => {
         hrefAcc += "/" + seg;
         const isLast = idx === segments.length - 1;
-        const label = LABEL_MAP[seg] || titleize(seg);
+        const labelKey = LABEL_MAP[seg];
+        const label = labelKey ? t(labelKey) : titleize(seg);
         parts.push({ label, href: isLast ? undefined : hrefAcc });
       });
 
       return parts;
     } catch {
-      return [{ label: "Home", href: "/" }];
+      return [{ label: t("Home"), href: "/" }];
     }
-  }, [path]);
+  }, [path, t]);
 
   if (!crumbs.length) return null;
 

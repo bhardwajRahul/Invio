@@ -2,6 +2,7 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
 import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
 import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
+import SettingsNav from "../islands/SettingsNav.tsx";
 import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
 import {
@@ -16,6 +17,7 @@ import {
   LuFileCode2,
   LuDownload,
   LuSave,
+  LuLanguages,
 } from "../components/icons.tsx";
 import {
   backendGet,
@@ -24,6 +26,7 @@ import {
   backendPost,
   getAuthHeaderFromCookie,
 } from "../utils/backend.ts";
+import { useTranslations } from "../i18n/context.tsx";
 
 type Settings = Record<string, unknown> & {
   companyName?: string;
@@ -31,6 +34,7 @@ type Settings = Record<string, unknown> & {
   phone?: string;
   taxId?: string;
   embedXmlInHtml?: string;
+  locale?: string;
 };
 type Template = { id: string; name: string; isDefault?: boolean; updatable?: boolean };
 type Data = {
@@ -127,6 +131,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "taxId",
       "countryCode",
       "currency",
+      "locale",
       "paymentMethods",
       "bankAccount",
       "paymentTerms",
@@ -196,6 +201,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
 };
 
 export default function SettingsPage(props: PageProps<Data & { demoMode: boolean }>) {
+  const { t } = useTranslations();
   const s = props.data.settings ?? {} as Settings;
   const templates = props.data.templates ?? [] as Template[];
   const selectedTemplateId = (s.templateId as string) ||
@@ -204,6 +210,11 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const xmlProfileId = (s.xmlProfileId as string) || 'ubl21';
   const embedXmlInPdf = String(s.embedXmlInPdf || 'false').toLowerCase() === 'true';
   const embedXmlInHtml = String(s.embedXmlInHtml || 'false').toLowerCase() === 'true';
+  const currentLocale = (s.locale as string) || "en";
+  const localeOptions = [
+    { value: "en", labelKey: "English" },
+    { value: "nl", labelKey: "Dutch" },
+  ];
   // Use demoMode from backend /demo-mode route
   const demoMode = props.data.demoMode;
   // Determine current section from query param
@@ -213,6 +224,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
     "company",
     "branding",
     "appearance",
+    "localization",
     "templates",
     "payments",
     "tax",
@@ -228,15 +240,13 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
       <SettingsEnhancements />
       
       <div class="flex items-center justify-between mb-4">
-        <h1 class="text-2xl font-semibold">Settings</h1>
+        <h1 class="text-2xl font-semibold">{t("Settings heading")}</h1>
       </div>
 
       {demoMode && (
         <div class="alert alert-warning mb-4">
           <LuAlertTriangle size={20} />
-          <div>
-            <strong>Demo Mode:</strong> The database resets every 30 minutes. Your changes are not permanent.
-          </div>
+          <div>{t("Demo mode warning")}</div>
         </div>
       )}
       {props.data.error && (
@@ -245,63 +255,104 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
         </div>
       )}
       
+      {/* Mobile: Dropdown menu */}
+      <div class="md:hidden mb-4">
+        <SettingsNav 
+          currentSection={link(section)}
+          currentLabel={(() => {
+            const labels: Record<string, string> = {
+              company: t("Company"),
+              branding: t("Branding"),
+              appearance: t("Appearance"),
+              localization: t("Localization"),
+              templates: t("Templates"),
+              payments: t("Payments"),
+              tax: t("Tax"),
+              numbering: t("Numbering"),
+              xml: t("XML Export"),
+              export: t("Export"),
+            };
+            return labels[section] || labels.company;
+          })()}
+          sections={[
+            { value: link("company"), label: t("Company"), icon: LuBuilding2 },
+            { value: link("branding"), label: t("Branding"), icon: LuPalette },
+            { value: link("appearance"), label: t("Appearance"), icon: LuSun },
+            { value: link("localization"), label: t("Localization"), icon: LuLanguages },
+            { value: link("templates"), label: t("Templates"), icon: LuLayoutTemplate, show: hasTemplates },
+            { value: link("payments"), label: t("Payments"), icon: LuCreditCard },
+            { value: link("tax"), label: t("Tax"), icon: LuPercent },
+            { value: link("numbering"), label: t("Numbering"), icon: LuHash },
+            { value: link("xml"), label: t("XML Export"), icon: LuFileCode2 },
+            { value: link("export"), label: t("Export"), icon: LuDownload },
+          ]}
+        />
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-4">
-        <aside>
+        {/* Desktop: Vertical sidebar menu */}
+        <aside class="hidden md:block">
           <ul class="menu bg-base-200 rounded-box w-full">
             <li>
               <a href={link("company")} class={section === "company" ? "active" : undefined}>
                 <LuBuilding2 size={20} class="mr-2" />
-                Company
+                {t("Company")}
               </a>
             </li>
             <li>
               <a href={link("branding")} class={section === "branding" ? "active" : undefined}>
                 <LuPalette size={20} class="mr-2" />
-                Branding
+                {t("Branding")}
               </a>
             </li>
             <li>
               <a href={link("appearance")} class={section === "appearance" ? "active" : undefined}>
                 <LuSun size={20} class="mr-2" />
-                Appearance
+                {t("Appearance")}
+              </a>
+            </li>
+            <li>
+              <a href={link("localization")} class={section === "localization" ? "active" : undefined}>
+                <LuLanguages size={20} class="mr-2" />
+                {t("Localization")}
               </a>
             </li>
             {hasTemplates && (
               <li>
                 <a href={link("templates")} class={section === "templates" ? "active" : undefined}>
                   <LuLayoutTemplate size={20} class="mr-2" />
-                  Templates
+                  {t("Templates")}
                 </a>
               </li>
             )}
             <li>
               <a href={link("payments")} class={section === "payments" ? "active" : undefined}>
                 <LuCreditCard size={20} class="mr-2" />
-                Payments
+                {t("Payments")}
               </a>
             </li>
             <li>
               <a href={link("tax")} class={section === "tax" ? "active" : undefined}>
                 <LuPercent size={20} class="mr-2" />
-                Tax
+                {t("Tax")}
               </a>
             </li>
             <li>
               <a href={link("numbering")} class={section === "numbering" ? "active" : undefined}>
                 <LuHash size={20} class="mr-2" />
-                Numbering
+                {t("Numbering")}
               </a>
             </li>
             <li>
               <a href={link("xml")} class={section === "xml" ? "active" : undefined}>
                 <LuFileCode2 size={20} class="mr-2" />
-                XML Export
+                {t("XML Export")}
               </a>
             </li>
             <li>
               <a href={link("export")} class={section === "export" ? "active" : undefined}>
                 <LuDownload size={20} class="mr-2" />
-                Export
+                {t("Export")}
               </a>
             </li>
           </ul>
@@ -310,33 +361,33 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
         <section class="space-y-4">
           {section === "company" && (
             <form method="post" class="space-y-4" data-writable>
-              <h2 class="text-xl font-semibold">Company Information</h2>
+              <h2 class="text-xl font-semibold">{t("Company Information")}</h2>
               
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Company Name</span></div>
+                  <div class="label"><span class="label-text">{t("Company Name")}</span></div>
                   <input name="companyName" value={(s.companyName as string) || ""} class="input input-bordered w-full" data-writable />
                 </label>
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Currency</span></div>
+                  <div class="label"><span class="label-text">{t("Currency")}</span></div>
                   <input name="currency" value={(s.currency as string) || "USD"} class="input input-bordered w-full" data-writable />
                 </label>
               </div>
               <label class="form-control">
-                <div class="label"><span class="label-text">Company Address</span></div>
+                <div class="label"><span class="label-text">{t("Company Address")}</span></div>
                 <textarea name="companyAddress" class="textarea textarea-bordered" rows={2} data-writable>{(s.companyAddress as string) || ""}</textarea>
               </label>
-              <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">Email</span></div><input name="email" value={(s.email as string) || (s.companyEmail as string) || ""} class="input input-bordered w-full" data-writable /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Phone</span></div><input name="phone" value={(s.phone as string) || (s.companyPhone as string) || ""} class="input input-bordered w-full" data-writable /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Tax ID</span></div><input name="taxId" value={(s.taxId as string) || (s.companyTaxId as string) || ""} class="input input-bordered w-full" data-writable /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Country Code (ISO alpha-2)</span></div><input name="countryCode" value={(s.countryCode as string) || (s.companyCountryCode as string) || ""} class="input input-bordered w-full" placeholder="e.g. US, NL, DE" maxlength={2} data-writable /></label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <label class="form-control"><div class="label"><span class="label-text">{t("Email")}</span></div><input name="email" value={(s.email as string) || (s.companyEmail as string) || ""} class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Phone")}</span></div><input name="phone" value={(s.phone as string) || (s.companyPhone as string) || ""} class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Tax ID")}</span></div><input name="taxId" value={(s.taxId as string) || (s.companyTaxId as string) || ""} class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Country Code (ISO alpha-2)")}</span></div><input name="countryCode" value={(s.countryCode as string) || (s.companyCountryCode as string) || ""} class="input input-bordered w-full" placeholder={t("Country code placeholder")} maxlength={2} data-writable /></label>
               </div>
               
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                <button type="submit" class="btn btn-primary" data-writable>
                   <LuSave size={16} />
-                  Save Changes
+                  {t("Save Changes")}
                 </button>
               </div>
             </form>
@@ -344,17 +395,17 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
 
           {section === "branding" && (
             <form method="post" class="space-y-4" data-writable>
-              <h2 class="text-xl font-semibold">Branding Settings</h2>
+              <h2 class="text-xl font-semibold">{t("Branding Settings")}</h2>
               
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Default Template</span></div>
+                  <div class="label"><span class="label-text">{t("Default Template")}</span></div>
                   <select name="templateId" class="select select-bordered w-full" value={selectedTemplateId}>
-                    {templates.length > 0 ? (templates.map((t) => (<option value={t.id} key={t.id}>{t.name}</option>))) : (<><option value="professional-modern">Professional Modern</option><option value="minimalist-clean">Minimalist Clean</option></>)}
+                    {templates.length > 0 ? (templates.map((template) => (<option value={template.id} key={template.id}>{template.name}</option>))) : (<><option value="professional-modern">{t("Professional Modern")}</option><option value="minimalist-clean">{t("Minimalist Clean")}</option></>)}
                   </select>
                 </label>
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Highlight Color</span></div>
+                  <div class="label"><span class="label-text">{t("Highlight Color")}</span></div>
                   <div class="flex items-center gap-2">
                     <input id="highlight-input" name="highlight" value={(s.highlight as string) || "#6B4EFF"} class="input input-bordered w-full" placeholder="#6B4EFF" />
                     <span id="highlight-swatch" class="inline-block w-6 h-6 rounded" style={`background: ${(s.highlight as string) || "#6B4EFF"}`}></span>
@@ -363,79 +414,99 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               </div>
               <div class="grid grid-cols-1 gap-3 mt-2">
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Logo</span></div>
-                  <input id="logo-input" name="logo" value={(s.logo as string) || (s.logoUrl as string) || ""} class="input input-bordered w-full" placeholder="https://example.com/logo.png or data:image/png;base64,..." />
+                  <div class="label"><span class="label-text">{t("Logo")}</span></div>
+                  <input id="logo-input" name="logo" value={(s.logo as string) || (s.logoUrl as string) || ""} class="input input-bordered w-full" placeholder={t("Logo placeholder")}
+                  />
                 </label>
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Upload Logo Image</span></div>
+                  <div class="label"><span class="label-text">{t("Upload Logo Image")}</span></div>
                   <input id="logo-file" type="file" accept="image/*,.svg" class="file-input file-input-bordered w-full" />
-                  <div class="label"><span class="label-text-alt">Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB</span></div>
+                  <div class="label"><span class="label-text-alt">{t("Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB")}</span></div>
                 </label>
                 <div class="flex items-center gap-3">
-                  <span id="logo-error" class="text-error text-sm hidden">Invalid logo URL or data URI</span>
+                  <span id="logo-error" class="text-error text-sm hidden">{t("Invalid logo URL or data URI")}</span>
                   <div id="logo-preview" class="hidden">
-                    <img id="logo-preview-img" class="max-h-16 max-w-32 object-contain border rounded" alt="Logo preview" />
+                    <img id="logo-preview-img" class="max-h-16 max-w-32 object-contain border rounded" alt={t("Logo preview alt")} />
                   </div>
                 </div>
                 <div id="color-suggestions" class="hidden">
-                  <div class="label"><span class="label-text">Suggested accent colors from logo:</span></div>
+                  <div class="label"><span class="label-text">{t("Suggested accent colors from logo:")}</span></div>
                   <div class="flex gap-2 mt-1"></div>
                 </div>
               </div>
               
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                <button type="submit" class="btn btn-primary" data-writable>
                   <LuSave size={16} />
-                  Save Changes
+                  {t("Save Changes")}
                 </button>
               </div>
             </form>
           )}
 
           {section === "appearance" && (
-            <form method="post" class="space-y-4" data-writable>
-              <h2 class="text-xl font-semibold">Appearance</h2>
+            <div class="space-y-4">
+              <h2 class="text-xl font-semibold">{t("Appearance heading")}</h2>
               
               <div class="bg-base-200 rounded-box p-4">
-                <h3 class="font-semibold mb-2">Theme</h3>
+                <h3 class="font-semibold mb-2">{t("Theme")}</h3>
                 <div class="flex items-center gap-3">
-                  <ThemeToggle size="md" label="Toggle light/dark theme" />
-                  <span class="text-sm opacity-70">Switch between Light and Dark (DaisyUI)</span>
+                  <ThemeToggle size="md" label={t("Toggle light/dark theme")} />
+                  <span class="text-sm opacity-70">{t("Switch between Light and Dark (DaisyUI)")}</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {section === "localization" && (
+            <form method="post" class="space-y-4" data-writable>
+              <h2 class="text-xl font-semibold">{t("Localization settings heading")}</h2>
 
               <div class="bg-base-200 rounded-box p-4">
-                <h3 class="font-semibold mb-2">Date Format</h3>
+                <h3 class="font-semibold mb-2">{t("Interface language heading")}</h3>
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Display dates as</span></div>
-                  <select name="dateFormat" class="select select-bordered w-full" value={(s.dateFormat as string) || "YYYY-MM-DD"}>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD (2025-01-15)</option>
-                    <option value="DD.MM.YYYY">DD.MM.YYYY (15.01.2025)</option>
+                  <div class="label"><span class="label-text">{t("Interface language label")}</span></div>
+                  <select name="locale" class="select select-bordered w-full" value={currentLocale}>
+                    {localeOptions.map((option) => (
+                      <option value={option.value} key={option.value}>{t(option.labelKey)}</option>
+                    ))}
                   </select>
-                  <div class="label"><span class="label-text-alt">Choose how dates are displayed in invoices</span></div>
+                  <div class="label"><span class="label-text-alt">{t("Interface language helper")}</span></div>
                 </label>
               </div>
 
               <div class="bg-base-200 rounded-box p-4">
-                <h3 class="font-semibold mb-2">Number Formatting</h3>
+                <h3 class="font-semibold mb-2">{t("Date Format")}</h3>
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Thousands separator</span></div>
+                  <div class="label"><span class="label-text">{t("Display dates as")}</span></div>
+                  <select name="dateFormat" class="select select-bordered w-full" value={(s.dateFormat as string) || "YYYY-MM-DD"}>
+                    <option value="YYYY-MM-DD">{t("YYYY-MM-DD (2025-01-15)")}</option>
+                    <option value="DD.MM.YYYY">{t("DD.MM.YYYY (15.01.2025)")}</option>
+                  </select>
+                  <div class="label"><span class="label-text-alt">{t("Choose how dates are displayed in invoices")}</span></div>
+                </label>
+              </div>
+
+              <div class="bg-base-200 rounded-box p-4">
+                <h3 class="font-semibold mb-2">{t("Number Formatting")}</h3>
+                <label class="form-control">
+                  <div class="label"><span class="label-text">{t("Thousands separator")}</span></div>
                   <select
                     name="numberFormat"
                     class="select select-bordered w-full"
                     value={(s.numberFormat as string) || "comma"}
                   >
-                    <option value="comma">Comma (1,000.00)</option>
-                    <option value="period">Period (1.000,00)</option>
+                    <option value="comma">{t("Comma (1,000.00)")}</option>
+                    <option value="period">{t("Period (1.000,00)")}</option>
                   </select>
-                  <div class="label"><span class="label-text-alt">Controls currency formatting everywhere, including PDFs</span></div>
+                  <div class="label"><span class="label-text-alt">{t("Controls currency formatting everywhere, including PDFs")}</span></div>
                 </label>
               </div>
-              
+
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                <button type="submit" class="btn btn-primary" data-writable>
                   <LuSave size={16} />
-                  Save Changes
+                  {t("Save Changes")}
                 </button>
               </div>
             </form>
@@ -443,47 +514,47 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
 
           {section === "templates" && hasTemplates && (
             <div class="space-y-4">
-              <h2 class="text-xl font-semibold">Templates</h2>
+              <h2 class="text-xl font-semibold">{t("Templates")}</h2>
               
               <div class="flex items-center justify-between mb-3">
-                <div class="text-sm opacity-70">Manage your invoice templates</div>
-                <InstallTemplateForm demoMode={demoMode} />
+                <div class="text-sm opacity-70">{t("Manage your invoice templates")}</div>
+                <InstallTemplateForm />
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {templates.map((t) => {
-                  const builtIn = t.id === "professional-modern" || t.id === "minimalist-clean";
+                {templates.map((template) => {
+                  const builtIn = template.id === "professional-modern" || template.id === "minimalist-clean";
                   return (
-                    <div class="card bg-base-200 shadow-sm" key={t.id}>
+                    <div class="card bg-base-200 shadow-sm" key={template.id}>
                       <div class="card-body p-3">
                         <div class="flex items-start justify-between">
                           <div>
-                            <div class="font-medium">{t.name}</div>
-                            <div class="text-xs opacity-60">{t.id}</div>
+                            <div class="font-medium">{template.name}</div>
+                            <div class="text-xs opacity-60">{template.id}</div>
                           </div>
-                          {selectedTemplateId === t.id && <span class="badge badge-primary">Default</span>}
+                          {selectedTemplateId === template.id && <span class="badge badge-primary">{t("Default")}</span>}
                         </div>
                         <div class="card-actions justify-end mt-2 gap-2">
-                          {selectedTemplateId !== t.id && (
+                          {selectedTemplateId !== template.id && (
                             <form method="post" data-writable>
-                              <input type="hidden" name="templateId" value={t.id} />
-                              <button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>
-                                Set default
+                              <input type="hidden" name="templateId" value={template.id} />
+                              <button class="btn btn-sm" type="submit" data-writable>
+                                {t("Set default")}
                               </button>
                             </form>
                           )}
-                          {!builtIn && t.updatable && (
+                          {!builtIn && template.updatable && (
                             <form method="post" data-writable>
-                              <input type="hidden" name="updateTemplateId" value={t.id} />
-                              <button class="btn btn-sm" type="submit" disabled={demoMode} data-writable>
-                                Update
+                              <input type="hidden" name="updateTemplateId" value={template.id} />
+                              <button class="btn btn-sm" type="submit" data-writable>
+                                {t("Update")}
                               </button>
                             </form>
                           )}
-                          {!builtIn && selectedTemplateId !== t.id && (
+                          {!builtIn && selectedTemplateId !== template.id && (
                             <form method="post" data-writable>
-                              <input type="hidden" name="deleteTemplateId" value={t.id} />
-                              <button class="btn btn-sm btn-error" type="submit" disabled={demoMode} data-writable>
-                                Delete
+                              <input type="hidden" name="deleteTemplateId" value={template.id} />
+                              <button class="btn btn-sm btn-error" type="submit" data-writable>
+                                {t("Delete")}
                               </button>
                             </form>
                           )}
@@ -493,27 +564,28 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                   );
                 })}
               </div>
-              <p class="text-xs opacity-60 mt-2">Built-in templates are protected and cannot be deleted. Update is available for templates installed from a manifest.</p>
+              <p class="text-xs opacity-60 mt-2">{t("Built-in templates note")}</p>
             </div>
           )}
 
           {section === "payments" && (
             <form method="post" class="space-y-4" data-writable>
-              <h2 class="text-xl font-semibold">Payment Settings</h2>
+              <h2 class="text-xl font-semibold">{t("Payment Settings")}</h2>
               
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">Payment Methods</span></div><input name="paymentMethods" value={(s.paymentMethods as string) || "Bank Transfer"} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Bank Account</span></div><input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Payment Methods")}</span></div><input name="paymentMethods" value={(s.paymentMethods as string) || t("Bank Transfer")}
+                  class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Bank Account")}</span></div><input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" data-writable /></label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">Payment Terms</span></div><input name="paymentTerms" value={(s.paymentTerms as string) || "Due in 30 days"} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Default Notes</span></div><input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Payment Terms")}</span></div><input name="paymentTerms" value={(s.paymentTerms as string) || t("Due in 30 days")} class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Default Notes")}</span></div><input name="defaultNotes" value={(s.defaultNotes as string) || ""} class="input input-bordered w-full" data-writable /></label>
               </div>
               
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                <button type="submit" class="btn btn-primary" data-writable>
                   <LuSave size={16} />
-                  Save Changes
+                  {t("Save Changes")}
                 </button>
               </div>
             </form>
@@ -521,18 +593,18 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
 
           {section === "tax" && (
             <form method="post" class="space-y-4" data-writable>
-              <h2 class="text-xl font-semibold">Tax Settings</h2>
+              <h2 class="text-xl font-semibold">{t("Tax Settings")}</h2>
               
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">Default tax rate (%)</span></div><input type="number" step="0.01" min="0" name="defaultTaxRate" value={String((s.defaultTaxRate as number) ?? 0)} class="input input-bordered w-full" data-writable disabled={demoMode} /></label>
-                <label class="form-control"><div class="label"><span class="label-text">Prices include tax?</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} disabled={demoMode} data-writable><option value="false">No</option><option value="true">Yes</option></select></label>
-                <label class="form-control"><div class="label"><span class="label-text">Rounding mode</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} disabled={demoMode} data-writable><option value="line">Round per line</option><option value="total">Round on totals</option></select></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Default tax rate (%)")}</span></div><input type="number" step="0.01" min="0" name="defaultTaxRate" value={String((s.defaultTaxRate as number) ?? 0)} class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Prices include tax?")}</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} data-writable><option value="false">{t("No")}</option><option value="true">{t("Yes")}</option></select></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Rounding mode")}</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} data-writable><option value="line">{t("Round per line")}</option><option value="total">{t("Round on totals")}</option></select></label>
               </div>
               
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                <button type="submit" class="btn btn-primary" data-writable>
                   <LuSave size={16} />
-                  Save Changes
+                  {t("Save Changes")}
                 </button>
               </div>
             </form>
@@ -540,33 +612,31 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
 
           {section === "numbering" && (
             <form method="post" class="space-y-4" data-writable>
-              <h2 class="text-xl font-semibold">Invoice Numbering</h2>
+              <h2 class="text-xl font-semibold">{t("Invoice Numbering")}</h2>
               
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Enable advanced numbering pattern</span></div>
+                  <div class="label"><span class="label-text">{t("Enable advanced numbering pattern")}</span></div>
                   <div class="flex items-center gap-3">
                     {/* Hidden field ensures a value is sent when unchecked */}
                     <input type="hidden" name="invoiceNumberingEnabled" value="false" />
                     <input type="checkbox" name="invoiceNumberingEnabled" value="true" class="toggle toggle-primary" checked={String((s.invoiceNumberingEnabled as string) ?? 'true').toLowerCase() !== 'false'} />
-                    <span class="text-sm opacity-70">When off, the invoice number pattern will be ignored and legacy numbering will be used.</span>
+                    <span class="text-sm opacity-70">{t("Invoice numbering toggle helper")}</span>
                   </div>
                 </label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
-                  <div class="label"><span class="label-text">Invoice Number Pattern</span></div>
-                  <input name="invoiceNumberPattern" value={(s.invoiceNumberPattern as string) || ''} class="input input-bordered w-full" placeholder="e.g. INV-{YYYY}-{SEQ} or {YYYY}{MM}{SEQ}" />
+                  <div class="label"><span class="label-text">{t("Invoice Number Pattern")}</span></div>
+                  <input name="invoiceNumberPattern" value={(s.invoiceNumberPattern as string) || ''} class="input input-bordered w-full" placeholder={t("Invoice number pattern placeholder")} />
                 </label>
               </div>
-              <p class="text-xs mt-2 opacity-70">
-                Tokens: {`{YYYY}`} full year, {`{YY}`} short year, {`{MM}`} month (01-12), {`{DD}`} day, {`{DATE}`} = {`{YYYY}{MM}{DD}`}, {`{RAND4}`} random alnum 4 chars, {`{SEQ}`} auto-incrementing sequence (resets yearly when pattern includes {`{YYYY}`} ). Leave blank to use legacy prefix/year/padding settings.
-              </p>
+              <p class="text-xs mt-2 opacity-70">{t("Invoice numbering tokens help")}</p>
               
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                <button type="submit" class="btn btn-primary" data-writable>
                   <LuSave size={16} />
-                  Save Changes
+                  {t("Save Changes")}
                 </button>
               </div>
             </form>
@@ -574,52 +644,55 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
 
           {section === "xml" && (
             <div class="space-y-4">
-              <h2 class="text-xl font-semibold">XML Export Settings</h2>
+              <h2 class="text-xl font-semibold">{t("XML Export Settings")}</h2>
               
               <form method="post" data-writable>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <label class="form-control">
-                    <div class="label"><span class="label-text">Default XML Profile</span></div>
+                    <div class="label"><span class="label-text">{t("Default XML Profile")}</span></div>
                     <select name="xmlProfileId" class="select select-bordered w-full" value={xmlProfileId}>
-                      <option value="ubl21">UBL 2.1 (PEPPOL BIS)</option>
-                      <option value="facturx22">Factur‑X / ZUGFeRD 2.2 (BASIC)</option>
-                      <option value="fatturapa">FatturaPA 1.9</option>
+                      <option value="ubl21">{t("UBL 2.1 (PEPPOL BIS)")}</option>
+                      <option value="facturx22">{t("Factur-X / ZUGFeRD 2.2 (BASIC)")}</option>
+                      <option value="fatturapa">{t("FatturaPA 1.9")}</option>
                     </select>
                   </label>
                   <label class="form-control">
-                    <div class="label flex justify-between"><span class="label-text">Embed XML in PDF</span></div>
+                    <div class="label flex justify-between"><span class="label-text">{t("Embed XML in PDF")}</span></div>
                     <div class="flex items-center gap-3 mt-1">
                       <input type="hidden" name="embedXmlInPdf" value="false" />
                       <input type="checkbox" name="embedXmlInPdf" value="true" class="toggle toggle-primary" checked={embedXmlInPdf} />
-                      <span class="text-xs opacity-70">Adds selected XML as a PDF attachment</span>
+                      <span class="text-xs opacity-70">{t("Adds selected XML as a PDF attachment")}</span>
                     </div>
                   </label>
                   <label class="form-control">
-                    <div class="label flex justify-between"><span class="label-text">Embed XML in HTML</span></div>
+                    <div class="label flex justify-between"><span class="label-text">{t("Embed XML in HTML")}</span></div>
                     <div class="flex items-center gap-3 mt-1">
                       <input type="hidden" name="embedXmlInHtml" value="false" />
                       <input type="checkbox" name="embedXmlInHtml" value="true" class="toggle toggle-primary" checked={embedXmlInHtml} />
-                      <span class="text-xs opacity-70">Adds selected XML as an HTML attachment</span>
+                      <span class="text-xs opacity-70">{t("Adds selected XML as an HTML attachment")}</span>
                     </div>
                   </label>
                 </div>
                 
                 <div class="flex justify-end">
-                  <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+                  <button type="submit" class="btn btn-primary" data-writable>
                     <LuSave size={16} />
-                    Save Changes
+                    {t("Save Changes")}
                   </button>
                 </div>
               </form>
               
               <div class="bg-base-200 rounded-box p-3">
-                <p class="text-xs opacity-70">Profiles are currently built-in only. UBL 2.1 is the default and preferred for e-invoicing networks (PEPPOL). The stub profile is for internal testing.</p>
+                <p class="text-xs opacity-70">{t("XML profiles helper")}</p>
               </div>
             </div>
           )}
 
           {section === "export" && (
-            <ExportAll />
+            <div class="space-y-4">
+              <h2 class="text-xl font-semibold">{t("Export data heading")}</h2>
+              <ExportAll />
+            </div>
           )}
         </section>
       </div>

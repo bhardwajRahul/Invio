@@ -28,6 +28,7 @@ type Settings = Record<string, unknown> & {
   phone?: string;
   taxId?: string;
   embedXmlInHtml?: string;
+  locale?: string;
 };
 type Template = { id: string; name: string; isDefault?: boolean };
 type Data = {
@@ -108,6 +109,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "taxId",
       "countryCode",
       "currency",
+      "locale",
       "paymentMethods",
       "bankAccount",
       "paymentTerms",
@@ -184,6 +186,11 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const xmlProfileId = (s.xmlProfileId as string) || 'ubl21';
   const embedXmlInPdf = String(s.embedXmlInPdf || 'false').toLowerCase() === 'true';
   const embedXmlInHtml = String(s.embedXmlInHtml || 'false').toLowerCase() === 'true';
+  const currentLocale = (s.locale as string) || 'en';
+  const localeOptions = [
+    { value: "en", label: "English" },
+    { value: "nl", label: "Nederlands" },
+  ];
   // Use demoMode from backend /demo-mode route
   const demoMode = props.data.demoMode;
   // Determine current section from query param
@@ -342,7 +349,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                 </div>
               </div>
               <form method="post" data-writable>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <label class="form-control">
                     <div class="label"><span class="label-text">Thousands Separator</span></div>
                     <select name="numberFormat" class="select select-bordered w-full" value={(s.numberFormat as string) || "comma"}>
@@ -358,6 +365,15 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                     </select>
                     <div class="label"><span class="label-text-alt">Choose how dates are displayed in invoices</span></div>
                   </label>
+                  <label class="form-control">
+                    <div class="label"><span class="label-text">Invoice Language</span></div>
+                    <select name="locale" class="select select-bordered w-full" value={currentLocale}>
+                      {localeOptions.map((option) => (
+                        <option value={option.value} key={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                    <div class="label"><span class="label-text-alt">Applies to invoice labels and headings</span></div>
+                  </label>
                 </div>
                 <div class="pt-2"><button type="submit" class="btn btn-primary">Save</button></div>
               </form>
@@ -368,7 +384,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
             <div>
               <div class="flex items-center justify-between mb-2">
                 <h2 class="card-title">Templates</h2>
-                <InstallTemplateForm demoMode={demoMode} />
+                <InstallTemplateForm />
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {templates.map((t) => (

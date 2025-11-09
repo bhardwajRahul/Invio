@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-type Props = { demoMode?: boolean };
+import { useTranslations } from "../i18n/context.tsx";
 
 function getAuthHeaderFromCookie(cookie: string): string | null {
   const parts = cookie.split(/;\s*/);
@@ -13,17 +13,18 @@ function getAuthHeaderFromCookie(cookie: string): string | null {
   return null;
 }
 
-export default function InstallTemplateForm({ demoMode }: Props) {
+export default function InstallTemplateForm() {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const { t } = useTranslations();
   return (
-  <form
+    <form
       onSubmit={async (e) => {
         e.preventDefault();
         setErr(null);
         const u = url.trim();
-        if (!u) return setErr("Enter a manifest URL");
+        if (!u) return setErr(t("Enter a manifest URL"));
         try {
           setBusy(true);
           const auth = getAuthHeaderFromCookie(document.cookie);
@@ -36,7 +37,7 @@ export default function InstallTemplateForm({ demoMode }: Props) {
             body: JSON.stringify({ url: u }),
           });
           if (!res.ok) {
-            let message = `${res.status} ${res.statusText}`;
+            let message = t("Template install failed with status {{status}}", { status: `${res.status} ${res.statusText}` });
             try {
               const data = await res.json();
               if (data && (data.error || data.message)) {
@@ -54,19 +55,18 @@ export default function InstallTemplateForm({ demoMode }: Props) {
       }}
     >
       <label class="form-control">
-        <div class="label"><span class="label-text">Install from Manifest URL</span></div>
+        <div class="label"><span class="label-text">{t("Install from Manifest URL")}</span></div>
         <div class="flex gap-2">
           <input
             name="manifestUrl"
             class="input input-bordered w-full"
-            placeholder="https://.../manifest.yaml"
+            placeholder={t("Manifest URL placeholder")}
             value={url}
             onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
           />
-          <button type="submit" class="btn btn-primary" disabled={busy}>Install</button>
+          <button type="submit" class="btn btn-primary" disabled={busy}>{t("Install")}</button>
         </div>
         {err && <span class="text-error text-sm mt-1">{err}</span>}
-        {demoMode && <span class="text-sm mt-1 text-muted">Demo mode: installation will be blocked (read-only)</span>}
       </label>
     </form>
   );

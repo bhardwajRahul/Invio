@@ -1,6 +1,7 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../components/Layout.tsx";
 import { backendGet, setAuthCookieHeaders, BACKEND_URL } from "../utils/backend.ts";
+import { useTranslations } from "../i18n/context.tsx";
 
 type Data = { error: string | null; username?: string; demoMode?: boolean };
 
@@ -51,6 +52,7 @@ export const handler: Handlers<Data> = {
 };
 
 export default function LoginPage(props: PageProps<Data>) {
+  const { t } = useTranslations();
   const username = props.data.username || "";
   const dm = (props.data as unknown as { demoMode?: boolean | string }).demoMode;
   const demoMode = dm === true || dm === "true";
@@ -60,15 +62,17 @@ export default function LoginPage(props: PageProps<Data>) {
         <div class="w-full max-w-sm">
           <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-              <h1 class="text-2xl font-semibold text-center mb-2">Sign in</h1>
+              <h1 class="text-2xl font-semibold text-center mb-2">
+                {t("Sign in")}
+              </h1>
 
               {demoMode && (
                 <div class="alert alert-info mb-4">
                   <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <span class="font-semibold">Demo credentials:</span>
+                    <span class="font-semibold">{t("Demo credentials:")}</span>
                     <div class="flex gap-3 flex-wrap">
-                      <span>username: <code>demo</code></span>
-                      <span>password: <code>demo</code></span>
+                      <span>{t("username")}: <code>demo</code></span>
+                      <span>{t("password")}: <code>demo</code></span>
                     </div>
                   </div>
                 </div>
@@ -76,20 +80,20 @@ export default function LoginPage(props: PageProps<Data>) {
 
               {props.data.error && (
                 <div class="alert alert-error mb-3">
-                  <span>{props.data.error}</span>
+                  <span>{t(props.data.error)}</span>
                 </div>
               )}
 
               <form method="post" class="space-y-3">
                 <div class="form-control">
                   <label class="label">
-                    <span class="label-text">Username</span>
+                    <span class="label-text">{t("Username")}</span>
                   </label>
                   <input
                     class="input input-bordered w-full"
                     name="username"
                     value={username}
-                    placeholder="Username"
+                    placeholder={t("Username")}
                     autocomplete="username"
                     autoFocus
                     required
@@ -97,19 +101,19 @@ export default function LoginPage(props: PageProps<Data>) {
                 </div>
                 <div class="form-control">
                   <label class="label">
-                    <span class="label-text">Password</span>
+                    <span class="label-text">{t("Password")}</span>
                   </label>
                   <input
                     class="input input-bordered w-full"
                     name="password"
                     type="password"
-                    placeholder="Password"
+                    placeholder={t("Password")}
                     autocomplete="current-password"
                     required
                   />
                 </div>
                 <button type="submit" class="btn btn-primary w-full">
-                  Login
+                  {t("Login")}
                 </button>
               </form>
             </div>

@@ -1,6 +1,8 @@
 import { useEffect } from "preact/hooks";
+import { useTranslations } from "../i18n/context.tsx";
 
 export default function SettingsEnhancements() {
+  const { t } = useTranslations();
   useEffect(() => {
     // Highlight color sync
     const input = document.getElementById('highlight-input') as HTMLInputElement | null;
@@ -285,7 +287,7 @@ export default function SettingsEnhancements() {
         const swatch = document.createElement('button');
         swatch.className = 'w-8 h-8 rounded border-2 border-base-300 hover:border-base-content transition-colors';
         swatch.style.backgroundColor = color;
-        swatch.title = `Click to set highlight color to ${color}`;
+  swatch.title = t("Click to set highlight color to {{color}}", { color });
         swatch.addEventListener('click', () => {
           if (input) {
             input.value = color;
@@ -343,13 +345,13 @@ export default function SettingsEnhancements() {
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file.');
+        alert(t("Please select a valid image file."));
         return;
       }
 
       // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB.');
+        alert(t("File size must be less than 5MB."));
         return;
       }
 
@@ -377,6 +379,6 @@ export default function SettingsEnhancements() {
       logoInput?.removeEventListener('input', onLogoTyping);
       logoFileInput?.removeEventListener('change', onFileChange);
     };
-  }, []);
+  }, [t]);
   return null;
 }

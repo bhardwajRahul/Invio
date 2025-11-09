@@ -71,6 +71,7 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    locale: settingsMap.locale || undefined,
   };
 
   // Use template/highlight from settings only (no query overrides)
@@ -97,7 +98,13 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
       businessSettings,
       selectedTemplateId,
       highlight,
-      { embedXml, embedXmlProfileId: xmlProfileId, dateFormat: settingsMap.dateFormat, numberFormat: settingsMap.numberFormat },
+      {
+        embedXml,
+        embedXmlProfileId: xmlProfileId,
+        dateFormat: settingsMap.dateFormat,
+        numberFormat: settingsMap.numberFormat,
+        locale: settingsMap.locale,
+      },
     );
     // Detect embedded attachments for diagnostics
     let hasAttachment = false;
@@ -160,6 +167,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    locale: settingsMap.locale || undefined,
   };
 
   // Use template/highlight from settings only (no query overrides)
@@ -182,6 +190,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     highlight,
     settingsMap.dateFormat,
     settingsMap.numberFormat,
+    settingsMap.locale,
   );
   return new Response(html, {
     headers: {

@@ -1,381 +1,1095 @@
-import { useEffect } from "preact/hooks";
+import type { JSX } from "preact";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
+import { LuGripVertical, LuPlus, LuSave } from "../components/icons.tsx";
 import { formatMoney } from "../utils/format.ts";
 
-export default function InvoiceEditorIsland() {
-  type InvoiceEditorGlobals = typeof globalThis & {
-    invoiceEditorSettings?: {
-      numberFormat?: "comma" | "period";
-    };
-    lucide?: {
-      createIcons?: () => void;
-    };
+type Customer = { id: string; name: string };
+type IncomingItem = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  notes?: string;
+  taxPercent?: number;
+};
+
+export type InvoiceEditorProps = {
+  mode: "create" | "edit";
+  customers?: Customer[];
+  selectedCustomerId?: string;
+  customerName?: string;
+  currency?: string;
+  status?: "draft" | "sent" | "paid" | "overdue";
+  invoiceNumber?: string;
+  invoiceNumberPrefill?: string;
+  taxRate?: number;
+  pricesIncludeTax?: boolean;
+  roundingMode?: string;
+  taxMode?: "invoice" | "line";
+  notes?: string;
+  paymentTerms?: string;
+  items: IncomingItem[];
+  showDates?: boolean;
+  issueDate?: string;
+  dueDate?: string;
+  demoMode?: boolean;
+  invoiceNumberError?: string;
+  numberFormat?: string;
+  hideTopButton?: boolean;
+  formId?: string;
+};
+
+type ItemState = {
+  id: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  notes: string;
+  taxPercent: string;
+};
+
+type InlineCustomer = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  taxId: string;
+  countryCode: string;
+};
+
+let itemIdCounter = 0;
+
+function nextItemId(): string {
+  itemIdCounter += 1;
+  return `invoice-item-${Date.now()}-${itemIdCounter}`;
+}
+
+function mapItem(item?: IncomingItem): ItemState {
+  return {
+    id: nextItemId(),
+    description: item?.description ?? "",
+    quantity: item ? String(item.quantity ?? 1) : "1",
+    unitPrice: item ? String(item.unitPrice ?? 0) : "0",
+    notes: item?.notes ?? "",
+    taxPercent: item && typeof item.taxPercent === "number"
+      ? String(item.taxPercent)
+      : "",
   };
+}
 
-  const invoiceEditorGlobals = globalThis as InvoiceEditorGlobals;
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
 
-  // Get numberFormat from global settings
-  const numberFormat = invoiceEditorGlobals.invoiceEditorSettings?.numberFormat || "comma";
-  useEffect(() => {
-    const addBtn = document.getElementById('add-item');
-    const container = document.getElementById('items-container');
-    const tpl = document.getElementById('item-template') as HTMLTemplateElement | null;
-    const taxModeSelect = document.getElementById('tax-mode-select') as HTMLSelectElement | null;
-    const invoiceTaxInput = document.getElementById('invoice-tax-rate-input') as HTMLInputElement | null;
-    const form = (addBtn?.closest('form')) as HTMLFormElement | null;
-    const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    const itemsError = document.getElementById('items-error');
-    const customerError = document.getElementById('customer-error');
-    const customerSelect = document.querySelector('select[name="customerId"]') as HTMLSelectElement | null;
-    const currencyInput = document.querySelector('input[name="currency"]') as HTMLInputElement | null;
-    const pricesIncludeTaxSelect = document.querySelector('select[name="pricesIncludeTax"]') as HTMLSelectElement | null;
-    const roundingModeSelect = document.querySelector('select[name="roundingMode"]') as HTMLSelectElement | null;
-    if (!addBtn || !container || !tpl) return;
+const blankInlineCustomer: InlineCustomer = {
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  postalCode: "",
+  taxId: "",
+  countryCode: "",
+};
 
-    // Totals preview elements
-    const previewSubtotal = document.getElementById('preview-subtotal');
-    const previewTax = document.getElementById('preview-tax');
-    const previewTotal = document.getElementById('preview-total');
-    const previewTaxContainer = document.getElementById('preview-tax-container');
+export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
+  const numberFormat = props.numberFormat === "period" ? "period" : "comma";
+  const initialItems = props.items && props.items.length > 0
+    ? props.items.map((item) => mapItem(item))
+    : [mapItem()];
+  const [items, setItems] = useState<ItemState[]>(initialItems);
 
-    function formatCurrency(amount: number): string {
-      const currency = currencyInput?.value || 'USD';
-      return formatMoney(amount, currency, numberFormat);
+  const initialCustomerSelection = (() => {
+    if (props.mode === "create") {
+      if (props.selectedCustomerId) return props.selectedCustomerId;
+      if (!props.customers || props.customers.length === 0) return "__create__";
+      return "";
     }
+    return props.selectedCustomerId ?? "";
+  })();
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
+    initialCustomerSelection,
+  );
+  const [inlineCustomer, setInlineCustomer] = useState<InlineCustomer>({
+    ...blankInlineCustomer,
+  });
+  const [invoiceNumber, setInvoiceNumber] = useState(
+    props.invoiceNumber ?? props.invoiceNumberPrefill ?? "",
+  );
+  const [currency, setCurrency] = useState(props.currency ?? "USD");
+  const [status, setStatus] = useState<
+    "draft" | "sent" | "paid" | "overdue"
+  >(props.status ?? "draft");
+  const [issueDate, setIssueDate] = useState(
+    props.issueDate ??
+      (props.showDates ? new Date().toISOString().slice(0, 10) : ""),
+  );
+  const [dueDate, setDueDate] = useState(props.dueDate ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(props.paymentTerms ?? "");
+  const [notes, setNotes] = useState(props.notes ?? "");
+  const [taxMode, setTaxMode] = useState<"invoice" | "line">(
+    props.taxMode ?? "invoice",
+  );
+  const [invoiceTaxRate, setInvoiceTaxRate] = useState(
+    typeof props.taxRate === "number" ? String(props.taxRate) : "0",
+  );
+  const [pricesIncludeTax, setPricesIncludeTax] = useState<"true" | "false">(
+    props.pricesIncludeTax ? "true" : "false",
+  );
+  const [roundingMode, setRoundingMode] = useState<"line" | "total">(
+    props.roundingMode === "total" ? "total" : "line",
+  );
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<
+    { id: string; position: "before" | "after" } | null
+  >(null);
 
-    function calculateTotals() {
-      if (!container || !previewSubtotal || !previewTax || !previewTotal) return;
+  const formRef = useRef<HTMLFormElement>(null);
 
-      const rows = container.querySelectorAll('.item-row');
-      const taxMode = taxModeSelect?.value || 'invoice';
-      const invoiceTaxRate = Number(invoiceTaxInput?.value || 0);
-      const pricesIncludeTax = pricesIncludeTaxSelect?.value === 'true';
-      const roundingMode = roundingModeSelect?.value || 'line';
+  const isCreateMode = props.mode === "create";
+  const isDemo = !!props.demoMode;
 
-      let subtotal = 0;
-      let totalTax = 0;
+  // Reset items when server-side data changes (e.g. after validation errors).
+  useEffect(() => {
+    const next = props.items && props.items.length > 0
+      ? props.items.map((item) => mapItem(item))
+      : [mapItem()];
+    setItems(next);
+  }, [props.items]);
 
-      rows.forEach((row) => {
-        const qtyInput = row.querySelector('input[name="item_quantity"]') as HTMLInputElement | null;
-        const priceInput = row.querySelector('input[name="item_unitPrice"]') as HTMLInputElement | null;
-        const taxInput = row.querySelector('input[name="item_tax_percent"]') as HTMLInputElement | null;
+  const handleAddItem = useCallback(() => {
+    setItems((prev) => [...prev, mapItem()]);
+  }, []);
 
-        const qty = Number(qtyInput?.value || 0);
-        const price = Number(priceInput?.value || 0);
-        let lineTotal = qty * price;
+  const handleRemoveItem = useCallback((id: string) => {
+    setItems((prev) => {
+      if (prev.length <= 1) {
+        return [mapItem()];
+      }
+      return prev.filter((item) => item.id !== id);
+    });
+  }, []);
 
-        if (roundingMode === 'line') {
-          lineTotal = Math.round(lineTotal * 100) / 100;
-        }
+  const handleItemChange = useCallback(
+    (index: number, field: keyof ItemState) => (event: Event) => {
+      const target = event.currentTarget as
+        | HTMLInputElement
+        | HTMLTextAreaElement;
+      const value = target.value;
+      setItems((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], [field]: value };
+        return next;
+      });
+    },
+    [],
+  );
 
-        if (taxMode === 'line' && taxInput) {
-          const lineTaxRate = Number(taxInput.value || 0);
-          if (pricesIncludeTax) {
-            // Extract tax from line total
-            const lineTax = lineTotal - (lineTotal / (1 + lineTaxRate / 100));
-            totalTax += lineTax;
+  const handleCustomerChange = useCallback((event: Event) => {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    setSelectedCustomerId(value);
+    if (value !== "__create__") {
+      setInlineCustomer({ ...blankInlineCustomer });
+    }
+  }, []);
+
+  const handleInlineCustomerChange = useCallback(
+    (field: keyof InlineCustomer) => (event: Event) => {
+      const value = (event.currentTarget as
+        | HTMLInputElement
+        | HTMLTextAreaElement).value;
+      setInlineCustomer((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
+
+  const hasItemWithDescription = useMemo(
+    () => items.some((item) => item.description.trim().length > 0),
+    [items],
+  );
+  const inlineCustomerRequired =
+    isCreateMode && selectedCustomerId === "__create__";
+  const customerError = isCreateMode && !inlineCustomerRequired &&
+      !selectedCustomerId
+    ? "Please select a customer."
+    : undefined;
+  const inlineCustomerError = inlineCustomerRequired &&
+      !inlineCustomer.name.trim()
+    ? "Customer name is required."
+    : undefined;
+  const itemsError = hasItemWithDescription
+    ? undefined
+    : "Add at least one item with a description.";
+  const isValid = !itemsError && !customerError && !inlineCustomerError;
+
+  // Recalculate totals whenever line items or tax settings change.
+  const totals = useMemo(() => {
+    const includeTax = pricesIncludeTax === "true";
+    const invoiceRate = parseFloat(invoiceTaxRate) || 0;
+    let subtotal = 0;
+    let tax = 0;
+
+    items.forEach((item) => {
+      const quantity = parseFloat(item.quantity) || 0;
+      const unitPrice = parseFloat(item.unitPrice) || 0;
+      let lineTotal = quantity * unitPrice;
+      if (roundingMode === "line") {
+        lineTotal = round2(lineTotal);
+      }
+
+      if (taxMode === "line") {
+        const lineRate = parseFloat(item.taxPercent) || 0;
+        if (includeTax && lineRate > 0) {
+          const divisor = 1 + lineRate / 100;
+          if (divisor > 0) {
+            const lineTax = lineTotal - lineTotal / divisor;
+            tax += lineTax;
             subtotal += lineTotal - lineTax;
           } else {
-            // Add tax to line total
-            const lineTax = lineTotal * (lineTaxRate / 100);
-            totalTax += lineTax;
             subtotal += lineTotal;
           }
+        } else if (!includeTax && lineRate > 0) {
+          const lineTax = lineTotal * (lineRate / 100);
+          tax += lineTax;
+          subtotal += lineTotal;
         } else {
           subtotal += lineTotal;
         }
-      });
-
-      // Apply invoice-level tax
-      if (taxMode === 'invoice' && invoiceTaxRate > 0) {
-        if (pricesIncludeTax) {
-          // Extract tax from subtotal
-          totalTax = subtotal - (subtotal / (1 + invoiceTaxRate / 100));
-          subtotal = subtotal - totalTax;
-        } else {
-          // Add tax to subtotal
-          totalTax = subtotal * (invoiceTaxRate / 100);
-        }
-      }
-
-      // Round totals if needed
-      if (roundingMode === 'total') {
-        subtotal = Math.round(subtotal * 100) / 100;
-        totalTax = Math.round(totalTax * 100) / 100;
       } else {
-        subtotal = Math.round(subtotal * 100) / 100;
-        totalTax = Math.round(totalTax * 100) / 100;
-      }
-
-      const total = subtotal + totalTax;
-
-      // Update display
-      previewSubtotal.textContent = formatCurrency(subtotal);
-      previewTax.textContent = formatCurrency(totalTax);
-      previewTotal.textContent = formatCurrency(total);
-
-      // Hide tax row if no tax
-      if (previewTaxContainer) {
-        if (totalTax === 0) {
-          previewTaxContainer.classList.add('hidden');
-        } else {
-          previewTaxContainer.classList.remove('hidden');
-        }
-      }
-    }
-
-    // Drag and drop state
-    let draggedItem: HTMLElement | null = null;
-
-    function setupDragAndDrop(row: Element) {
-      const handle = row.querySelector('.drag-handle');
-      if (!handle) return;
-
-      row.addEventListener('dragstart', (e: Event) => {
-        const dragEvent = e as DragEvent;
-        draggedItem = row as HTMLElement;
-        (row as HTMLElement).classList.add('opacity-50');
-        if (dragEvent.dataTransfer) {
-          dragEvent.dataTransfer.effectAllowed = 'move';
-        }
-      });
-
-      row.addEventListener('dragend', () => {
-        (row as HTMLElement).classList.remove('opacity-50');
-        draggedItem = null;
-      });
-
-      row.addEventListener('dragover', (e: Event) => {
-        const dragEvent = e as DragEvent;
-        dragEvent.preventDefault();
-        if (!draggedItem || draggedItem === row) return;
-        
-        const bounding = (row as HTMLElement).getBoundingClientRect();
-        const offset = bounding.y + bounding.height / 2;
-        
-        if (dragEvent.clientY - offset > 0) {
-          (row as HTMLElement).style.borderBottom = '2px solid hsl(var(--p))';
-          (row as HTMLElement).style.borderTop = '';
-        } else {
-          (row as HTMLElement).style.borderTop = '2px solid hsl(var(--p))';
-          (row as HTMLElement).style.borderBottom = '';
-        }
-      });
-
-      row.addEventListener('dragleave', () => {
-        (row as HTMLElement).style.borderTop = '';
-        (row as HTMLElement).style.borderBottom = '';
-      });
-
-      row.addEventListener('drop', (e: Event) => {
-        const dragEvent = e as DragEvent;
-        dragEvent.preventDefault();
-        (row as HTMLElement).style.borderTop = '';
-        (row as HTMLElement).style.borderBottom = '';
-        
-        if (!draggedItem || draggedItem === row) return;
-        
-        const bounding = (row as HTMLElement).getBoundingClientRect();
-        const offset = bounding.y + bounding.height / 2;
-        
-        if (dragEvent.clientY - offset > 0) {
-          row.parentNode?.insertBefore(draggedItem, row.nextSibling);
-        } else {
-          row.parentNode?.insertBefore(draggedItem, row);
-        }
-      });
-    }
-
-    function bindRemove(el: Element) {
-      const btn = el.querySelector('.remove-item') as HTMLButtonElement | null;
-      if (btn) {
-        const handler = () => {
-          const rows = (container as HTMLElement).querySelectorAll('.item-row');
-          if (rows.length > 1) {
-            el.remove();
-            calculateTotals();
-          }
-        };
-        btn.addEventListener('click', handler);
-      }
-    }
-
-    container.querySelectorAll('.item-row').forEach((n) => {
-      bindRemove(n);
-      setupDragAndDrop(n);
-    });
-
-    const onAdd = () => {
-      let row: Element | null = null;
-      if (tpl instanceof HTMLTemplateElement) {
-        const first = tpl.content.firstElementChild;
-        if (first) row = first.cloneNode(true) as Element;
-      }
-      if (row) {
-        container.appendChild(row);
-        bindRemove(row);
-        setupDragAndDrop(row);
-        applyTaxMode();
-        calculateTotals();
-        // Initialize lucide icons for the new row
-        try {
-          const lucide = invoiceEditorGlobals.lucide;
-          if (lucide && typeof lucide.createIcons === 'function') {
-            lucide.createIcons();
-          }
-        } catch (_e) {
-          // ignore lucide init errors
-        }
-      }
-    };
-    addBtn.addEventListener('click', onAdd);
-
-    function applyTaxMode() {
-      const mode = taxModeSelect ? (taxModeSelect.value || 'invoice') : 'invoice';
-      if (!container) return;
-      const perLineInputs = (container as HTMLElement).querySelectorAll('.per-line-tax-input');
-      perLineInputs.forEach((inp) => {
-        if (!(inp instanceof HTMLElement)) return;
-        if (mode === 'line') {
-          inp.removeAttribute('disabled');
-          inp.classList.remove('hidden');
-        } else {
-          inp.setAttribute('disabled','disabled');
-          if (inp instanceof HTMLInputElement) inp.value = '';
-          inp.classList.add('hidden');
-        }
-      });
-      // Also toggle column header for per-line tax
-      const taxHeader = document.querySelector('.items-header .per-line-tax-input');
-      if (taxHeader instanceof HTMLElement) {
-        if (mode === 'line') {
-          taxHeader.classList.remove('hidden');
-        } else {
-          taxHeader.classList.add('hidden');
-        }
-      }
-      if (invoiceTaxInput) {
-        if (mode === 'invoice') {
-          invoiceTaxInput.removeAttribute('disabled');
-          invoiceTaxInput.parentElement?.classList.remove('hidden');
-        } else {
-          invoiceTaxInput.setAttribute('disabled','disabled');
-          invoiceTaxInput.parentElement?.classList.add('hidden');
-        }
-      }
-      calculateTotals();
-    }
-
-    if (taxModeSelect) taxModeSelect.addEventListener('change', applyTaxMode);
-    applyTaxMode();
-
-    // Calculate totals on load and when inputs change
-    calculateTotals();
-    form?.addEventListener('input', (e) => {
-      const t = e.target as HTMLElement | null;
-      if (t && (t.matches('input[name="item_description"]') || t.matches('select[name="customerId"]'))) {
-        validate();
-      }
-      // Recalculate totals when relevant inputs change
-      if (t && (
-        t.matches('input[name="item_quantity"]') ||
-        t.matches('input[name="item_unitPrice"]') ||
-        t.matches('input[name="item_tax_percent"]') ||
-        t.matches('input[name="taxRate"]') ||
-        t.matches('input[name="currency"]')
-      )) {
-        calculateTotals();
+        subtotal += lineTotal;
       }
     });
-    
-    // Recalculate when tax settings change
-    taxModeSelect?.addEventListener('change', calculateTotals);
-    invoiceTaxInput?.addEventListener('input', calculateTotals);
-    pricesIncludeTaxSelect?.addEventListener('change', calculateTotals);
-    roundingModeSelect?.addEventListener('change', calculateTotals);
 
-    // Keyboard shortcuts
-    const handleKeyboard = (e: KeyboardEvent) => {
-      // Ctrl+S to save
-      if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        if (submitBtn && !submitBtn.disabled) {
-          submitBtn.click();
+    if (taxMode === "invoice") {
+      if (includeTax && invoiceRate > 0) {
+        const divisor = 1 + invoiceRate / 100;
+        if (divisor > 0) {
+          const extracted = subtotal - subtotal / divisor;
+          tax = extracted;
+          subtotal = subtotal - extracted;
         }
-        return;
-      }
-
-      // Ctrl+Enter to add new item
-      if (e.ctrlKey && e.key === 'Enter') {
-        e.preventDefault();
-        if (addBtn && !(addBtn as HTMLButtonElement).disabled) {
-          addBtn.click();
-        }
-        return;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyboard);
-
-    // Simple client-side validation
-    function validate(): boolean {
-      if (!container) return false;
-      let valid = true;
-      // Customer required
-      if (customerSelect) {
-        if (!customerSelect.value) {
-          valid = false;
-          if (customerError) {
-            customerError.textContent = 'Please select a customer.';
-            customerError.classList.remove('hidden');
-          }
-          customerSelect.classList.add('input-error', 'select-error');
-        } else {
-          if (customerError) customerError.classList.add('hidden');
-          customerSelect.classList.remove('input-error', 'select-error');
-        }
-      }
-
-      // At least one item with non-empty description
-  const rows = container.querySelectorAll('.item-row');
-      let hasDescription = false;
-      rows.forEach((row) => {
-        const desc = row.querySelector('input[name="item_description"]') as HTMLInputElement | null;
-        if (desc && desc.value.trim()) hasDescription = true;
-      });
-      if (!hasDescription) {
-        valid = false;
-        if (itemsError) itemsError.classList.remove('hidden');
+      } else if (!includeTax && invoiceRate > 0) {
+        tax = subtotal * (invoiceRate / 100);
       } else {
-        if (itemsError) itemsError.classList.add('hidden');
+        tax = 0;
       }
-
-      // Disable submit if invalid
-      if (submitBtn) submitBtn.disabled = !valid;
-      return valid;
     }
 
-    // Validate on load and when inputs change
-    validate();
-    customerSelect?.addEventListener('change', validate);
-    form?.addEventListener('input', (e) => {
-      const t = e.target as HTMLElement | null;
-      if (t && (t.matches('input[name="item_description"]') || t.matches('select[name="customerId"]'))) {
-        validate();
-      }
-    });
-    form?.addEventListener('submit', (e) => {
-      if (!validate()) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
+    subtotal = round2(subtotal);
+    tax = round2(tax);
+    const total = round2(subtotal + tax);
+    const format = (value: number) =>
+      formatMoney(value, currency || "USD", numberFormat);
 
-    return () => {
-      addBtn.removeEventListener('click', onAdd);
-      if (taxModeSelect) taxModeSelect.removeEventListener('change', applyTaxMode);
-      customerSelect?.removeEventListener('change', validate);
-      document.removeEventListener('keydown', handleKeyboard);
+    return {
+      subtotal: format(subtotal),
+      tax: format(tax),
+      total: format(total),
+      rawTax: tax,
     };
+  }, [
+    currency,
+    invoiceTaxRate,
+    items,
+    numberFormat,
+    pricesIncludeTax,
+    roundingMode,
+    taxMode,
+  ]);
+
+  const handleDragStart = useCallback(
+    (event: DragEvent, id: string) => {
+      setDraggedId(id);
+      setDropIndicator(null);
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", id);
+      }
+    },
+    [],
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragEvent, id: string) => {
+      if (!draggedId || draggedId === id) return;
+      event.preventDefault();
+      const target = event.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
+      const after = event.clientY >= rect.top + rect.height / 2;
+      setDropIndicator({ id, position: after ? "after" : "before" });
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
+    },
+    [draggedId],
+  );
+
+  const handleDragLeave = useCallback((id: string) => {
+    setDropIndicator((current) =>
+      current && current.id === id ? null : current
+    );
   }, []);
-  return null;
+
+  const handleDrop = useCallback(
+    (event: DragEvent, id: string) => {
+      if (!draggedId || draggedId === id) {
+        setDropIndicator(null);
+        return;
+      }
+      event.preventDefault();
+      setItems((prev) => {
+        const next = [...prev];
+        const fromIndex = next.findIndex((item) => item.id === draggedId);
+        const targetIndex = next.findIndex((item) => item.id === id);
+        if (fromIndex === -1 || targetIndex === -1) return prev;
+        const [moved] = next.splice(fromIndex, 1);
+        let insertIndex = next.findIndex((item) => item.id === id);
+        if (insertIndex === -1) return prev;
+        const indicator = dropIndicator && dropIndicator.id === id
+          ? dropIndicator.position
+          : "before";
+        if (indicator === "after") insertIndex += 1;
+        next.splice(insertIndex, 0, moved);
+        return next;
+      });
+      setDropIndicator(null);
+      setDraggedId(null);
+    },
+    [draggedId, dropIndicator],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null);
+    setDropIndicator(null);
+  }, []);
+
+  const handleSubmit = useCallback(
+    (event: Event) => {
+      if (!isValid) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    [isValid],
+  );
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.ctrlKey && (event.key === "s" || event.key === "S")) {
+        event.preventDefault();
+        formRef.current?.requestSubmit();
+      } else if (event.ctrlKey && event.key === "Enter") {
+        event.preventDefault();
+        handleAddItem();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [handleAddItem]);
+
+  const customerDescribedBy = inlineCustomerRequired
+    ? "customer-error inline-customer-error"
+    : "customer-error";
+
+  return (
+    <form
+      ref={formRef}
+      method="post"
+      class="space-y-6"
+      data-writable
+      onSubmit={(event) => handleSubmit(event as Event)}
+      id={props.formId}
+      data-valid={isValid ? "true" : "false"}
+    >
+      {!props.hideTopButton && (
+        <div class="flex items-center justify-end gap-3">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            data-writable
+            disabled={!isValid}
+          >
+            <LuSave size={16} />
+            <span>Save</span>
+          </button>
+        </div>
+      )}
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="form-control">
+          <div class="label">
+            <span class="label-text">
+              Customer <span aria-hidden="true" class="text-error">*</span>
+            </span>
+          </div>
+          {isCreateMode
+            ? (
+              <>
+                <select
+                  name="customerId"
+                  class="select select-bordered w-full"
+                  value={selectedCustomerId}
+                  onInput={handleCustomerChange}
+                  disabled={isDemo}
+                  aria-required="true"
+                  aria-describedby={customerDescribedBy}
+                  data-writable
+                >
+                  <option value="">Select customer</option>
+                  {props.customers?.map((customer) => (
+                    <option value={customer.id} key={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                  <option value="__create__">Add new customer…</option>
+                </select>
+                <div
+                  id="customer-error"
+                  class={`text-error text-xs mt-1 ${customerError ? "" : "hidden"}`}
+                >
+                  {customerError ?? ""}
+                </div>
+              </>
+            )
+            : (
+              <div class="space-y-2">
+                <input
+                  value={props.customerName || ""}
+                  class="input input-bordered w-full"
+                  disabled
+                />
+              </div>
+            )}
+        </div>
+
+        <div class="form-control">
+          <div class="label">
+            <span class="label-text">Invoice Number</span>
+          </div>
+          <input
+            name="invoiceNumber"
+            value={invoiceNumber}
+            class="input input-bordered w-full"
+            placeholder="e.g. INV-2025-001"
+            onInput={(event) =>
+              setInvoiceNumber(
+                (event.currentTarget as HTMLInputElement).value,
+              )}
+            data-writable
+            disabled={isDemo}
+          />
+          {props.invoiceNumberError && (
+            <div class="text-error text-xs mt-1">
+              {props.invoiceNumberError}
+            </div>
+          )}
+        </div>
+
+        <div class="form-control">
+          <div class="label">
+            <span class="label-text">Currency</span>
+          </div>
+          <input
+            name="currency"
+            value={currency}
+            class="input input-bordered w-full"
+            onInput={(event) =>
+              setCurrency((event.currentTarget as HTMLInputElement).value)}
+            data-writable
+            disabled={isDemo}
+          />
+        </div>
+
+        <div class="form-control">
+          <div class="label">
+            <span class="label-text">Status</span>
+          </div>
+          <select
+            name="status"
+            class="select select-bordered w-full"
+            value={status}
+            onInput={(event) =>
+              setStatus(
+                (event.currentTarget as HTMLSelectElement)
+                  .value as "draft" | "sent" | "paid" | "overdue",
+              )}
+            data-writable
+            disabled={isDemo}
+          >
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+      </div>
+
+      {inlineCustomerRequired && (
+        <div class="rounded-box border border-base-300 bg-base-200/40 p-4 space-y-3">
+          <h3 class="text-sm font-semibold">New customer details</h3>
+          <div
+            id="inline-customer-error"
+            class={`text-error text-xs ${inlineCustomerError ? "" : "hidden"}`}
+          >
+            {inlineCustomerError ?? ""}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="form-control sm:col-span-2">
+              <div class="label">
+                <span class="label-text">
+                  Customer name <span aria-hidden="true" class="text-error">*</span>
+                </span>
+              </div>
+              <input
+                name="inlineCustomerName"
+                value={inlineCustomer.name}
+                onInput={handleInlineCustomerChange("name")}
+                class="input input-bordered w-full"
+                required
+                data-writable
+                disabled={isDemo}
+                aria-describedby="inline-customer-error"
+                placeholder="Acme Corp"
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Email</span>
+              </div>
+              <input
+                type="email"
+                name="inlineCustomerEmail"
+                value={inlineCustomer.email}
+                onInput={handleInlineCustomerChange("email")}
+                class="input input-bordered w-full"
+                data-writable
+                disabled={isDemo}
+                placeholder="billing@example.com"
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Phone</span>
+              </div>
+              <input
+                name="inlineCustomerPhone"
+                value={inlineCustomer.phone}
+                onInput={handleInlineCustomerChange("phone")}
+                class="input input-bordered w-full"
+                data-writable
+                disabled={isDemo}
+                placeholder="+1 555 0100"
+              />
+            </label>
+            <label class="form-control sm:col-span-2">
+              <div class="label">
+                <span class="label-text">Address</span>
+              </div>
+              <textarea
+                name="inlineCustomerAddress"
+                value={inlineCustomer.address}
+                onInput={handleInlineCustomerChange("address")}
+                class="textarea textarea-bordered"
+                rows={3}
+                data-writable
+                disabled={isDemo}
+                placeholder="123 Main Street"
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">City</span>
+              </div>
+              <input
+                name="inlineCustomerCity"
+                value={inlineCustomer.city}
+                onInput={handleInlineCustomerChange("city")}
+                class="input input-bordered w-full"
+                data-writable
+                disabled={isDemo}
+                placeholder="Amsterdam"
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Postal code</span>
+              </div>
+              <input
+                name="inlineCustomerPostalCode"
+                value={inlineCustomer.postalCode}
+                onInput={handleInlineCustomerChange("postalCode")}
+                class="input input-bordered w-full"
+                data-writable
+                disabled={isDemo}
+                placeholder="1234 AB"
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">VAT / Tax ID</span>
+              </div>
+              <input
+                name="inlineCustomerTaxId"
+                value={inlineCustomer.taxId}
+                onInput={handleInlineCustomerChange("taxId")}
+                class="input input-bordered w-full"
+                data-writable
+                disabled={isDemo}
+                placeholder="NL123456789B01"
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Country code</span>
+              </div>
+              <input
+                name="inlineCustomerCountryCode"
+                value={inlineCustomer.countryCode}
+                onInput={handleInlineCustomerChange("countryCode")}
+                class="input input-bordered w-full"
+                data-writable
+                disabled={isDemo}
+                placeholder="NL"
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {props.showDates && (
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Issue Date</span>
+            </div>
+            <input
+              type="date"
+              name="issueDate"
+              value={issueDate}
+              onInput={(event) =>
+                setIssueDate((event.currentTarget as HTMLInputElement).value)}
+              class="input input-bordered w-full"
+              data-writable
+              disabled={isDemo}
+            />
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Due Date</span>
+            </div>
+            <input
+              type="date"
+              name="dueDate"
+              value={dueDate}
+              onInput={(event) =>
+                setDueDate((event.currentTarget as HTMLInputElement).value)}
+              class="input input-bordered w-full"
+              data-writable
+              disabled={isDemo}
+            />
+          </label>
+        </div>
+      )}
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm">
+            Items <span aria-hidden="true" class="text-error">*</span>
+            <span class="ml-2 text-xs text-base-content/50 font-normal">
+              (Ctrl+Enter to add)
+            </span>
+          </label>
+          <button
+            type="button"
+            id="add-item"
+            class="btn btn-sm"
+            onClick={handleAddItem}
+            data-writable
+            disabled={isDemo}
+          >
+            <LuPlus size={16} />
+            <span class="ml-2">Add item</span>
+          </button>
+        </div>
+        <div
+          id="items-error"
+          class={`text-error text-xs mb-2 ${itemsError ? "" : "hidden"}`}
+        >
+          {itemsError ?? ""}
+        </div>
+
+        <div class="items-header hidden lg:flex flex-row flex-nowrap items-center gap-2 mb-1 text-xs text-base-content/60 font-medium">
+          <div class="w-6 shrink-0"></div>
+          <div class="flex-1 min-w-0 pl-3">Description</div>
+          <div class="w-16 sm:w-20 shrink-0 text-center">Quantity</div>
+          <div class="w-24 shrink-0 text-center">Price</div>
+          <div
+            class={`w-24 shrink-0 text-center per-line-tax-input ${taxMode === "line" ? "" : "hidden"}`}
+          >
+            Tax %
+          </div>
+          <div class="w-40 max-w-xs shrink-0 text-center">Notes</div>
+          <div class="w-8 shrink-0"></div>
+        </div>
+
+        <div id="items-container" class="space-y-3">
+          {items.map((item, index) => {
+            const indicator = dropIndicator && dropIndicator.id === item.id
+              ? dropIndicator.position
+              : null;
+            const rowStyle: JSX.CSSProperties | undefined = indicator === "before"
+              ? { borderTop: "2px solid hsl(var(--p))" }
+              : indicator === "after"
+              ? { borderBottom: "2px solid hsl(var(--p))" }
+              : undefined;
+            return (
+              <div
+                key={item.id}
+                class="item-row"
+                draggable
+                onDragStart={(event) => handleDragStart(event, item.id)}
+                onDragOver={(event) => handleDragOver(event, item.id)}
+                onDragLeave={() => handleDragLeave(item.id)}
+                onDrop={(event) => handleDrop(event, item.id)}
+                onDragEnd={handleDragEnd}
+                style={rowStyle}
+              >
+                {/* Mobile card layout */}
+                <div class="lg:hidden border border-base-300 rounded-lg p-3 space-y-2">
+                  <div class="flex items-start gap-2">
+                    <button
+                      type="button"
+                      class="drag-handle btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100"
+                      aria-label="Drag to reorder"
+                      tabIndex={-1}
+                    >
+                      <LuGripVertical size={16} />
+                    </button>
+                    <div class="flex-1 space-y-2">
+                      <input
+                        name={`item_${index}_description`}
+                        value={item.description}
+                        placeholder="Description *"
+                        class="input input-bordered w-full"
+                        onInput={handleItemChange(index, "description")}
+                        data-writable
+                        aria-describedby="items-error"
+                      />
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="label py-1"><span class="label-text text-xs">Quantity</span></label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name={`item_${index}_quantity`}
+                            value={item.quantity}
+                            class="input input-bordered w-full input-sm"
+                            onInput={handleItemChange(index, "quantity")}
+                            data-writable
+                          />
+                        </div>
+                        <div>
+                          <label class="label py-1"><span class="label-text text-xs">Price</span></label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name={`item_${index}_unitPrice`}
+                            value={item.unitPrice}
+                            class="input input-bordered w-full input-sm"
+                            onInput={handleItemChange(index, "unitPrice")}
+                            data-writable
+                          />
+                        </div>
+                      </div>
+                      {taxMode === "line" && (
+                        <div>
+                          <label class="label py-1"><span class="label-text text-xs">Tax %</span></label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name={`item_${index}_tax_percent`}
+                            value={item.taxPercent}
+                            placeholder="0"
+                            class="input input-bordered w-full input-sm per-line-tax-input"
+                            onInput={handleItemChange(index, "taxPercent")}
+                            data-writable
+                            disabled={taxMode !== "line"}
+                            title="Per-line tax rate (%)"
+                          />
+                        </div>
+                      )}
+                      <input
+                        name={`item_${index}_notes`}
+                        value={item.notes}
+                        placeholder="Notes (optional)"
+                        class="input input-bordered w-full input-sm"
+                        onInput={handleItemChange(index, "notes")}
+                        data-writable
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      class="remove-item btn btn-ghost btn-square btn-sm shrink-0"
+                      aria-label="Remove item"
+                      onClick={() => handleRemoveItem(item.id)}
+                      data-writable
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+
+                {/* Desktop inline layout */}
+                <div class="hidden lg:flex flex-nowrap items-center gap-2">
+                  <button
+                    type="button"
+                    class="drag-handle btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100"
+                    aria-label="Drag to reorder"
+                    tabIndex={-1}
+                  >
+                    <LuGripVertical size={16} />
+                  </button>
+                  <input
+                    name={`item_${index}_description`}
+                    value={item.description}
+                    placeholder="Description"
+                    class="input input-bordered flex-1 min-w-0"
+                    onInput={handleItemChange(index, "description")}
+                    data-writable
+                    aria-describedby="items-error"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name={`item_${index}_quantity`}
+                    value={item.quantity}
+                    class="input input-bordered w-16 sm:w-20 shrink-0"
+                    onInput={handleItemChange(index, "quantity")}
+                    data-writable
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name={`item_${index}_unitPrice`}
+                    value={item.unitPrice}
+                    class="input input-bordered w-24 shrink-0"
+                    onInput={handleItemChange(index, "unitPrice")}
+                    data-writable
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name={`item_${index}_tax_percent`}
+                    value={item.taxPercent}
+                    placeholder="Tax %"
+                    class={`input input-bordered w-24 shrink-0 per-line-tax-input ${taxMode === "line" ? "" : "hidden"}`}
+                    onInput={handleItemChange(index, "taxPercent")}
+                    data-writable
+                    disabled={taxMode !== "line"}
+                    title="Per-line tax rate (%)"
+                  />
+                  <input
+                    name={`item_${index}_notes`}
+                    value={item.notes}
+                    placeholder="Notes"
+                    class="input input-bordered w-40 max-w-xs shrink-0"
+                    onInput={handleItemChange(index, "notes")}
+                    data-writable
+                  />
+                  <button
+                    type="button"
+                    class="remove-item btn btn-ghost btn-square btn-sm shrink-0"
+                    aria-label="Remove item"
+                    onClick={() => handleRemoveItem(item.id)}
+                    data-writable
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div id="totals-preview" class="bg-base-200 rounded-box p-3 sm:p-4 text-sm">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+          <div class="flex flex-col sm:flex-row gap-3 sm:gap-6">
+            <div class="flex justify-between sm:block">
+              <span class="text-base-content/60">Subtotal:</span>
+              <span class="font-semibold sm:ml-2" id="preview-subtotal">
+                {totals.subtotal}
+              </span>
+            </div>
+            <div
+              id="preview-tax-container"
+              class={Math.abs(totals.rawTax) < 0.005 ? "hidden" : "flex justify-between sm:block"}
+            >
+              <span class="text-base-content/60">Tax:</span>
+              <span class="font-semibold sm:ml-2" id="preview-tax">
+                {totals.tax}
+              </span>
+            </div>
+          </div>
+          <div class="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0">
+            <span class="text-base-content/60">Total:</span>
+            <span class="font-bold text-lg ml-2" id="preview-total">
+              {totals.total}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs text-base-content/50 flex flex-wrap gap-x-4 gap-y-1">
+        <span class="hidden sm:inline">
+          <kbd class="kbd kbd-xs">Ctrl</kbd>
+          +
+          <kbd class="kbd kbd-xs">S</kbd>
+          Save
+        </span>
+        <span class="hidden sm:inline">
+          <kbd class="kbd kbd-xs">Ctrl</kbd>
+          +
+          <kbd class="kbd kbd-xs">Enter</kbd>
+          Add item
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Tax Mode</span>
+          </div>
+          <select
+            name="taxMode"
+            id="tax-mode-select"
+            class="select select-bordered w-full"
+            value={taxMode}
+            onInput={(event) =>
+              setTaxMode(
+                (event.currentTarget as HTMLSelectElement)
+                  .value as "invoice" | "line",
+              )}
+            data-writable
+            disabled={isDemo}
+          >
+            <option value="invoice">Invoice total</option>
+            <option value="line">Per line</option>
+          </select>
+        </label>
+        <label
+          class={`form-control ${taxMode === "invoice" ? "" : "hidden"}`}
+        >
+          <div class="label">
+            <span class="label-text">Tax Rate (%)</span>
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="taxRate"
+            value={invoiceTaxRate}
+            class="input input-bordered w-full"
+            onInput={(event) =>
+              setInvoiceTaxRate(
+                (event.currentTarget as HTMLInputElement).value,
+              )}
+            data-writable
+            disabled={isDemo || taxMode !== "invoice"}
+            id="invoice-tax-rate-input"
+          />
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Prices include tax?</span>
+          </div>
+          <select
+            name="pricesIncludeTax"
+            class="select select-bordered w-full"
+            value={pricesIncludeTax}
+            onInput={(event) =>
+              setPricesIncludeTax(
+                (event.currentTarget as HTMLSelectElement).value as
+                  | "true"
+                  | "false",
+              )}
+            data-writable
+            disabled={isDemo}
+          >
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Rounding mode</span>
+          </div>
+          <select
+            name="roundingMode"
+            class="select select-bordered w-full"
+            value={roundingMode}
+            onInput={(event) =>
+              setRoundingMode(
+                (event.currentTarget as HTMLSelectElement)
+                  .value === "total"
+                  ? "total"
+                  : "line",
+              )}
+            data-writable
+            disabled={isDemo}
+          >
+            <option value="line">Round per line</option>
+            <option value="total">Round on totals</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Payment Terms</span>
+          </div>
+          <input
+            name="paymentTerms"
+            value={paymentTerms}
+            placeholder="e.g. Due in 30 days"
+            class="input input-bordered w-full"
+            onInput={(event) =>
+              setPaymentTerms((event.currentTarget as HTMLInputElement).value)}
+            data-writable
+            disabled={isDemo}
+          />
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text">Notes</span>
+          </div>
+          <textarea
+            name="notes"
+            value={notes}
+            class="textarea textarea-bordered"
+            rows={3}
+            onInput={(event) =>
+              setNotes((event.currentTarget as HTMLTextAreaElement).value)}
+            data-writable
+            disabled={isDemo}
+          />
+        </label>
+      </div>
+
+    </form>
+  );
 }

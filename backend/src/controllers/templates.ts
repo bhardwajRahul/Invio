@@ -29,7 +29,11 @@ async function fetchText(url: string): Promise<string> {
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+  const hash = await crypto.subtle.digest("SHA-256", buffer);
   return Array.from(new Uint8Array(hash)).map((b) =>
     b.toString(16).padStart(2, "0")
   ).join("");
@@ -71,6 +75,29 @@ function assertManifestShape(m: unknown): asserts m is TemplateManifest {
   }
 }
 
+let builtInDefaultTemplate: Template | null | undefined;
+
+function loadBuiltinTemplate(): Template | null {
+  if (builtInDefaultTemplate !== undefined) {
+    return builtInDefaultTemplate;
+  }
+  try {
+    const url = new URL("../../static/templates/professional-modern.html", import.meta.url);
+    const html = Deno.readTextFileSync(url);
+    builtInDefaultTemplate = {
+      id: "builtin-professional-modern",
+      name: "Professional Modern",
+      html,
+      isDefault: true,
+      createdAt: new Date(0),
+    };
+  } catch (error) {
+    console.error("Failed to load built-in template:", error);
+    builtInDefaultTemplate = null;
+  }
+  return builtInDefaultTemplate ?? null;
+}
+
 export async function installTemplateFromManifest(manifestUrl: string) {
   if (!/^https?:\/\//i.test(manifestUrl)) {
     throw new Error("Manifest URL must be http(s)");
@@ -102,7 +129,7 @@ export async function installTemplateFromManifest(manifestUrl: string) {
       throw new Error("HTML sha256 mismatch");
     }
   }
-  let html = new TextDecoder().decode(htmlBuf);
+  const html = new TextDecoder().decode(htmlBuf);
   basicHtmlSanity(html);
 
   // Persist to filesystem under data/templates/{id}/{version}/
@@ -151,6 +178,39 @@ export const getTemplateById = (id: string) => {
     isDefault: row[3] as boolean,
     createdAt: new Date(row[4] as string),
   };
+};
+
+export const getDefaultTemplate = (): Template | null => {
+  const db = getDatabase();
+  const defaultRows = db.query(
+    "SELECT id, name, html, is_default, created_at FROM templates WHERE is_default = 1 ORDER BY created_at DESC LIMIT 1",
+  );
+  if (defaultRows.length > 0) {
+    const row = defaultRows[0] as unknown[];
+    return {
+      id: row[0] as string,
+      name: row[1] as string,
+      html: row[2] as string,
+      isDefault: Boolean(row[3]),
+      createdAt: new Date(row[4] as string),
+    };
+  }
+
+  const anyRows = db.query(
+    "SELECT id, name, html, is_default, created_at FROM templates ORDER BY created_at DESC LIMIT 1",
+  );
+  if (anyRows.length > 0) {
+    const row = anyRows[0] as unknown[];
+    return {
+      id: row[0] as string,
+      name: row[1] as string,
+      html: row[2] as string,
+      isDefault: Boolean(row[3]),
+      createdAt: new Date(row[4] as string),
+    };
+  }
+
+  return loadBuiltinTemplate();
 };
 
 export const loadTemplateFromFile = async (

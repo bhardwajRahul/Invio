@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fontconfig \
     tar \
     chromium \
+  ghostscript \
     fonts-dejavu \
     fonts-liberation \
     fonts-noto \
@@ -31,7 +32,8 @@ RUN mkdir -p /app/data
 
 ENV PORT=3000 \
   DATABASE_PATH=/app/data/invio.db \
-  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+  GHOSTSCRIPT_BIN=/usr/bin/gs
 
 EXPOSE 3000
 CMD ["deno", "task", "start"]

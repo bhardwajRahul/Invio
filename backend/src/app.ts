@@ -5,21 +5,23 @@ import { initDatabase, resetDatabaseFromDemo } from "./database/init.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { logChromiumAvailability } from "./utils/chromium.ts";
+import { ensureEnv } from "./utils/env.ts";
 
 const app = new Hono();
 
 // Check for required credentials in environment
-const requiredEnv = ["ADMIN_USER", "ADMIN_PASS", "JWT_SECRET"];
-const missing = requiredEnv.filter((key) => !Deno.env.get(key));
-if (missing.length > 0) {
-  console.error(
-    `FATAL: Missing required environment variables: ${missing.join(", ")}. Refusing to start.`,
-  );
+try {
+  ensureEnv(["ADMIN_USER", "ADMIN_PASS", "JWT_SECRET"]);
+} catch (error) {
+  console.error(`FATAL: ${error instanceof Error ? error.message : error}`);
   Deno.exit(1);
 }
 
 // Initialize the database
 initDatabase();
+
+await logChromiumAvailability();
 
 // In demo mode, schedule a periodic reset of the database from DEMO_DB_PATH.
 // Writes are allowed between resets.

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { useTranslations } from "../i18n/context.tsx";
 
 type Props = {
   size?: "sm" | "md" | "lg";
@@ -11,6 +12,7 @@ const LIGHT = "light";
 const DARK = "dark";
 
 export default function ThemeToggle(props: Props) {
+  const { t } = useTranslations();
   const [theme, setTheme] = useState<string>(LIGHT);
 
   // Initialize from localStorage or prefers-color-scheme
@@ -42,8 +44,11 @@ export default function ThemeToggle(props: Props) {
   const size = props.size ?? "md";
   const cls = `btn btn-ghost ${size === "sm" ? "btn-sm" : size === "lg" ? "btn-lg" : ""} ${props.class ?? ""}`;
 
+  const defaultLabel = t("Toggle light/dark theme");
+  const buttonLabel = props.label ?? defaultLabel;
+
   return (
-    <button type="button" class={cls} onClick={toggle} aria-label={props.label ?? "Toggle theme"} title={props.label ?? "Toggle theme"}>
+    <button type="button" class={cls} onClick={toggle} aria-label={buttonLabel} title={buttonLabel}>
       {/* sun/moon icon swap */}
       <svg xmlns="http://www.w3.org/2000/svg" class={`h-5 w-5 ${theme === DARK ? "hidden" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="4" />
@@ -52,7 +57,7 @@ export default function ThemeToggle(props: Props) {
       <svg xmlns="http://www.w3.org/2000/svg" class={`h-5 w-5 ${theme === DARK ? "" : "hidden"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
-      <span class="ml-2 hidden sm:inline text-sm opacity-70">{theme === DARK ? "Dark" : "Light"}</span>
+      <span class="ml-2 hidden sm:inline text-sm opacity-70">{theme === DARK ? t("Dark") : t("Light")}</span>
     </button>
   );
 }

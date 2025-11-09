@@ -1,5 +1,7 @@
 type Crumb = { label: string; href?: string };
 
+import { useTranslations } from "../i18n/context.tsx";
+
 function titleize(slug: string) {
   return slug
     .replace(/[-_]+/g, " ")
@@ -21,6 +23,7 @@ const LABEL_MAP: Record<string, string> = {
 };
 
 export function Breadcrumbs(props: { path?: string }) {
+  const { t } = useTranslations();
   const path = props.path || "/";
   const segments = path.replace(/(^\/+|\/+?$)/g, "").split("/").filter(Boolean);
   // Only show breadcrumbs on subpages (e.g., /section/subpage), not on top-level pages like /dashboard or /invoices
@@ -31,8 +34,11 @@ export function Breadcrumbs(props: { path?: string }) {
   segments.forEach((seg, idx) => {
     hrefAcc += "/" + seg;
     const isLast = idx === segments.length - 1;
-    const label = LABEL_MAP[seg] || titleize(seg);
-    crumbs.push({ label, href: isLast ? undefined : hrefAcc });
+    const english = LABEL_MAP[seg] || titleize(seg);
+    crumbs.push({
+      label: t(english),
+      href: isLast ? undefined : hrefAcc,
+    });
   });
 
   return (

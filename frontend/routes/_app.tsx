@@ -1,9 +1,13 @@
 import { AppProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
+import { LocalizationProvider } from "../i18n/context.tsx";
+import { DEFAULT_LOCALIZATION } from "../i18n/mod.ts";
+import type { AppState } from "./_middleware.ts";
 
-export default function App({ Component }: AppProps) {
+export default function App({ Component, state }: AppProps<unknown, AppState>) {
+  const localization = state?.localization ?? DEFAULT_LOCALIZATION;
   return (
-  <html lang="en">
+  <html lang={localization.locale}>
       <Head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,13 +15,8 @@ export default function App({ Component }: AppProps) {
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {/* Early theme init to prevent FOUC */}
     <script src="/app-init.js"></script>
-        {/* Tailwind CDN for utilities */}
-        <script src="https://cdn.tailwindcss.com"></script>
-        {/* daisyUI precompiled CSS */}
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css"
-        />
+        {/* Tailwind CSS with DaisyUI */}
+        <link rel="stylesheet" href="/styles.css" />
         {/* Inter font */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -40,7 +39,9 @@ export default function App({ Component }: AppProps) {
         </style>
       </Head>
       <body class="min-h-screen bg-base-200 text-base-content">
-        <Component />
+        <LocalizationProvider value={localization}>
+          <Component />
+        </LocalizationProvider>
       </body>
     </html>
   );

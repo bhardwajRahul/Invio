@@ -25,6 +25,7 @@ export const updateSettings = (data: Record<string, string>) => {
       "email", // alias
       "companyCountryCode",
       "countryCode", // alias
+      "locale",
     ].includes(key) && String(raw).trim() === "";
 
     if (shouldClear) {

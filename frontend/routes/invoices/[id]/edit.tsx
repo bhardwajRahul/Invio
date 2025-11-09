@@ -1,12 +1,13 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Layout } from "../../../components/Layout.tsx";
 import { InvoiceEditor } from "../../../components/InvoiceEditor.tsx";
-import { LuSave } from "../../../components/icons.tsx";
+import InvoiceFormButton from "../../../islands/InvoiceFormButton.tsx";
 import {
   backendGet,
   backendPut,
   getAuthHeaderFromCookie,
 } from "../../../utils/backend.ts";
+import { useTranslations } from "../../../i18n/context.tsx";
 
 type Item = {
   description: string;
@@ -31,7 +32,12 @@ type Invoice = {
   status?: "draft" | "sent" | "paid" | "overdue";
   taxes?: Array<{ percent: number; taxableAmount: number; taxAmount: number }>;
 };
-type Data = { authed: boolean; invoice?: Invoice; settings?: Record<string, string>; error?: string };
+type Data = {
+  authed: boolean;
+  invoice?: Invoice;
+  settings?: Record<string, string>;
+  error?: string;
+};
 
 export const handler: Handlers<Data> = {
   async GET(req, ctx) {
@@ -58,7 +64,10 @@ export const handler: Handlers<Data> = {
         });
       }
       // Also fetch settings for numberFormat
-      const settings = await backendGet("/api/v1/settings", auth) as Record<string, string>;
+      const settings = await backendGet("/api/v1/settings", auth) as Record<
+        string,
+        string
+      >;
       return ctx.render({ authed: true, invoice, settings });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
@@ -86,37 +95,48 @@ export const handler: Handlers<Data> = {
       | "sent"
       | "paid"
       | "overdue";
-  const taxRate = Number(form.get("taxRate") || 0) || 0;
-    const pricesIncludeTax = String(form.get("pricesIncludeTax") || 'false') === 'true';
+    const taxRate = Number(form.get("taxRate") || 0) || 0;
+    const pricesIncludeTax =
+      String(form.get("pricesIncludeTax") || "false") === "true";
     const roundingMode = String(form.get("roundingMode") || "line");
-  const taxMode = String(form.get("taxMode") || 'invoice') as 'invoice' | 'line';
+    const taxMode = String(form.get("taxMode") || "invoice") as
+      | "invoice"
+      | "line";
 
-    // Collect items from repeated fields item_description[], item_quantity[], item_unitPrice[]
-    const descriptions = form.getAll("item_description") as string[];
-    const quantities = form.getAll("item_quantity") as string[];
-    const unitPrices = form.getAll("item_unitPrice") as string[];
-    const itemNotes = form.getAll("item_notes") as string[];
-    const itemTaxPercents = form.getAll("item_tax_percent") as string[];
     const items: Item[] = [];
-    for (let i = 0; i < descriptions.length; i++) {
-      const description = String(descriptions[i] || "").trim();
-      if (!description) continue;
-      const taxPercentRaw = String(itemTaxPercents[i] || "").trim();
-      let taxes: Array<{ percent: number }> | undefined = undefined;
-      if (taxMode === 'line' && taxPercentRaw !== "") {
-        const n = Number(taxPercentRaw);
-        if (!isNaN(n) && isFinite(n) && n >= 0) {
-          taxes = [{ percent: n }];
-        }
+    let i = 0;
+    while (form.has(`item_${i}_description`)) {
+      const description = form.get(`item_${i}_description`) as string;
+      if (!description || description.trim() === "") {
+        i++;
+        continue;
       }
-      items.push({
+      const quantity = parseFloat(
+        (form.get(`item_${i}_quantity`) as string) || "1",
+      );
+      const unitPrice = parseFloat(
+        (form.get(`item_${i}_unitPrice`) as string) || "0",
+      );
+      const itemNotes = form.get(`item_${i}_notes`) as string | undefined;
+      const taxPercent = parseFloat(
+        (form.get(`item_${i}_tax_percent`) as string) || "0",
+      );
+
+      const item: Item = {
         description,
-        quantity: Number(quantities[i] || 1),
-        unitPrice: Number(unitPrices[i] || 0),
-        notes: String(itemNotes[i] || "") || undefined,
-        ...(taxes ? { taxes } : {}),
-      });
+        quantity,
+        unitPrice,
+        notes: itemNotes,
+      };
+
+      if (taxMode === "line" && taxPercent > 0) {
+        item.taxes = [{ percent: taxPercent }];
+      }
+
+      items.push(item);
+      i++;
     }
+
     if (items.length === 0) {
       return new Response("At least one item required", { status: 400 });
     }
@@ -125,15 +145,17 @@ export const handler: Handlers<Data> = {
       // Send notes as-is, including empty string, so existing notes get cleared when user deletes them
       const invoiceNumber = String(form.get("invoiceNumber") || "").trim();
       // Adjust items based on tax mode
-      if (taxMode === 'invoice') {
-        items.forEach((it) => { delete (it as Record<string, unknown>).taxes; });
+      if (taxMode === "invoice") {
+        items.forEach((it) => {
+          delete (it as Record<string, unknown>).taxes;
+        });
       }
       await backendPut(`/api/v1/invoices/${id}`, auth, {
         currency,
         status,
         notes,
         paymentTerms,
-        taxRate: taxMode === 'invoice' ? taxRate : 0,
+        taxRate: taxMode === "invoice" ? taxRate : 0,
         pricesIncludeTax,
         roundingMode,
         invoiceNumber: invoiceNumber || undefined,
@@ -149,8 +171,15 @@ export const handler: Handlers<Data> = {
     } catch (e) {
       const msg = String(e);
       if (/409|already exists|duplicate/i.test(msg)) {
-        const invoice = await backendGet(`/api/v1/invoices/${id}`, auth) as Invoice;
-        return ctx.render({ authed: true, invoice, error: "Invoice number already exists" });
+        const invoice = await backendGet(
+          `/api/v1/invoices/${id}`,
+          auth,
+        ) as Invoice;
+        return ctx.render({
+          authed: true,
+          invoice,
+          error: "Invoice number already exists",
+        });
       }
       return new Response(String(e), { status: 500 });
     }
@@ -158,30 +187,38 @@ export const handler: Handlers<Data> = {
 };
 
 export default function EditInvoicePage(props: PageProps<Data>) {
-  const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
+  const { t } = useTranslations();
+  const demoMode =
+    ((props.data as unknown) as { settings?: Record<string, unknown> }).settings
+      ?.demoMode === "true";
   const inv = props.data.invoice;
   const settings = props.data.settings || {};
   const numberFormat = settings.numberFormat || "comma";
+  const duplicateNumber = props.data.error &&
+    /invoice number already exists/i.test(props.data.error);
+  const errorMessage = duplicateNumber
+    ? t("Invoice number already exists")
+    : props.data.error;
   return (
-    <Layout authed={props.data.authed} demoMode={demoMode} path={new URL(props.url).pathname} wide>
-      {props.data.error && (
+    <Layout
+      authed={props.data.authed}
+      demoMode={demoMode}
+      path={new URL(props.url).pathname}
+      wide
+    >
+      {errorMessage && (
         <div class="alert alert-error mb-3">
-          <span>{props.data.error}</span>
+          <span>{errorMessage}</span>
         </div>
       )}
       {inv && (
-    <form method="post" class="space-y-4" data-writable>
+        <div class="space-y-4">
           <div class="flex items-center justify-between gap-2">
-            <h1 class="text-2xl font-semibold">Edit Invoice</h1>
-            <div class="flex items-center gap-2">
-              <a href={`/invoices/${inv.id}`} class="btn btn-ghost btn-sm">
-                Cancel
-              </a>
-      <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
-                <LuSave size={16} />
-                Save
-              </button>
-            </div>
+            <h1 class="text-2xl font-semibold">{t("Edit Invoice")}</h1>
+            <InvoiceFormButton
+              formId="invoice-form"
+              label={t("Save")}
+            />
           </div>
 
           <InvoiceEditor
@@ -193,7 +230,10 @@ export default function EditInvoicePage(props: PageProps<Data>) {
             taxRate={inv.taxRate as number}
             pricesIncludeTax={inv.pricesIncludeTax as boolean}
             roundingMode={inv.roundingMode as string}
-            taxMode={(inv.items && inv.items.some(i => i.taxes && i.taxes.length)) ? 'line' : 'invoice'}
+            taxMode={(inv.items &&
+                inv.items.some((i) => i.taxes && i.taxes.length))
+              ? "line"
+              : "invoice"}
             showDates
             issueDate={(inv.issue_date as string) || ""}
             dueDate={(inv.due_date as string) || ""}
@@ -205,13 +245,19 @@ export default function EditInvoicePage(props: PageProps<Data>) {
                 const single = it.taxes && it.taxes.length === 1
                   ? it.taxes[0].percent
                   : undefined;
-                return { ...it, taxPercent: single } as Item & { taxPercent?: number };
+                return { ...it, taxPercent: single } as Item & {
+                  taxPercent?: number;
+                };
               })}
             demoMode={demoMode}
-            invoiceNumberError={props.data.error}
+            invoiceNumberError={duplicateNumber
+              ? t("Invoice number already exists")
+              : undefined}
             numberFormat={numberFormat}
+            hideTopButton
+            formId="invoice-form"
           />
-        </form>
+        </div>
       )}
     </Layout>
   );

@@ -3,6 +3,7 @@ import { Layout } from "../../components/Layout.tsx";
 import { LuPlus } from "../../components/icons.tsx";
 import { formatMoney, getNumberFormat } from "../../utils/format.ts";
 import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
+import { useTranslations } from "../../i18n/context.tsx";
 
 type Invoice = {
   id: string;
@@ -79,6 +80,7 @@ export const handler: Handlers<Data> = {
 };
 
 export default function Invoices(props: PageProps<Data>) {
+  const { t } = useTranslations();
   const list = props.data.invoices ?? [];
   const q = props.data.q ?? "";
   const status = props.data.status ?? "";
@@ -113,7 +115,8 @@ export default function Invoices(props: PageProps<Data>) {
       : st === "sent"
       ? "badge-info"
       : "";
-    return <span class={`badge ${cls}`}>{st || ""}</span>;
+    const label = st ? t(st === "paid" ? "Paid" : st === "overdue" ? "Overdue" : st === "sent" ? "Sent" : "Draft") : "";
+    return <span class={`badge ${cls}`}>{label}</span>;
   };
   const qsFor = (s: string) => {
     const p = new URLSearchParams();
@@ -123,10 +126,10 @@ export default function Invoices(props: PageProps<Data>) {
   };
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
-      <div class="flex items-center justify-between mb-4">
-        <h1 class="text-2xl font-semibold">Invoices</h1>
-        <a href="/invoices/new" class="btn btn-sm btn-primary">
-          <LuPlus size={16} />New Invoice
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+        <h1 class="text-2xl font-semibold">{t("Invoices")}</h1>
+        <a href="/invoices/new" class="btn btn-sm btn-primary w-full sm:w-auto">
+          <LuPlus size={16} />{t("New Invoice")}
         </a>
       </div>
       {props.data.error && (
@@ -134,33 +137,35 @@ export default function Invoices(props: PageProps<Data>) {
           <span>{props.data.error}</span>
         </div>
       )}
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <form method="get" class="flex flex-wrap items-end gap-2">
-          <label class="form-control w-64 max-w-full">
+      <div class="mb-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <form method="get" class="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 w-full sm:w-auto">
+          <label class="form-control w-full sm:w-64">
             <div class="label py-0">
-              <span class="label-text text-xs">Search</span>
+              <span class="label-text text-xs">{t("Search")}</span>
             </div>
             <input
               name="q"
               value={q}
-              placeholder="Customer, ID or number"
+              placeholder={t("Customer, ID or number")}
               class="input input-bordered input-sm"
             />
           </label>
           {/* preserve current status chosen via tags */}
           <input type="hidden" name="status" value={status} />
-          <button type="submit" class="btn btn-sm">Apply</button>
-          {(q || status) && (
-            <a href="/invoices" class="btn btn-ghost btn-sm">Clear</a>
-          )}
+          <div class="flex gap-2">
+            <button type="submit" class="btn btn-sm flex-1 sm:flex-none">{t("Apply")}</button>
+            {(q || status) && (
+              <a href="/invoices" class="btn btn-ghost btn-sm flex-1 sm:flex-none">{t("Clear")}</a>
+            )}
+          </div>
         </form>
-        <div class="join">
+        <div class="join w-full sm:w-auto overflow-x-auto">
           {[
-            { v: "", l: "All" },
-            { v: "draft", l: "Draft" },
-            { v: "sent", l: "Sent" },
-            { v: "paid", l: "Paid" },
-            { v: "overdue", l: "Overdue" },
+            { v: "", l: t("All") },
+            { v: "draft", l: t("Draft") },
+            { v: "sent", l: t("Sent") },
+            { v: "paid", l: t("Paid") },
+            { v: "overdue", l: t("Overdue") },
           ].map(({ v, l }) => (
             <a
               href={qsFor(v)}
@@ -174,18 +179,64 @@ export default function Invoices(props: PageProps<Data>) {
         </div>
       </div>
       <div class="mb-3 text-xs opacity-70">
-        Showing <span class="font-medium">{list.length}</span> of{" "}
-        <span class="font-medium">{totalCount}</span> invoices
+        {t("Invoices list summary", { visible: String(list.length), total: String(totalCount) })}
       </div>
-  <div class="overflow-x-auto rounded-box bg-base-100 border border-base-300">
+      
+      {/* Mobile Card View */}
+      <div class="block lg:hidden space-y-3">
+        {list.map((inv) => (
+          <a href={`/invoices/${inv.id}`} class="card bg-base-100 border border-base-300 hover:shadow-md transition-shadow">
+            <div class="card-body p-4">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                  <div class="font-mono text-sm font-semibold link">
+                    {inv.invoiceNumber || inv.id}
+                  </div>
+                  <div class="text-sm mt-1">{inv.customer?.name}</div>
+                </div>
+                <div>{statusBadge(inv.status)}</div>
+              </div>
+              <div class="flex justify-between items-center text-sm pt-2 border-t border-base-300">
+                <div class="opacity-70">{fmtDate(inv.issue_date)}</div>
+                <div class="font-medium font-mono tabular-nums">{formatInvoiceMoney(inv)}</div>
+              </div>
+            </div>
+          </a>
+        ))}
+        {list.length === 0 && (
+          <div class="card bg-base-100 border border-base-300">
+            <div class="card-body text-center py-10 text-sm opacity-70">
+              {q || status
+                ? (
+                  <span>
+                    {t("No invoices match your filters.")}{" "}
+                    <a href="/invoices" class="link">{t("Clear filters")}</a>
+                  </span>
+                )
+                : (
+                  <span>
+                    {t("No invoices yet.")}{" "}
+                    <a href="/invoices/new" class="link">
+                      {t("Create your first invoice")}
+                    </a>
+                    {"."}
+                  </span>
+                )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div class="hidden lg:block overflow-x-auto rounded-box bg-base-100 border border-base-300">
         <table class="table table-sm w-full text-sm">
           <thead class="bg-base-200 text-base-content">
             <tr class="font-medium">
-              <th class="w-[22%]">Invoice #</th>
-              <th>Customer</th>
-              <th class="w-[16%]">Date</th>
-              <th class="w-[14%]">Status</th>
-              <th class="w-[16%] text-right">Total</th>
+              <th class="w-[22%]">{t("Invoice #")}</th>
+              <th>{t("Customer")}</th>
+              <th class="w-[16%]">{t("Date")}</th>
+              <th class="w-[14%]">{t("Status")}</th>
+              <th class="w-[16%] text-right">{t("Total")}</th>
             </tr>
           </thead>
           <tbody>
@@ -209,18 +260,19 @@ export default function Invoices(props: PageProps<Data>) {
                 <td colSpan={5} class="text-center py-10 text-sm opacity-70">
                   {q || status
                     ? (
-                      <>
-                        No invoices match your filters.{"  "}
-                        <a href="/invoices" class="link">Clear filters</a>
-                      </>
+                      <span>
+                        {t("No invoices match your filters.")}{" "}
+                        <a href="/invoices" class="link">{t("Clear filters")}</a>
+                      </span>
                     )
                     : (
-                      <>
-                        No invoices yet.{"  "}
+                      <span>
+                        {t("No invoices yet.")}{" "}
                         <a href="/invoices/new" class="link">
-                          Create your first invoice
-                        </a>.
-                      </>
+                          {t("Create your first invoice")}
+                        </a>
+                        {"."}
+                      </span>
                     )}
                 </td>
               </tr>

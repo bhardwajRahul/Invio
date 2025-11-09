@@ -3,6 +3,7 @@
 // This file is automatically updated during development when running `dev.ts`.
 
 import * as $_app from "./routes/_app.tsx";
+import * as $_middleware from "./routes/_middleware.ts";
 import * as $api_admin_export_full from "./routes/api/admin/export/full.ts";
 import * as $api_templates_install from "./routes/api/templates/install.ts";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
@@ -35,13 +36,16 @@ import * as $DemoModeDisabler from "./islands/DemoModeDisabler.tsx";
 import * as $ExportAll from "./islands/ExportAll.tsx";
 import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
 import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
+import * as $InvoiceFormButton from "./islands/InvoiceFormButton.tsx";
 import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
+import * as $SettingsNav from "./islands/SettingsNav.tsx";
 import * as $ThemeToggle from "./islands/ThemeToggle.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
+    "./routes/_middleware.ts": $_middleware,
     "./routes/api/admin/export/full.ts": $api_admin_export_full,
     "./routes/api/templates/install.ts": $api_templates_install,
     "./routes/customers/[id].tsx": $customers_id_,
@@ -81,7 +85,9 @@ const manifest = {
     "./islands/ExportAll.tsx": $ExportAll,
     "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
     "./islands/InvoiceEditorIsland.tsx": $InvoiceEditorIsland,
+    "./islands/InvoiceFormButton.tsx": $InvoiceFormButton,
     "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
+    "./islands/SettingsNav.tsx": $SettingsNav,
     "./islands/ThemeToggle.tsx": $ThemeToggle,
   },
   baseUrl: import.meta.url,

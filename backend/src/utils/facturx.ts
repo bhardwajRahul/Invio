@@ -34,6 +34,17 @@ function taxCategoryId(rate: number): string {
   return rate > 0 ? "S" : "Z"; 
 }
 
+function splitAddressLines(address?: string): { lineOne?: string; lineTwo?: string } {
+  if (!address) return {};
+  const parts = address.split(/\r?\n/).map((part) => part.trim()).filter((part) => part.length > 0);
+  if (parts.length === 0) return {};
+  const [lineOne, ...rest] = parts;
+  return {
+    lineOne,
+    lineTwo: rest.length ? rest.join(", ") : undefined,
+  };
+}
+
 function isLikelyVatId(v?: string): boolean {
   if (!v) return false;
   const s = v.trim();
@@ -84,10 +95,13 @@ export function generateFacturX22XML(
   </rsm:ExchangedDocument>`;
 
   // BASIC: Simplified seller party - only essential elements
+  const sellerAddressLines = splitAddressLines(business.companyAddress);
   const sellerParty = `
     <ram:SellerTradeParty>
       <ram:Name>${xmlEscape(business.companyName)}</ram:Name>
       <ram:PostalTradeAddress>
+        ${sellerAddressLines.lineOne ? `<ram:LineOne>${xmlEscape(sellerAddressLines.lineOne)}</ram:LineOne>` : ""}
+        ${sellerAddressLines.lineTwo ? `<ram:LineTwo>${xmlEscape(sellerAddressLines.lineTwo)}</ram:LineTwo>` : ""}
         <ram:CountryID>${xmlEscape(business.companyCountryCode || opts.sellerCountryCode || "DE")}</ram:CountryID>
       </ram:PostalTradeAddress>
       ${isLikelyVatId(business.companyTaxId) ? `
@@ -98,10 +112,15 @@ export function generateFacturX22XML(
 
   // BASIC: Simplified buyer party - only essential elements
   const buyer = invoice.customer;
+  const buyerAddressLines = splitAddressLines(buyer.address);
   const buyerParty = `
     <ram:BuyerTradeParty>
       <ram:Name>${xmlEscape(buyer.name)}</ram:Name>
       <ram:PostalTradeAddress>
+        ${buyerAddressLines.lineOne ? `<ram:LineOne>${xmlEscape(buyerAddressLines.lineOne)}</ram:LineOne>` : ""}
+        ${buyerAddressLines.lineTwo ? `<ram:LineTwo>${xmlEscape(buyerAddressLines.lineTwo)}</ram:LineTwo>` : ""}
+        ${buyer.postalCode ? `<ram:PostcodeCode>${xmlEscape(buyer.postalCode)}</ram:PostcodeCode>` : ""}
+        ${buyer.city ? `<ram:CityName>${xmlEscape(buyer.city)}</ram:CityName>` : ""}
         <ram:CountryID>${xmlEscape(buyer.countryCode || opts.buyerCountryCode || "DE")}</ram:CountryID>
       </ram:PostalTradeAddress>
       ${isLikelyVatId(buyer.taxId) ? `

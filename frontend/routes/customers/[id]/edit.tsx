@@ -89,13 +89,13 @@ export default function EditCustomerPage(props: PageProps<Data>) {
       )}
       {c && (
         <form method="post" class="space-y-4" data-writable>
-          <div class="flex items-center justify-between gap-2">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <h1 class="text-2xl font-semibold">Edit Customer</h1>
-            <div class="flex items-center gap-2">
-              <a href={`/customers/${c.id}`} class="btn btn-ghost btn-sm">
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <a href={`/customers/${c.id}`} class="btn btn-ghost btn-sm flex-1 sm:flex-none">
                 Cancel
               </a>
-              <button type="submit" class="btn btn-primary" data-writable disabled={demoMode}>
+              <button type="submit" class="btn btn-primary flex-1 sm:flex-none" data-writable disabled={demoMode}>
                 <LuSave size={16} />
                 Save
               </button>

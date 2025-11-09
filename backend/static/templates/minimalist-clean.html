@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{locale}}">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice {{invoiceNumber}}</title>
+  <title>{{labels.invoiceTitle}} {{invoiceNumber}}</title>
     <style>
       :root {
         --highlight-color: {{highlightColor || "#059669"}};
@@ -23,7 +23,7 @@
       @page { size: A4; margin: 10mm; }
       body { font-family: "Helvetica Neue", Arial, sans-serif; line-height: 1.4; color: var(--text-dark); padding: 4mm 6mm; max-width: 190mm; margin: 0 auto; background: #fff; font-size: 12.2px; }
 
-      .header { margin-bottom: 14px; /* float-based layout for wkhtmltopdf compatibility */ }
+  .header { margin-bottom: 14px; /* float-based layout for consistent PDF engine rendering */ }
 
       .company-info {
         float: left;
@@ -290,19 +290,19 @@
   <body>
     <!-- Top title -->
     <div class="title-top">
-      <h2 class="invoice-title invoice-title--top">INVOICE</h2>
+      <h2 class="invoice-title invoice-title--top">{{labels.invoiceTitle}}</h2>
       {{#invoiceNumber}}<div class="invoice-number invoice-number--top">
-        #{{invoiceNumber}}
+        {{labels.invoiceNumberShortLabel}} {{invoiceNumber}}
       </div>{{/invoiceNumber}}
     </div>
     <div class="header">
       <div class="invoice-meta">
-        <div><strong>Issue Date:</strong> {{issueDate}}</div>
+        <div><strong>{{labels.invoiceDateLabel}}:</strong> {{issueDate}}</div>
         {{#dueDate}}<div>
-          <strong>Due Date:</strong> {{dueDate}}
+          <strong>{{labels.dueDateLabel}}:</strong> {{dueDate}}
         </div>{{/dueDate}}
         <div>
-          <strong>Status:</strong> <span class="status-badge">{{status}}</span>
+          <strong>{{labels.statusLabel}}:</strong> <span class="status-badge">{{status}}</span>
         </div>
       </div>
 
@@ -356,13 +356,13 @@
     </div>
 
     <div class="customer-section">
-      <div class="section-label">Billed To</div>
+      <div class="section-label">{{labels.billToHeading}}</div>
       <div class="customer-name">{{customerName}}</div>
       <div class="customer-details">
         {{#customerEmail}}<p>{{customerEmail}}</p>{{/customerEmail}}
         {{#customerPhone}}<p>{{customerPhone}}</p>{{/customerPhone}}
         {{#customerAddress}}<p>{{customerAddress}}</p>{{/customerAddress}}
-        {{#customerTaxId}}<p>Tax ID: {{customerTaxId}}</p>{{/customerTaxId}}
+  {{#customerTaxId}}<p>{{labels.taxIdLabel}}: {{customerTaxId}}</p>{{/customerTaxId}}
       </div>
     </div>
 
@@ -370,10 +370,10 @@
       <table class="items-table">
         <thead>
           <tr>
-            <th>Description</th>
-            <th>Qty</th>
-            <th>Rate</th>
-            <th>Amount</th>
+            <th>{{labels.itemHeaderDescription}}</th>
+            <th>{{labels.itemHeaderQuantityShort}}</th>
+            <th>{{labels.itemHeaderUnitPriceShort}}</th>
+            <th>{{labels.itemHeaderAmount}}</th>
           </tr>
         </thead>
         <tbody>
@@ -394,30 +394,30 @@
 
     <div class="totals-section">
       <div class="totals-row subtotal">
-        <span>Subtotal</span>
+        <span>{{labels.subtotalLabel}}</span>
         <span>{{currency}} {{subtotal}}</span>
       </div>
       {{#hasDiscount}}
       <div class="totals-row">
-        <span>Discount
+        <span>{{labels.discountLabel}}
           {{#discountPercentage}}({{discountPercentage}}%){{/discountPercentage}}</span>
         <span>-{{currency}} {{discountAmount}}</span>
       </div>
       {{/hasDiscount}} {{#hasTax}}
       <div class="totals-row">
-        <span>Tax ({{taxRate}}%)</span>
+        <span>{{labels.taxLabel}} ({{taxRate}}%)</span>
         <span>{{currency}} {{taxAmount}}</span>
       </div>
       {{/hasTax}} {{#hasTaxSummary}}
       <div class="totals-row" style="display:block; padding-top:4px;">
-        <div style="font-weight:600; color:var(--text-medium); margin-bottom:2px; font-size:12px;">Tax Summary</div>
+        <div style="font-weight:600; color:var(--text-medium); margin-bottom:2px; font-size:12px;">{{labels.taxSummaryHeading}}</div>
         <div>
           <table style="width:100%; font-size:11px; border-collapse:collapse;">
             <thead>
               <tr>
-                <th style="text-align:left; color:var(--text-light); font-weight:500;">Tax</th>
-                <th style="text-align:right; color:var(--text-light); font-weight:500;">Taxable</th>
-                <th style="text-align:right; color:var(--text-light); font-weight:500;">Tax Amount</th>
+                <th style="text-align:left; color:var(--text-light); font-weight:500;">{{labels.taxLabel}}</th>
+                <th style="text-align:right; color:var(--text-light); font-weight:500;">{{labels.taxableLabel}}</th>
+                <th style="text-align:right; color:var(--text-light); font-weight:500;">{{labels.taxAmountLabel}}</th>
               </tr>
             </thead>
             <tbody>
@@ -434,27 +434,27 @@
       </div>
       {{/hasTaxSummary}}
       <div class="totals-row total">
-        <span>Total</span>
+        <span>{{labels.totalLabel}}</span>
         <span>{{currency}} {{total}}</span>
       </div>
     </div>
 
     {{#notes}}
     <div class="notes-section">
-      <div class="section-label">Notes</div>
+      <div class="section-label">{{labels.notesHeading}}</div>
       <div class="notes-content">{{notes}}</div>
     </div>
     {{/notes}}
 
     <div class="footer">
       {{#paymentTerms}}<p>
-        <strong>Payment Terms:</strong> {{paymentTerms}}
+        <strong>{{labels.paymentTermsLabel}}:</strong> {{paymentTerms}}
       </p>{{/paymentTerms}} {{#paymentMethods}}<p>
-        <strong>Payment Methods:</strong> {{paymentMethods}}
+        <strong>{{labels.paymentMethodsLabel}}:</strong> {{paymentMethods}}
       </p>{{/paymentMethods}} {{#bankAccount}}<p>
-        <strong>Bank Details:</strong> {{bankAccount}}
+        <strong>{{labels.bankAccountLabel}}:</strong> {{bankAccount}}
       </p>{{/bankAccount}} {{#companyTaxId}}<p>
-        Tax ID: {{companyTaxId}}
+        {{labels.taxIdLabel}}: {{companyTaxId}}
       </p>{{/companyTaxId}}
     </div>
   </body>

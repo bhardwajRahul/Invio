@@ -38,9 +38,14 @@ import {
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
+import { availableInvoiceLocales } from "../i18n/translations.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
 import { getDatabase } from "../database/init.ts";
+import {
+  getAdminCredentials,
+  isDemoMode,
+} from "../utils/env.ts";
 
 const adminRoutes = new Hono();
 
@@ -89,11 +94,34 @@ function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
   }
 }
 
+const SUPPORTED_LOCALES = new Set(availableInvoiceLocales());
+
+function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
+  if (!data || !Object.prototype.hasOwnProperty.call(data, "locale")) {
+    return;
+  }
+  const raw = String((data as Record<string, unknown>).locale ?? "").trim();
+  if (!raw) {
+    delete (data as Record<string, unknown>).locale;
+    return;
+  }
+  const lower = raw.toLowerCase();
+  if (SUPPORTED_LOCALES.has(lower)) {
+    (data as Record<string, unknown>).locale = lower;
+    return;
+  }
+  const base = lower.split("-")[0];
+  if (SUPPORTED_LOCALES.has(base)) {
+    (data as Record<string, unknown>).locale = base;
+  } else {
+    (data as Record<string, unknown>).locale = "en";
+  }
+}
+
 // Basic auth middleware for admin routes
-const ADMIN_USER = Deno.env.get("ADMIN_USER") || "admin";
-const ADMIN_PASS = Deno.env.get("ADMIN_PASS") || "supersecret";
+const { username: ADMIN_USER, password: ADMIN_PASS } = getAdminCredentials();
 // Demo mode flag (mutations allowed; periodic resets handle reverting state)
-const DEMO_MODE = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
+const DEMO_MODE = isDemoMode();
 
 adminRoutes.use(
   "/invoices/*",
@@ -118,25 +146,6 @@ adminRoutes.use(
     password: ADMIN_PASS,
   }),
 );
-
-// Public dev-only endpoints (no auth) to serve a test manifest and HTML
-adminRoutes.get("/dev/templates/simple/manifest.yaml", (_c) => {
-  const text = Deno.readTextFileSync(
-    "./static/dev-templates/simple/manifest.yaml",
-  );
-  return new Response(text, {
-    headers: { "Content-Type": "text/yaml; charset=utf-8" },
-  });
-});
-
-adminRoutes.get("/dev/templates/simple/index.html", (_c) => {
-  const text = Deno.readTextFileSync(
-    "./static/dev-templates/simple/index.html",
-  );
-  return new Response(text, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
-});
 
 adminRoutes.use(
   "/settings/*",
@@ -485,6 +494,7 @@ adminRoutes.get("/settings", async (c) => {
   // Unify logo fields: prefer single 'logo'; hide legacy 'logoUrl'
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
+  if (!map.locale) map.locale = "en";
   // Expose demo mode to frontend UI
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -499,6 +509,7 @@ adminRoutes.put("/settings", async (c) => {
   }
   // Normalize tax-related settings
   normalizeTaxSettingsPayload(data);
+  normalizeLocaleSettingPayload(data);
   const settings = await updateSettings(data);
   try {
     if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -527,6 +538,7 @@ adminRoutes.patch("/settings", async (c) => {
   }
   // Normalize tax-related settings
   normalizeTaxSettingsPayload(data);
+  normalizeLocaleSettingPayload(data);
   const settings = await updateSettings(data);
   if (typeof data.templateId === "string" && data.templateId) {
     try {
@@ -554,6 +566,7 @@ adminRoutes.get("/admin/settings", async (c) => {
   }
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
+  if (!map.locale) map.locale = "en";
   // Expose demo mode to frontend UI for admin-prefixed route as well
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -567,6 +580,7 @@ adminRoutes.put("/admin/settings", async (c) => {
   }
   // Normalize tax-related settings
   normalizeTaxSettingsPayload(data);
+  normalizeLocaleSettingPayload(data);
   const settings = await updateSettings(data);
   try {
     if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -582,6 +596,7 @@ adminRoutes.patch("/admin/settings", async (c) => {
   }
   // Normalize tax-related settings
   normalizeTaxSettingsPayload(data);
+  normalizeLocaleSettingPayload(data);
   const settings = await updateSettings(data);
   try {
     if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -654,6 +669,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    locale: settingsMap.locale || undefined,
   };
 
   // Use template/highlight from settings only (no query overrides)
@@ -676,6 +692,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     highlight,
     settingsMap.dateFormat,
     settingsMap.numberFormat,
+    settingsMap.locale,
   );
   return new Response(html, {
     headers: {
@@ -715,6 +732,7 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    locale: settingsMap.locale || undefined,
   };
 
   // Use template/highlight from settings only (no query overrides)
@@ -739,7 +757,13 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
       businessSettings,
       selectedTemplateId,
       highlight,
-      { embedXml, embedXmlProfileId: xmlProfileId, dateFormat: settingsMap.dateFormat, numberFormat: settingsMap.numberFormat },
+      {
+        embedXml,
+        embedXmlProfileId: xmlProfileId,
+        dateFormat: settingsMap.dateFormat,
+        numberFormat: settingsMap.numberFormat,
+        locale: settingsMap.locale,
+      },
     );
     // Detect embedded attachments for diagnostics
     let hasAttachment = false;
