@@ -43,14 +43,23 @@ export function ensureEnv(keys: string[]): void {
 }
 
 export function getAdminCredentials() {
-  return {
-    username: requireEnv("ADMIN_USER"),
-    password: requireEnv("ADMIN_PASS"),
-  };
+  const username = requireEnv("ADMIN_USER").trim();
+  const password = requireEnv("ADMIN_PASS").trim();
+  if (username.length === 0) {
+    throw new Error("ADMIN_USER must not be empty");
+  }
+  if (password.length === 0) {
+    throw new Error("ADMIN_PASS must not be empty");
+  }
+  return { username, password };
 }
 
 export function getJwtSecret(): string {
-  return requireEnv("JWT_SECRET");
+  const secret = requireEnv("JWT_SECRET").trim();
+  if (secret.length === 0) {
+    throw new Error("JWT_SECRET must not be empty");
+  }
+  return secret;
 }
 
 export function isDemoMode(): boolean {

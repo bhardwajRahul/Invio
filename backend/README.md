@@ -1,3 +1,27 @@
+## Environment Configuration
+
+The backend requires three critical environment variables to authenticate and issue JWTs:
+
+```
+ADMIN_USER=...
+ADMIN_PASS=...
+JWT_SECRET=...
+```
+
+Starting with v1.8.1 the server checks these values at boot. If any of them are missing **or empty**, the backend will exit with a fatal error.
+
+- `ADMIN_USER` and `ADMIN_PASS` must be non-empty strings. They define the login credentials for the admin dashboard.
+- `JWT_SECRET` must be non-empty and should be at least 16 characters to avoid weak tokens. Longer random strings are strongly recommended.
+
+When running through Docker Compose, define these in a `.env` file and ensure the values are quoted if they contain special characters. Example:
+
+```
+ADMIN_USER="myadmin"
+ADMIN_PASS="super-secret-P@ssw0rd"
+JWT_SECRET="change-this-to-a-long-random-string"
+```
+
+If you rely on Synology’s GUI or other orchestrators, double-check that the variables are actually persisted and not left blank by default.
 # Invio — Backend API
 
 Plain, fast invoicing without enterprise bloat. Create an invoice, share a link,

@@ -6,7 +6,7 @@ import { adminRoutes } from "./routes/admin.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { logChromiumAvailability } from "./utils/chromium.ts";
-import { ensureEnv } from "./utils/env.ts";
+import { ensureEnv, getAdminCredentials, getJwtSecret } from "./utils/env.ts";
 
 const SECURE_HEADERS_DISABLED = (Deno.env.get("SECURE_HEADERS_DISABLED") || "").toLowerCase() === "true";
 const HSTS_ENABLED = (Deno.env.get("ENABLE_HSTS") || "").toLowerCase() === "true";
@@ -17,7 +17,20 @@ const app = new Hono();
 
 // Check for required credentials in environment
 try {
-  ensureEnv(["ADMIN_USER", "ADMIN_PASS", "JWT_SECRET"]);
+  ensureEnv(["JWT_SECRET"]);
+
+  const { username: adminUsername, password: adminPassword } = getAdminCredentials();
+  if (!adminUsername || adminUsername.trim().length === 0) {
+    throw new Error("ADMIN_USER must not be empty");
+  }
+  if (!adminPassword || adminPassword.trim().length === 0) {
+    throw new Error("ADMIN_PASS must not be empty");
+  }
+
+  const secret = getJwtSecret();
+  if (!secret || secret.trim().length === 0) {
+    throw new Error("JWT_SECRET must not be empty");
+  }
 } catch (error) {
   console.error(`FATAL: ${error instanceof Error ? error.message : error}`);
   Deno.exit(1);

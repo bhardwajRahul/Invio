@@ -1,12 +1,32 @@
 import { create, decode, verify } from "djwt";
-import { getJwtSecret } from "./env.ts";
+import { getJwtSecret, getAdminCredentials } from "./env.ts";
 
-async function getKey(): Promise<CryptoKey> {
-  const secretKey = getJwtSecret();
-  const secretBytes = new TextEncoder().encode(secretKey);
-  if (secretBytes.length === 0) {
+function validateSecret(secretKey: string) {
+  if (!secretKey || secretKey.trim().length === 0) {
     throw new Error("JWT_SECRET must not be empty");
   }
+
+  const trimmed = secretKey.trim();
+  if (trimmed.length < 16) {
+    console.warn("Warning: JWT_SECRET is shorter than 16 characters. Consider using a longer secret for better security.");
+  }
+}
+
+function validateAdminCredentials() {
+  const { username, password } = getAdminCredentials();
+  if (!username || username.trim().length === 0) {
+    throw new Error("ADMIN_USER must not be empty");
+  }
+  if (!password || password.trim().length === 0) {
+    throw new Error("ADMIN_PASS must not be empty");
+  }
+}
+
+async function getKey(): Promise<CryptoKey> {
+  validateAdminCredentials();
+  const secretKey = getJwtSecret();
+  validateSecret(secretKey);
+  const secretBytes = new TextEncoder().encode(secretKey.trim());
   const key = await crypto.subtle.importKey(
     "raw",
     secretBytes,
