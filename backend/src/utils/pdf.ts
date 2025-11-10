@@ -2,7 +2,6 @@ import {
   PDFArray,
   PDFDict,
   PDFDocument,
-  PDFHexString,
   PDFName,
   PDFNumber,
   PDFString,
@@ -42,7 +41,7 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-function escapeHtmlWithBreaks(value: unknown): string {
+function _escapeHtmlWithBreaks(value: unknown): string {
   return escapeHtml(value).replace(/\r?\n/g, "<br />");
 }
 
@@ -342,8 +341,9 @@ export async function generateInvoicePDF(
         `${profile.name} export embedded by Invio`,
         opts?.locale || invoiceData.locale || inlined?.locale || "en-US",
       );
-    } catch (_e) {
-      // Silently ignore embedding failures to avoid breaking download
+    } catch (error) {
+      console.warn("Failed to embed XML attachment:", error);
+      // Continue without attachment to avoid breaking download
     }
   }
   return pdfBytes as Uint8Array;
@@ -514,13 +514,6 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
   }
 }
 
-function toHexUpper(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase();
-}
-
 async function embedXmlAttachment(
   pdfBytes: Uint8Array,
   xmlBytes: Uint8Array,
@@ -532,23 +525,19 @@ async function embedXmlAttachment(
   const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
   const context = pdfDoc.context;
   const now = new Date();
-  const xmlBuffer = xmlBytes.buffer.slice(
-    xmlBytes.byteOffset,
-    xmlBytes.byteOffset + xmlBytes.byteLength,
-  );
-  const checksumBuffer = await crypto.subtle.digest("MD5", xmlBuffer as ArrayBuffer);
-  const checksum = toHexUpper(new Uint8Array(checksumBuffer));
-
   const paramsDict = context.obj({
     Size: PDFNumber.of(xmlBytes.length),
-    CheckSum: PDFHexString.of(checksum),
     CreationDate: PDFString.fromDate(now),
     ModDate: PDFString.fromDate(now),
   });
 
+  const subtypeName = mediaType.includes("/")
+    ? mediaType.replace("/", "#2F")
+    : mediaType;
+
   const embeddedFileStream = context.stream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of(mediaType.replace("/", "#2F")),
+    Subtype: PDFName.of(subtypeName),
     Params: paramsDict,
   });
   const embeddedFileRef = context.register(embeddedFileStream);
@@ -568,34 +557,40 @@ async function embedXmlAttachment(
   });
   const fileSpecRef = context.register(fileSpecDict);
 
-  let namesDict = pdfDoc.catalog.lookup(PDFName.of("Names"), PDFDict);
-  if (!namesDict) {
-    namesDict = context.obj({});
-    pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
+  let namesDict = pdfDoc.catalog.get(PDFName.of("Names"));
+  if (!(namesDict instanceof PDFDict)) {
+    const created = context.obj({});
+    pdfDoc.catalog.set(PDFName.of("Names"), created);
+    namesDict = created;
   }
+  const namesDictObj = namesDict as PDFDict;
 
-  let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"), PDFDict);
-  if (!embeddedFilesDict) {
-    embeddedFilesDict = context.obj({
-      Names: context.obj([]),
-    });
-    namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+  let embeddedFilesDict = namesDictObj.get(PDFName.of("EmbeddedFiles"));
+  if (!(embeddedFilesDict instanceof PDFDict)) {
+    const created = context.obj({});
+    namesDictObj.set(PDFName.of("EmbeddedFiles"), created);
+    embeddedFilesDict = created;
   }
+  const embeddedFilesDictObj = embeddedFilesDict as PDFDict;
 
-  let namesArray = embeddedFilesDict.lookup(PDFName.of("Names"), PDFArray);
-  if (!namesArray) {
-    namesArray = context.obj([]);
-    embeddedFilesDict.set(PDFName.of("Names"), namesArray);
+  let namesArray = embeddedFilesDictObj.get(PDFName.of("Names"));
+  if (!(namesArray instanceof PDFArray)) {
+    const created = context.obj([]);
+    embeddedFilesDictObj.set(PDFName.of("Names"), created);
+    namesArray = created;
   }
-  namesArray.push(PDFString.of(fileName));
-  namesArray.push(fileSpecRef);
+  const namesArrayObj = namesArray as PDFArray;
+  namesArrayObj.push(PDFString.of(fileName));
+  namesArrayObj.push(fileSpecRef);
 
-  let afArray = pdfDoc.catalog.lookup(PDFName.of("AF"), PDFArray);
-  if (!afArray) {
-    afArray = context.obj([]);
-    pdfDoc.catalog.set(PDFName.of("AF"), afArray);
+  let afArray = pdfDoc.catalog.get(PDFName.of("AF"));
+  if (!(afArray instanceof PDFArray)) {
+    const created = context.obj([]);
+    pdfDoc.catalog.set(PDFName.of("AF"), created);
+    afArray = created;
   }
-  afArray.push(fileSpecRef);
+  const afArrayObj = afArray as PDFArray;
+  afArrayObj.push(fileSpecRef);
 
   pdfDoc.setSubject(`Embedded XML: ${fileName}`);
   pdfDoc.setKeywords(["Invoice", "Embedded XML", fileName]);

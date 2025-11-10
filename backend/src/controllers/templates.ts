@@ -228,9 +228,21 @@ export const getTemplates = () => {
 
 export const getTemplateById = (id: string) => {
   const db = getDatabase();
-  return db
-    .prepare("SELECT * FROM templates WHERE id = ?")
-    .get(id) as Template | undefined;
+  const rows = db.query(
+    "SELECT id, name, html, is_default, created_at FROM templates WHERE id = ? LIMIT 1",
+    [id],
+  );
+  if (rows.length === 0) {
+    return undefined;
+  }
+  const row = rows[0] as unknown[];
+  return {
+    id: row[0] as string,
+    name: row[1] as string,
+    html: row[2] as string,
+    isDefault: Boolean(row[3]),
+    createdAt: new Date(row[4] as string),
+  } as Template;
 };
 
 let builtInDefaultTemplate: Template | null | undefined;

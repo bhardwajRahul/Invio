@@ -1,11 +1,15 @@
 import { create, decode, verify } from "djwt";
-
-const secretKey = Deno.env.get("JWT_SECRET")
+import { getJwtSecret } from "./env.ts";
 
 async function getKey(): Promise<CryptoKey> {
+  const secretKey = getJwtSecret();
+  const secretBytes = new TextEncoder().encode(secretKey);
+  if (secretBytes.length === 0) {
+    throw new Error("JWT_SECRET must not be empty");
+  }
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(secretKey),
+    secretBytes,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"],
