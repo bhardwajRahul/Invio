@@ -1,5 +1,6 @@
 import enMessages from "./locales/en.json" with { type: "json" };
 import nlMessages from "./locales/nl.json" with { type: "json" };
+import deMessages from "./locales/de.json" with { type: "json" };
 
 export type UiMessages = Record<string, string>;
 export type TranslateParams = Record<string, string | number>;
@@ -7,6 +8,7 @@ export type TranslateParams = Record<string, string | number>;
 const catalogs: Record<string, UiMessages> = {
   en: enMessages as UiMessages,
   nl: nlMessages as UiMessages,
+  de: deMessages as UiMessages,
 };
 
 const DEFAULT_LOCALE = "en";
