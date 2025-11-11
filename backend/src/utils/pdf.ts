@@ -234,6 +234,7 @@ function buildContext(
 
     // Customer
     customerName: invoice.customer.name,
+    customerContactName: invoice.customer.contactName,
     customerEmail: invoice.customer.email,
     customerPhone: invoice.customer.phone,
     customerAddress: invoice.customer.address,

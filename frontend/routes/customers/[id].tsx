@@ -8,7 +8,7 @@ import {
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
 
-type Customer = { id: string; name?: string; email?: string; address?: string; city?: string; postalCode?: string };
+type Customer = { id: string; name?: string; contactName?: string; email?: string; address?: string; city?: string; postalCode?: string };
 type Data = { authed: boolean; customer?: Customer; error?: string };
 
 export const handler: Handlers<Data> = {
@@ -98,6 +98,11 @@ export default function CustomerDetail(props: PageProps<Data>) {
       )}
       {c && (
         <div class="space-y-2">
+          {c.contactName && (
+            <div>
+              <span class="opacity-70">Contact:</span> {c.contactName}
+            </div>
+          )}
           {c.email && (
             <div>
               <span class="opacity-70">Email:</span> {c.email}

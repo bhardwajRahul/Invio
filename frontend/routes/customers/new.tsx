@@ -31,6 +31,7 @@ export const handler: Handlers<Data> = {
     }
     const form = await req.formData();
     const name = String(form.get("name") || "");
+    const contactName = String(form.get("contactName") || "");
     const email = String(form.get("email") || "");
     const phone = String(form.get("phone") || "");
     const address = String(form.get("address") || "");
@@ -44,6 +45,7 @@ export const handler: Handlers<Data> = {
     try {
       const created = await backendPost("/api/v1/customers", auth, {
         name,
+        contactName,
         email,
         phone,
         address,
@@ -92,6 +94,12 @@ export default function NewCustomerPage(props: PageProps<Data>) {
               <span class="label-text">{t("Name")} <span class="text-error">*</span></span>
             </div>
             <input name="name" class="input input-bordered w-full" required data-writable />
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">{t("Contact Name")}</span>
+            </div>
+            <input name="contactName" class="input input-bordered w-full" data-writable />
           </label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label class="form-control">

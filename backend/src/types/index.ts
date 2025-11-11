@@ -1,6 +1,7 @@
 export interface Customer {
   id: string;
   name: string;
+  contactName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -175,6 +176,7 @@ export interface UpdateInvoiceRequest extends Partial<CreateInvoiceRequest> {
 
 export interface CreateCustomerRequest {
   name: string;
+  contactName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -211,6 +213,7 @@ export interface TemplateContext {
 
   // Customer info
   customerName: string;
+  customerContactName?: string;
   customerEmail?: string;
   customerPhone?: string;
   customerAddress?: string;

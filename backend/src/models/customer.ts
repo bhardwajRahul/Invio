@@ -3,6 +3,7 @@ import { DB } from "sqlite";
 export interface Customer {
   id: string;
   name: string;
+  contactName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -21,10 +22,11 @@ export class CustomerModel {
     const id = crypto.randomUUID();
     const createdAt = new Date();
     await this.db.query(
-      "INSERT INTO customers (id, name, email, phone, address, city, postal_code, tax_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO customers (id, name, contact_name, email, phone, address, city, postal_code, tax_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         id,
         customer.name,
+        customer.contactName,
         customer.email,
         customer.phone,
         customer.address,
@@ -44,13 +46,14 @@ export class CustomerModel {
     return results.map((row: unknown[]) => ({
       id: row[0] as string,
       name: row[1] as string,
-      email: row[2] as string,
-      phone: row[3] as string,
-      address: row[4] as string,
-      city: row[5] as string,
-      postalCode: row[6] as string,
-      taxId: row[7] as string,
-      createdAt: new Date(row[8] as string),
+      contactName: row[2] as string,
+      email: row[3] as string,
+      phone: row[4] as string,
+      address: row[5] as string,
+      city: row[6] as string,
+      postalCode: row[7] as string,
+      taxId: row[8] as string,
+      createdAt: new Date(row[9] as string),
     }));
   }
 
@@ -63,13 +66,14 @@ export class CustomerModel {
     return {
       id: row[0] as string,
       name: row[1] as string,
-      email: row[2] as string,
-      phone: row[3] as string,
-      address: row[4] as string,
-      city: row[5] as string,
-      postalCode: row[6] as string,
-      taxId: row[7] as string,
-      createdAt: new Date(row[8] as string),
+      contactName: row[2] as string,
+      email: row[3] as string,
+      phone: row[4] as string,
+      address: row[5] as string,
+      city: row[6] as string,
+      postalCode: row[7] as string,
+      taxId: row[8] as string,
+      createdAt: new Date(row[9] as string),
     };
   }
 
@@ -82,9 +86,10 @@ export class CustomerModel {
 
     const updatedCustomer = { ...existingCustomer, ...customer };
     await this.db.query(
-      "UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, city = ?, postal_code = ?, tax_id = ? WHERE id = ?",
+      "UPDATE customers SET name = ?, contact_name = ?, email = ?, phone = ?, address = ?, city = ?, postal_code = ?, tax_id = ? WHERE id = ?",
       [
         updatedCustomer.name,
+        updatedCustomer.contactName,
         updatedCustomer.email,
         updatedCustomer.phone,
         updatedCustomer.address,

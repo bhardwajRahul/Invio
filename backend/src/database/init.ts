@@ -235,7 +235,18 @@ function ensureSchemaUpgrades(database: DB) {
       "PRAGMA table_info(customers)",
     ) as unknown[] as Array<unknown[]>;
     const names = new Set(cols.map((r) => String(r[1])));
-    // Add missing customer columns: country_code, city, postal_code
+    // Add missing customer columns: contact_name, country_code, city, postal_code
+    if (!names.has("contact_name")) {
+      try {
+        database.execute("ALTER TABLE customers ADD COLUMN contact_name TEXT");
+        console.log("✅ Added customers.contact_name column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add customers.contact_name:", msg);
+        }
+      }
+    }
     if (!names.has("country_code")) {
       try {
         database.execute("ALTER TABLE customers ADD COLUMN country_code TEXT");

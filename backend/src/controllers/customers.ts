@@ -8,15 +8,16 @@ import { generateUUID } from "../utils/uuid.ts";
 const mapRowToCustomer = (row: unknown[]): Customer => ({
   id: row[0] as string,
   name: row[1] as string,
-  email: (row[2] ?? undefined) as string | undefined,
-  phone: (row[3] ?? undefined) as string | undefined,
-  address: (row[4] ?? undefined) as string | undefined,
-  countryCode: (row[5] ?? undefined) as string | undefined,
-  taxId: (row[6] ?? undefined) as string | undefined,
-  createdAt: new Date(row[7] as string),
+  contactName: (row[2] ?? undefined) as string | undefined,
+  email: (row[3] ?? undefined) as string | undefined,
+  phone: (row[4] ?? undefined) as string | undefined,
+  address: (row[5] ?? undefined) as string | undefined,
+  countryCode: (row[6] ?? undefined) as string | undefined,
+  taxId: (row[7] ?? undefined) as string | undefined,
+  createdAt: new Date(row[8] as string),
   // Optional city/postal_code columns if present at the end
-  city: (row[8] ?? undefined) as string | undefined,
-  postalCode: (row[9] ?? undefined) as string | undefined,
+  city: (row[9] ?? undefined) as string | undefined,
+  postalCode: (row[10] ?? undefined) as string | undefined,
 });
 
 export const getCustomers = () => {
@@ -25,13 +26,19 @@ export const getCustomers = () => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers ORDER BY created_at DESC",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers ORDER BY created_at DESC",
     ) as unknown[][];
   } catch (_e) {
     // fallback older schema
-    results = db.query(
-      "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers ORDER BY created_at DESC",
-    ) as unknown[][];
+    try {
+      results = db.query(
+        "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers ORDER BY created_at DESC",
+      ) as unknown[][];
+    } catch (_e2) {
+      results = db.query(
+        "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers ORDER BY created_at DESC",
+      ) as unknown[][];
+    }
   }
   return results.map((row: unknown[]) => mapRowToCustomer(row));
 };
@@ -41,14 +48,21 @@ export const getCustomerById = (id: string): Customer | null => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
       [id],
     ) as unknown[][];
   } catch (_e) {
-    results = db.query(
-      "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
-      [id],
-    ) as unknown[][];
+    try {
+      results = db.query(
+        "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
+        [id],
+      ) as unknown[][];
+    } catch (_e2) {
+      results = db.query(
+        "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
+        [id],
+      ) as unknown[][];
+    }
   }
   if (results.length === 0) return null;
   return mapRowToCustomer(results[0] as unknown[]);
@@ -66,6 +80,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
   const now = new Date();
 
   // Normalize optional fields: store NULLs for empty strings
+  const contactName = toNullable(data.contactName);
   const email = toNullable(data.email);
   const phone = toNullable(data.phone);
   const address = toNullable(data.address);
@@ -77,12 +92,13 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
   try {
     db.query(
       `
-      INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         customerId,
         data.name,
+        contactName,
         email,
         phone,
         address,
@@ -95,28 +111,50 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     );
   } catch (_e) {
     // fallback older schema
-    db.query(
-      `
-      INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      [
-        customerId,
-        data.name,
-        email,
-        phone,
-        address,
-        countryCode,
-        taxId,
-        now,
-      ],
-    );
+    try {
+      db.query(
+        `
+        INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+        [
+          customerId,
+          data.name,
+          email,
+          phone,
+          address,
+          countryCode,
+          taxId,
+          now,
+          city,
+          postal,
+        ],
+      );
+    } catch (_e2) {
+      db.query(
+        `
+        INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+        [
+          customerId,
+          data.name,
+          email,
+          phone,
+          address,
+          countryCode,
+          taxId,
+          now,
+        ],
+      );
+    }
   }
 
   // Return undefined for missing optional fields
   return {
     id: customerId,
     name: data.name,
+    contactName: contactName ?? undefined,
     email: email ?? undefined,
     phone: phone ?? undefined,
     address: address ?? undefined,
@@ -139,6 +177,7 @@ export const updateCustomer = (
 
   const next = {
     name: data.name ?? existing.name,
+    contactName: data.contactName === undefined ? existing.contactName : undefined,
     email: data.email === undefined ? existing.email : undefined,
     phone: data.phone === undefined ? existing.phone : undefined,
     address: data.address === undefined ? existing.address : undefined,
@@ -146,6 +185,9 @@ export const updateCustomer = (
   } as Partial<Customer>;
 
   // If provided, coerce empty to NULL
+  const contactName = data.contactName !== undefined
+    ? toNullable(data.contactName)
+    : (existing.contactName ?? null);
   const email = data.email !== undefined
     ? toNullable(data.email)
     : (existing.email ?? null);
@@ -172,11 +214,12 @@ export const updateCustomer = (
     db.query(
       `
       UPDATE customers SET 
-        name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
+        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
       WHERE id = ?
     `,
       [
         next.name,
+        contactName,
         email,
         phone,
         address,
@@ -188,22 +231,43 @@ export const updateCustomer = (
       ],
     );
   } catch (_e) {
-    db.query(
-      `
-      UPDATE customers SET 
-        name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?
-      WHERE id = ?
-    `,
-      [
-        next.name,
-        email,
-        phone,
-        address,
-        countryCode,
-        taxId,
-        id,
-      ],
-    );
+    try {
+      db.query(
+        `
+        UPDATE customers SET 
+          name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
+        WHERE id = ?
+      `,
+        [
+          next.name,
+          email,
+          phone,
+          address,
+          countryCode,
+          taxId,
+          city,
+          postal,
+          id,
+        ],
+      );
+    } catch (_e2) {
+      db.query(
+        `
+        UPDATE customers SET 
+          name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?
+        WHERE id = ?
+      `,
+        [
+          next.name,
+          email,
+          phone,
+          address,
+          countryCode,
+          taxId,
+          id,
+        ],
+      );
+    }
   }
 
   return getCustomerById(id);

@@ -1050,29 +1050,37 @@ function getCustomerById(id: string) {
   let rows: unknown[][] = [];
   try {
     rows = db.query(
-      "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
       [id],
     ) as unknown[][];
   } catch (_e) {
-    // Fallback older schema without city/postal_code
-    rows = db.query(
-      "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
-      [id],
-    ) as unknown[][];
+    // Fallback older schema without contact_name/city/postal_code
+    try {
+      rows = db.query(
+        "SELECT id, name, email, phone, address, country_code, tax_id, created_at, city, postal_code FROM customers WHERE id = ?",
+        [id],
+      ) as unknown[][];
+    } catch (_e2) {
+      rows = db.query(
+        "SELECT id, name, email, phone, address, country_code, tax_id, created_at FROM customers WHERE id = ?",
+        [id],
+      ) as unknown[][];
+    }
   }
   if (rows.length === 0) return null;
   const row = rows[0] as unknown[];
   return {
     id: row[0] as string,
     name: row[1] as string,
-    email: row[2] as string,
-    phone: row[3] as string,
-    address: row[4] as string,
-    countryCode: (row[5] ?? undefined) as string | undefined,
-    taxId: row[6] as string,
-    createdAt: new Date(row[7] as string),
-    city: (row[8] ?? undefined) as string | undefined,
-    postalCode: (row[9] ?? undefined) as string | undefined,
+    contactName: (row[2] ?? undefined) as string | undefined,
+    email: (row[3] ?? undefined) as string | undefined,
+    phone: (row[4] ?? undefined) as string | undefined,
+    address: (row[5] ?? undefined) as string | undefined,
+    countryCode: (row[6] ?? undefined) as string | undefined,
+    taxId: (row[7] ?? undefined) as string | undefined,
+    createdAt: new Date(row[8] as string),
+    city: (row[9] ?? undefined) as string | undefined,
+    postalCode: (row[10] ?? undefined) as string | undefined,
   };
 }
 

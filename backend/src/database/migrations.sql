@@ -32,6 +32,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
 CREATE TABLE customers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  contact_name TEXT,
   email TEXT,
   phone TEXT,
   address TEXT,

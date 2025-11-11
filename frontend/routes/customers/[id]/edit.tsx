@@ -10,6 +10,7 @@ import {
 type Customer = {
   id: string;
   name?: string;
+  contactName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -56,6 +57,7 @@ export const handler: Handlers<Data> = {
     const form = await req.formData();
     const payload = {
       name: String(form.get("name") || ""),
+      contactName: String(form.get("contactName") || ""),
       email: String(form.get("email") || ""),
       phone: String(form.get("phone") || ""),
       address: String(form.get("address") || ""),
@@ -112,6 +114,18 @@ export default function EditCustomerPage(props: PageProps<Data>) {
                 value={c.name || ""}
                 class="input input-bordered w-full"
                 required
+                data-writable
+                disabled={demoMode}
+              />
+            </label>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">Contact Name</span>
+              </div>
+              <input
+                name="contactName"
+                value={c.contactName || ""}
+                class="input input-bordered w-full"
                 data-writable
                 disabled={demoMode}
               />
