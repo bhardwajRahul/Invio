@@ -214,6 +214,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
   const localeOptions = [
     { value: "en", labelKey: "English" },
     { value: "nl", labelKey: "Dutch" },
+    { value: "de", labelKey: "German" },
   ];
   // Use demoMode from backend /demo-mode route
   const demoMode = props.data.demoMode;
