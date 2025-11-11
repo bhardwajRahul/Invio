@@ -5,7 +5,12 @@ let envLoaded = false;
 async function loadEnvOnce() {
   if (envLoaded) return;
   try {
-    await load({ export: true });
+    const parsed = await load();
+    for (const [key, value] of Object.entries(parsed)) {
+      if (Deno.env.get(key) === undefined && value !== undefined) {
+        Deno.env.set(key, value);
+      }
+    }
   } catch (error) {
     // Ignore missing .env files, surface other errors for visibility
     if (!(error instanceof Deno.errors.NotFound)) {
