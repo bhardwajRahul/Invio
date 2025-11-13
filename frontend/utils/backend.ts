@@ -34,7 +34,7 @@ export function setAuthCookieHeaders(token: string, maxAgeSeconds = DEFAULT_SESS
     `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    "SameSite=Lax",
   ];
   if (COOKIE_SECURE) attrs.push("Secure");
   if (Number.isFinite(maxAgeSeconds) && maxAgeSeconds > 0) {
@@ -48,7 +48,7 @@ export function clearAuthCookieHeaders(): HeadersInit {
     `${SESSION_COOKIE}=`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    "SameSite=Lax",
     "Max-Age=0",
   ];
   if (COOKIE_SECURE) attrs.push("Secure");
