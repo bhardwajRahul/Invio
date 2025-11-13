@@ -74,6 +74,8 @@ app.use(
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    exposeHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -97,7 +99,7 @@ app.use("*", async (c, next) => {
     headers.set("Cross-Origin-Opener-Policy", "same-origin");
   }
   if (!headers.has("Cross-Origin-Resource-Policy")) {
-    headers.set("Cross-Origin-Resource-Policy", "same-site");
+    headers.set("Cross-Origin-Resource-Policy", "cross-origin");
   }
   if (!headers.has("Content-Security-Policy")) {
     headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
