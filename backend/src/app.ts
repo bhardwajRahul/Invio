@@ -17,7 +17,7 @@ const app = new Hono();
 
 // Check for required credentials in environment
 try {
-  ensureEnv(["JWT_SECRET"]);
+  ensureEnv(["JWT_SECRET", "ADMIN_USER", "ADMIN_PASS"]);
 
   const { username: adminUsername, password: adminPassword } = getAdminCredentials();
   if (!adminUsername || adminUsername.trim().length === 0) {

@@ -1,12 +1,6 @@
 import type { Context, Next } from "hono";
 import { verifyJWT } from "../utils/jwt.ts";
-
-function getAdminCredentials(): { username: string; password: string } {
-  return {
-    username: Deno.env.get("ADMIN_USER") || "admin",
-    password: Deno.env.get("ADMIN_PASS") || "supersecret",
-  };
-}
+import { getAdminCredentials } from "../utils/env.ts";
 
 function unauthorized(): Response {
   return new Response("Unauthorized", {
