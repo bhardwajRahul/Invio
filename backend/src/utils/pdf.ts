@@ -466,27 +466,47 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
 
   const inputPath = await Deno.makeTempFile({ prefix: "invio-pdfa-src-", suffix: ".pdf" });
   const outputPath = await Deno.makeTempFile({ prefix: "invio-pdfa-out-", suffix: ".pdf" });
-  await Deno.writeFile(inputPath, pdfBytes);
-
-  const args = [
-    "-dNOPAUSE",
-    "-dBATCH",
-    "-dSAFER",
-    "-sDEVICE=pdfwrite",
-    "-dPDFA=3",
-    "-dUseCIEColor",
-    "-dEmbedAllFonts=true",
-    "-dCompressFonts=true",
-    "-sProcessColorModel=DeviceRGB",
-    "-sColorConversionStrategy=UseDeviceIndependentColor",
-    "-sDefaultRGBProfile=srgb.icc",
-    "-sPDFAICCProfile=srgb.icc",
-    "-dPDFACompatibilityPolicy=1",
-    `-sOutputFile=${outputPath}`,
-    inputPath,
-  ];
+  const defPath = await Deno.makeTempFile({ prefix: "invio-pdfa-def-", suffix: ".ps" });
 
   try {
+    await Deno.writeFile(inputPath, pdfBytes);
+
+    // Resolve asset paths
+    // Assuming running from project root or similar structure. 
+    // Best effort to find assets relative to this file or CWD.
+    // In Deno, import.meta.url is reliable.
+    const assetsDir = new URL("../assets/", import.meta.url).pathname;
+    const iccPath = `${assetsDir}AdobeCompat-v2.icc`;
+    const defTemplatePath = `${assetsDir}PDFA_def.ps`;
+
+    // Read and prepare PDFA_def.ps
+    let defContent = await Deno.readTextFile(defTemplatePath);
+    // Escape path for PostScript: (path)
+    // We need to handle backslashes if on Windows, but we are on Mac/Linux usually in this env.
+    // PostScript strings use parentheses.
+    defContent = defContent.replace("{{ICC_PROFILE_PATH}}", iccPath);
+    await Deno.writeTextFile(defPath, defContent);
+
+    const args = [
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dSAFER",
+      "-sDEVICE=pdfwrite",
+      "-dPDFA=3",
+      "-dPDFACompatibilityPolicy=1",
+      "-sColorConversionStrategy=UseDeviceIndependentColor",
+      "-sProcessColorModel=DeviceRGB",
+      "-dCompressPages=false",
+      "-dWriteObjStms=false",
+      "-dWriteXRefStm=false",
+      `--permit-file-read=${iccPath}`,
+      `-sOutputFile=${outputPath}`,
+      defPath, // The definition file must come before the input file
+      inputPath,
+    ];
+  console.log(args);
+  console.log(defContent);
+
     const cmd = new Deno.Command(ghostscript, {
       args,
       stdout: "piped",
@@ -508,10 +528,13 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
   } finally {
     try {
       await Deno.remove(inputPath);
-    } catch { /* ignore cleanup failures */ }
+    } catch { /* ignore */ }
     try {
       await Deno.remove(outputPath);
-    } catch { /* ignore cleanup failures */ }
+    } catch { /* ignore */ }
+    try {
+      await Deno.remove(defPath);
+    } catch { /* ignore */ }
   }
 }
 
