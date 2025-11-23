@@ -17,6 +17,10 @@
 
 ---
 
+## ℹ️ Notice
+
+Some countries have e-invoicing laws that require invoices to contain information in a machine readable xml file, currently Factur-X/Zugferd is broken, I have tried my best to fix this but I just don't have unlimitted time at my disposal so I will not work on this. I am more then happy to review your PR to fix this!
+
 ## 🌟 Why Invio?
 
 - Built for doing, not configuring — create an invoice, send a link, get paid. No CRMs, projects, or bloat getting in your way.
