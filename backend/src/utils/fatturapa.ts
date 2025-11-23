@@ -108,6 +108,7 @@ export interface FatturaXMLOptions {
   buyerCountryCode?: string;
   buyerIsPA?: boolean;
   senderCode?: string; // IdTrasmittente code
+  transmissionFormat?: string; // defaults to FPA12
 }
 
 export function generateFatturaXML(
@@ -138,6 +139,7 @@ export function generateFatturaXML(
   const ibanClean = extractIBAN(business.bankAccount);
 
   const senderCode = opts.senderCode || "01234567890"; // default SDI sender code
+  const transmissionFormat = (opts.transmissionFormat || "FPA12").toUpperCase();
 
   const headerXml = `
   <FatturaElettronicaHeader>
@@ -147,7 +149,7 @@ export function generateFatturaXML(
         <IdCodice>${xmlEscape(senderCode)}</IdCodice>
       </IdTrasmittente>
       <ProgressivoInvio>1</ProgressivoInvio>
-      <FormatoTrasmissione>FPA12</FormatoTrasmissione>
+  <FormatoTrasmissione>${xmlEscape(transmissionFormat)}</FormatoTrasmissione>
       <CodiceDestinatario>${opts.buyerIsPA ? "999999" : "AUTORIZ"}</CodiceDestinatario>
       <ContattiTrasmittente>
         ${business.companyEmail ? `<Email>${xmlEscape(business.companyEmail)}</Email>` : "<Email>info@company.it</Email>"}
@@ -248,7 +250,7 @@ export function generateFatturaXML(
   </FatturaElettronicaBody>`;
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<p:FatturaElettronica versione="FPA12" xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+  <p:FatturaElettronica versione="${xmlEscape(transmissionFormat)}" xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
   ${headerXml}
   ${datiBody}
 </p:FatturaElettronica>`;
