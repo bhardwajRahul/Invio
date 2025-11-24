@@ -85,6 +85,8 @@ export interface Setting {
 export interface BusinessSettings {
   companyName: string;
   companyAddress?: string;
+  companyCity?: string;
+  companyPostalCode?: string;
   companyEmail?: string;
   companyPhone?: string;
   companyTaxId?: string;

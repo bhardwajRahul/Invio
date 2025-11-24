@@ -8,7 +8,8 @@ import {
 } from "pdf-lib";
 // Use Puppeteer (headless Chrome) for HTML -> PDF rendering instead of wkhtmltopdf
 import puppeteer from "puppeteer-core";
-import { generateInvoiceXML } from "./xmlProfiles.ts";
+import { generateInvoiceXML, XMLProfile } from "./xmlProfiles.ts";
+import { generateZugferdXMP } from "./xmp.ts";
 import {
   BusinessSettings,
   InvoiceWithDetails,
@@ -341,6 +342,7 @@ export async function generateInvoicePDF(
         profile.mediaType || "application/xml",
         `${profile.name} export embedded by Invio`,
         opts?.locale || invoiceData.locale || inlined?.locale || "en-US",
+        profile,
       );
     } catch (error) {
       console.warn("Failed to embed XML attachment:", error);
@@ -466,27 +468,45 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
 
   const inputPath = await Deno.makeTempFile({ prefix: "invio-pdfa-src-", suffix: ".pdf" });
   const outputPath = await Deno.makeTempFile({ prefix: "invio-pdfa-out-", suffix: ".pdf" });
-  await Deno.writeFile(inputPath, pdfBytes);
-
-  const args = [
-    "-dNOPAUSE",
-    "-dBATCH",
-    "-dSAFER",
-    "-sDEVICE=pdfwrite",
-    "-dPDFA=3",
-    "-dUseCIEColor",
-    "-dEmbedAllFonts=true",
-    "-dCompressFonts=true",
-    "-sProcessColorModel=DeviceRGB",
-    "-sColorConversionStrategy=UseDeviceIndependentColor",
-    "-sDefaultRGBProfile=srgb.icc",
-    "-sPDFAICCProfile=srgb.icc",
-    "-dPDFACompatibilityPolicy=1",
-    `-sOutputFile=${outputPath}`,
-    inputPath,
-  ];
+  const defPath = await Deno.makeTempFile({ prefix: "invio-pdfa-def-", suffix: ".ps" });
 
   try {
+    await Deno.writeFile(inputPath, pdfBytes);
+
+    // Resolve asset paths
+    // Assuming running from project root or similar structure. 
+    // Best effort to find assets relative to this file or CWD.
+    // In Deno, import.meta.url is reliable.
+    const assetsDir = new URL("../assets/", import.meta.url).pathname;
+    const iccPath = `${assetsDir}AdobeCompat-v2.icc`;
+    const defTemplatePath = `${assetsDir}PDFA_def.ps`;
+
+    // Read and prepare PDFA_def.ps
+    let defContent = await Deno.readTextFile(defTemplatePath);
+    // Escape path for PostScript: (path)
+    // We need to handle backslashes if on Windows, but we are on Mac/Linux usually in this env.
+    // PostScript strings use parentheses.
+    defContent = defContent.replace("{{ICC_PROFILE_PATH}}", iccPath);
+    await Deno.writeTextFile(defPath, defContent);
+
+    const args = [
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dSAFER",
+      "-sDEVICE=pdfwrite",
+      "-dPDFA=3",
+      "-dPDFACompatibilityPolicy=1",
+      "-sColorConversionStrategy=UseDeviceIndependentColor",
+      "-sProcessColorModel=DeviceRGB",
+      "-dCompressPages=false",
+      "-dWriteObjStms=false",
+      "-dWriteXRefStm=false",
+      `--permit-file-read=${iccPath}`,
+      `-sOutputFile=${outputPath}`,
+      defPath, // The definition file must come before the input file
+      inputPath,
+    ];
+
     const cmd = new Deno.Command(ghostscript, {
       args,
       stdout: "piped",
@@ -508,20 +528,24 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
   } finally {
     try {
       await Deno.remove(inputPath);
-    } catch { /* ignore cleanup failures */ }
+    } catch { /* ignore */ }
     try {
       await Deno.remove(outputPath);
-    } catch { /* ignore cleanup failures */ }
+    } catch { /* ignore */ }
+    try {
+      await Deno.remove(defPath);
+    } catch { /* ignore */ }
   }
 }
 
-async function embedXmlAttachment(
+export async function embedXmlAttachment(
   pdfBytes: Uint8Array,
   xmlBytes: Uint8Array,
   fileName: string,
   mediaType: string,
   description: string,
   docLang?: string,
+  profile?: XMLProfile,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
   const context = pdfDoc.context;
@@ -598,6 +622,16 @@ async function embedXmlAttachment(
   pdfDoc.setModificationDate(now);
   if (docLang) {
     pdfDoc.catalog.set(PDFName.of("Lang"), PDFString.of(docLang));
+  }
+
+  if (profile && (profile.id === "facturx22" || profile.id === "zugferd")) {
+    const xmp = generateZugferdXMP(fileName, "EN16931");
+    const metadataStream = context.stream(xmp, {
+      Type: PDFName.of("Metadata"),
+      Subtype: PDFName.of("XML"),
+    });
+    const metadataRef = context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
   }
 
   return pdfDoc.save({ useObjectStreams: false });

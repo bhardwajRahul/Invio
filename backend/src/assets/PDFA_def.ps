@@ -1,0 +1,15 @@
+%!
+% This is a sample prefix file for creating a PDF/A document.
+% You should modify it to suit your needs.
+
+% Define an ICC profile :
+/ICCProfile ({{ICC_PROFILE_PATH}}) def
+
+% Define the OutputIntent dictionary :
+/OutputIntentDict [
+  /Type /OutputIntent              % Must be so (the default is the empty string)
+  /S /GTS_PDFA1                    % Must be so (the default is the empty string)
+  /DestOutputProfile {ICCProfile}  % Must be so (see above)
+  /OutputConditionIdentifier (sRGB)      % Customize
+  /RegistryName (http://www.color.org)   % Must be so (the default is the empty string)
+] /ColorConversionStrategy /UseDeviceIndependentColor def     % Define the color conversion strategy
