@@ -126,6 +126,8 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
     const fields = [
       "companyName",
       "companyAddress",
+      "companyCity",
+      "companyPostalCode",
       "email",
       "phone",
       "taxId",
@@ -378,6 +380,16 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                 <div class="label"><span class="label-text">{t("Company Address")}</span></div>
                 <textarea name="companyAddress" class="textarea textarea-bordered" rows={2} data-writable>{(s.companyAddress as string) || ""}</textarea>
               </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="form-control">
+                  <div class="label"><span class="label-text">{t("City")}</span></div>
+                  <input name="companyCity" value={(s.companyCity as string) || ""} class="input input-bordered w-full" data-writable />
+                </label>
+                <label class="form-control">
+                  <div class="label"><span class="label-text">{t("Postal Code")}</span></div>
+                  <input name="companyPostalCode" value={(s.companyPostalCode as string) || ""} class="input input-bordered w-full" data-writable />
+                </label>
+              </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <label class="form-control"><div class="label"><span class="label-text">{t("Email")}</span></div><input name="email" value={(s.email as string) || (s.companyEmail as string) || ""} class="input input-bordered w-full" data-writable /></label>
                 <label class="form-control"><div class="label"><span class="label-text">{t("Phone")}</span></div><input name="phone" value={(s.phone as string) || (s.companyPhone as string) || ""} class="input input-bordered w-full" data-writable /></label>

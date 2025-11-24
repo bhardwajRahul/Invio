@@ -25,6 +25,8 @@ export const updateSettings = (data: Record<string, string>) => {
       "email", // alias
       "companyCountryCode",
       "countryCode", // alias
+      "companyCity",
+      "companyPostalCode",
       "locale",
     ].includes(key) && String(raw).trim() === "";
 
