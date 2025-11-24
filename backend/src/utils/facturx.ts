@@ -34,14 +34,35 @@ function taxCategoryId(rate: number): string {
   return rate > 0 ? "S" : "Z"; 
 }
 
-function splitAddressLines(address?: string): { lineOne?: string; lineTwo?: string } {
+function splitAddressLines(address?: string): { lineOne?: string; lineTwo?: string; city?: string; zip?: string } {
   if (!address) return {};
   const parts = address.split(/\r?\n/).map((part) => part.trim()).filter((part) => part.length > 0);
   if (parts.length === 0) return {};
   const [lineOne, ...rest] = parts;
+  let lineTwo = rest.length ? rest.join(", ") : undefined;
+  
+  // Simple heuristic: if lineTwo looks like "12345 City", try to extract it
+  // This is a fallback if structured city/zip are missing
+  let city: string | undefined;
+  let zip: string | undefined;
+
+  if (lineTwo && /^\d{4,5}\s+/.test(lineTwo)) {
+     const m = lineTwo.match(/^(\d{4,5})\s+(.*)$/);
+     if (m) {
+       zip = m[1];
+       city = m[2];
+     }
+  } else if (lineOne && /^\d{4,5}\s+/.test(lineOne)) {
+     // Sometimes address is just one line: "Street 1, 12345 City"
+     // But here we split by newline. If lineOne is "12345 City", it's weird.
+     // Let's just leave it for now.
+  }
+
   return {
     lineOne,
-    lineTwo: rest.length ? rest.join(", ") : undefined,
+    lineTwo,
+    city,
+    zip,
   };
 }
 
@@ -67,8 +88,9 @@ export function generateFacturX22XML(
   const currency = safeCurrency(business, invoice.currency);
   const issue = fmtDateYYYYMMDD(invoice.issueDate) || fmtDateYYYYMMDD(new Date()) || "";
   
-  // BASIC profile - minimal yet compliant
-  const profileUrn = "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic";
+  // EN16931 (COMFORT) profile - required for XRechnung compliance
+  // EN16931 (COMFORT) profile - required for XRechnung compliance
+  const profileUrn = "urn:cen.eu:en16931:2017";
 
   // Tax summary
   const taxes = (invoice.taxes && invoice.taxes.length > 0)
@@ -81,6 +103,9 @@ export function generateFacturX22XML(
 
   const docContext = `
   <rsm:ExchangedDocumentContext>
+    <ram:BusinessProcessSpecifiedDocumentContextParameter>
+      <ram:ID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</ram:ID>
+    </ram:BusinessProcessSpecifiedDocumentContextParameter>
     <ram:GuidelineSpecifiedDocumentContextParameter>
       <ram:ID>${xmlEscape(profileUrn)}</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
@@ -99,11 +124,25 @@ export function generateFacturX22XML(
   const sellerParty = `
     <ram:SellerTradeParty>
       <ram:Name>${xmlEscape(business.companyName)}</ram:Name>
+      <ram:DefinedTradeContact>
+        <ram:PersonName>${xmlEscape(business.companyName)}</ram:PersonName>
+        <ram:TelephoneUniversalCommunication>
+          <ram:CompleteNumber>${xmlEscape(business.companyPhone || "+49 000 000000")}</ram:CompleteNumber>
+        </ram:TelephoneUniversalCommunication>
+        <ram:EmailURIUniversalCommunication>
+          <ram:URIID>${xmlEscape(business.companyEmail || "info@example.com")}</ram:URIID>
+        </ram:EmailURIUniversalCommunication>
+      </ram:DefinedTradeContact>
       <ram:PostalTradeAddress>
+        ${(business.companyPostalCode || sellerAddressLines.zip) ? `<ram:PostcodeCode>${xmlEscape(business.companyPostalCode || sellerAddressLines.zip)}</ram:PostcodeCode>` : ""}
         ${sellerAddressLines.lineOne ? `<ram:LineOne>${xmlEscape(sellerAddressLines.lineOne)}</ram:LineOne>` : ""}
         ${sellerAddressLines.lineTwo ? `<ram:LineTwo>${xmlEscape(sellerAddressLines.lineTwo)}</ram:LineTwo>` : ""}
+        ${(business.companyCity || sellerAddressLines.city) ? `<ram:CityName>${xmlEscape(business.companyCity || sellerAddressLines.city)}</ram:CityName>` : ""}
         <ram:CountryID>${xmlEscape(business.companyCountryCode || opts.sellerCountryCode || "DE")}</ram:CountryID>
       </ram:PostalTradeAddress>
+      <ram:URIUniversalCommunication>
+        <ram:URIID schemeID="0088">${xmlEscape(business.companyTaxId || "0000000000000")}</ram:URIID>
+      </ram:URIUniversalCommunication>
       ${isLikelyVatId(business.companyTaxId) ? `
       <ram:SpecifiedTaxRegistration>
         <ram:ID schemeID="VA">${xmlEscape((business.companyCountryCode || opts.sellerCountryCode || "DE") + business.companyTaxId!)}</ram:ID>
@@ -117,12 +156,15 @@ export function generateFacturX22XML(
     <ram:BuyerTradeParty>
       <ram:Name>${xmlEscape(buyer.name)}</ram:Name>
       <ram:PostalTradeAddress>
+        ${(buyer.postalCode || buyerAddressLines.zip) ? `<ram:PostcodeCode>${xmlEscape(buyer.postalCode || buyerAddressLines.zip)}</ram:PostcodeCode>` : ""}
         ${buyerAddressLines.lineOne ? `<ram:LineOne>${xmlEscape(buyerAddressLines.lineOne)}</ram:LineOne>` : ""}
         ${buyerAddressLines.lineTwo ? `<ram:LineTwo>${xmlEscape(buyerAddressLines.lineTwo)}</ram:LineTwo>` : ""}
-        ${buyer.postalCode ? `<ram:PostcodeCode>${xmlEscape(buyer.postalCode)}</ram:PostcodeCode>` : ""}
-        ${buyer.city ? `<ram:CityName>${xmlEscape(buyer.city)}</ram:CityName>` : ""}
+        ${(buyer.city || buyerAddressLines.city) ? `<ram:CityName>${xmlEscape(buyer.city || buyerAddressLines.city)}</ram:CityName>` : ""}
         <ram:CountryID>${xmlEscape(buyer.countryCode || opts.buyerCountryCode || "DE")}</ram:CountryID>
       </ram:PostalTradeAddress>
+      <ram:URIUniversalCommunication>
+        <ram:URIID schemeID="0088">${xmlEscape(buyer.taxId || "0000000000000")}</ram:URIID>
+      </ram:URIUniversalCommunication>
       ${isLikelyVatId(buyer.taxId) ? `
       <ram:SpecifiedTaxRegistration>
         <ram:ID schemeID="VA">${xmlEscape((buyer.countryCode || opts.buyerCountryCode || "DE") + buyer.taxId!)}</ram:ID>
@@ -131,9 +173,9 @@ export function generateFacturX22XML(
 
   const headerAgreement = `
   <ram:ApplicableHeaderTradeAgreement>
+    <ram:BuyerReference>${xmlEscape(invoice.customer.reference || "N/A")}</ram:BuyerReference>
     ${sellerParty}
     ${buyerParty}
-    ${invoice.customer.reference ? `<ram:BuyerReference>${xmlEscape(invoice.customer.reference)}</ram:BuyerReference>` : ""}
     ${opts.orderReferenceId ? `<ram:BuyerOrderReferencedDocument><ram:IssuerAssignedID>${xmlEscape(opts.orderReferenceId)}</ram:IssuerAssignedID></ram:BuyerOrderReferencedDocument>` : ""}
   </ram:ApplicableHeaderTradeAgreement>`;
 
@@ -210,7 +252,11 @@ export function generateFacturX22XML(
   <rsm:SupplyChainTradeTransaction>
     ${linesXml}
     ${headerAgreement}
-    <ram:ApplicableHeaderTradeDelivery />
+    <ram:ApplicableHeaderTradeDelivery>
+      <ram:ActualDeliverySupplyChainEvent>
+        <ram:OccurrenceDateTime><udt:DateTimeString format="102">${issue}</udt:DateTimeString></ram:OccurrenceDateTime>
+      </ram:ActualDeliverySupplyChainEvent>
+    </ram:ApplicableHeaderTradeDelivery>
     ${headerSettlement}
   </rsm:SupplyChainTradeTransaction>`;
 

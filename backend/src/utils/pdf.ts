@@ -8,7 +8,8 @@ import {
 } from "pdf-lib";
 // Use Puppeteer (headless Chrome) for HTML -> PDF rendering instead of wkhtmltopdf
 import puppeteer from "puppeteer-core";
-import { generateInvoiceXML } from "./xmlProfiles.ts";
+import { generateInvoiceXML, XMLProfile } from "./xmlProfiles.ts";
+import { generateZugferdXMP } from "./xmp.ts";
 import {
   BusinessSettings,
   InvoiceWithDetails,
@@ -341,6 +342,7 @@ export async function generateInvoicePDF(
         profile.mediaType || "application/xml",
         `${profile.name} export embedded by Invio`,
         opts?.locale || invoiceData.locale || inlined?.locale || "en-US",
+        profile,
       );
     } catch (error) {
       console.warn("Failed to embed XML attachment:", error);
@@ -504,8 +506,6 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
       defPath, // The definition file must come before the input file
       inputPath,
     ];
-  console.log(args);
-  console.log(defContent);
 
     const cmd = new Deno.Command(ghostscript, {
       args,
@@ -538,13 +538,14 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
   }
 }
 
-async function embedXmlAttachment(
+export async function embedXmlAttachment(
   pdfBytes: Uint8Array,
   xmlBytes: Uint8Array,
   fileName: string,
   mediaType: string,
   description: string,
   docLang?: string,
+  profile?: XMLProfile,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
   const context = pdfDoc.context;
@@ -621,6 +622,16 @@ async function embedXmlAttachment(
   pdfDoc.setModificationDate(now);
   if (docLang) {
     pdfDoc.catalog.set(PDFName.of("Lang"), PDFString.of(docLang));
+  }
+
+  if (profile && (profile.id === "facturx22" || profile.id === "zugferd")) {
+    const xmp = generateZugferdXMP(fileName, "EN16931");
+    const metadataStream = context.stream(xmp, {
+      Type: PDFName.of("Metadata"),
+      Subtype: PDFName.of("XML"),
+    });
+    const metadataRef = context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
   }
 
   return pdfDoc.save({ useObjectStreams: false });
