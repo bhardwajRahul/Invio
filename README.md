@@ -17,6 +17,10 @@
 
 ---
 
+## Info
+
+It has been a little while since my last commit, I have just been busy with life in general. This project is not of my radar and it is something I wish to keep on working on.
+
 ## 🌟 Why Invio?
 
 - Built for doing, not configuring — create an invoice, send a link, get paid. No CRMs, projects, or bloat getting in your way.
