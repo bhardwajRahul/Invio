@@ -10,17 +10,26 @@ import { LuGripVertical, LuPlus, LuSave } from "../components/icons.tsx";
 import { formatMoney } from "../utils/format.ts";
 
 type Customer = { id: string; name: string };
+type TaxDefinition = {
+  id: string;
+  code?: string;
+  name?: string;
+  percent: number;
+  countryCode?: string;
+};
 type IncomingItem = {
   description: string;
   quantity: number;
   unitPrice: number;
   notes?: string;
   taxPercent?: number;
+  taxDefinitionId?: string;
 };
 
 export type InvoiceEditorProps = {
   mode: "create" | "edit";
   customers?: Customer[];
+  taxDefinitions?: TaxDefinition[];
   selectedCustomerId?: string;
   customerName?: string;
   currency?: string;
@@ -28,6 +37,7 @@ export type InvoiceEditorProps = {
   invoiceNumber?: string;
   invoiceNumberPrefill?: string;
   taxRate?: number;
+  taxDefinitionId?: string;
   pricesIncludeTax?: boolean;
   roundingMode?: string;
   taxMode?: "invoice" | "line";
@@ -51,6 +61,7 @@ type ItemState = {
   unitPrice: string;
   notes: string;
   taxPercent: string;
+  taxDefinitionId: string;
 };
 
 type InlineCustomer = {
@@ -81,6 +92,7 @@ function mapItem(item?: IncomingItem): ItemState {
     taxPercent: item && typeof item.taxPercent === "number"
       ? String(item.taxPercent)
       : "",
+    taxDefinitionId: item?.taxDefinitionId ? String(item.taxDefinitionId) : "",
   };
 }
 
@@ -100,6 +112,7 @@ const blankInlineCustomer: InlineCustomer = {
 };
 
 export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
+  const hasTaxDefinitions = (props.taxDefinitions?.length || 0) > 0;
   const numberFormat = props.numberFormat === "period" ? "period" : "comma";
   const initialItems = props.items && props.items.length > 0
     ? props.items.map((item) => mapItem(item))
@@ -137,6 +150,13 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
   const [taxMode, setTaxMode] = useState<"invoice" | "line">(
     props.taxMode ?? "invoice",
   );
+  const [invoiceTaxDefinitionId, setInvoiceTaxDefinitionId] = useState(() => {
+    if (!hasTaxDefinitions) return "";
+    if (props.taxDefinitionId) return String(props.taxDefinitionId);
+    const rate = typeof props.taxRate === "number" ? props.taxRate : Number(props.taxRate || 0);
+    const match = (props.taxDefinitions || []).find((d) => Number(d.percent) === Number(rate));
+    return match ? String(match.id) : "";
+  });
   const [invoiceTaxRate, setInvoiceTaxRate] = useState(
     typeof props.taxRate === "number" ? String(props.taxRate) : "0",
   );
@@ -185,12 +205,45 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
       const value = target.value;
       setItems((prev) => {
         const next = [...prev];
-        next[index] = { ...next[index], [field]: value };
+        const updated = { ...next[index], [field]: value };
+        // If user manually edits tax percent, treat it as a custom rate.
+        if (field === "taxPercent") {
+          updated.taxDefinitionId = "";
+        }
+        next[index] = updated;
         return next;
       });
     },
     [],
   );
+
+  const handleItemTaxDefinitionChange = useCallback(
+    (index: number) => (event: Event) => {
+      const value = (event.currentTarget as HTMLSelectElement).value;
+      const defs = props.taxDefinitions ?? [];
+      const selected = defs.find((d) => String(d.id) === String(value));
+      setItems((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          taxDefinitionId: value,
+          taxPercent: selected ? String(selected.percent) : next[index].taxPercent,
+        };
+        return next;
+      });
+    },
+    [props.taxDefinitions],
+  );
+
+  const handleInvoiceTaxDefinitionChange = useCallback((event: Event) => {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    setInvoiceTaxDefinitionId(value);
+    const defs = props.taxDefinitions ?? [];
+    const selected = defs.find((d) => String(d.id) === String(value));
+    if (selected) {
+      setInvoiceTaxRate(String(selected.percent));
+    }
+  }, [props.taxDefinitions]);
 
   const handleCustomerChange = useCallback((event: Event) => {
     const value = (event.currentTarget as HTMLSelectElement).value;
@@ -633,7 +686,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">VAT / Tax ID</span>
+                <span class="label-text">Tax ID</span>
               </div>
               <input
                 name="inlineCustomerTaxId"
@@ -731,6 +784,11 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
           <div class="w-16 sm:w-20 shrink-0 text-center">Quantity</div>
           <div class="w-24 shrink-0 text-center">Price</div>
           <div
+            class={`w-40 shrink-0 text-center per-line-tax-select ${taxMode === "line" && hasTaxDefinitions ? "" : "hidden"}`}
+          >
+            Tax
+          </div>
+          <div
             class={`w-24 shrink-0 text-center per-line-tax-input ${taxMode === "line" ? "" : "hidden"}`}
           >
             Tax %
@@ -811,21 +869,55 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                         </div>
                       </div>
                       {taxMode === "line" && (
-                        <div>
-                          <label class="label py-1"><span class="label-text text-xs">Tax %</span></label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            name={`item_${index}_tax_percent`}
-                            value={item.taxPercent}
-                            placeholder="0"
-                            class="input input-bordered w-full input-sm per-line-tax-input"
-                            onInput={handleItemChange(index, "taxPercent")}
-                            data-writable
-                            disabled={taxMode !== "line"}
-                            title="Per-line tax rate (%)"
-                          />
+                        <div class={`grid ${hasTaxDefinitions ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
+                          {hasTaxDefinitions && (
+                            <div>
+                              <label class="label py-1"><span class="label-text text-xs">Tax</span></label>
+                              <select
+                                name={`item_${index}_tax_definition_id`}
+                                value={item.taxDefinitionId}
+                                class="select select-bordered w-full select-sm"
+                                onInput={handleItemTaxDefinitionChange(index)}
+                                data-writable
+                                disabled={isDemo || taxMode !== "line"}
+                                title="Per-line tax definition"
+                              >
+                                <option value="">Custom tax</option>
+                                {(props.taxDefinitions || []).map((d) => {
+                                  const code = (d.code || "").trim();
+                                  const name = (d.name || "").trim();
+                                  const label = code && name
+                                    ? `${code} (${d.percent}%)`
+                                    : code
+                                    ? `${code} (${d.percent}%)`
+                                    : name
+                                    ? `${name} (${d.percent}%)`
+                                    : `${d.percent}%`;
+                                  return (
+                                    <option key={d.id} value={d.id}>
+                                      {label}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          )}
+                          <div>
+                            <label class="label py-1"><span class="label-text text-xs">Tax %</span></label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              name={`item_${index}_tax_percent`}
+                              value={item.taxPercent}
+                              placeholder="0"
+                              class="input input-bordered w-full input-sm per-line-tax-input"
+                              onInput={handleItemChange(index, "taxPercent")}
+                              data-writable
+                              disabled={taxMode !== "line"}
+                              title="Per-line tax rate (%)"
+                            />
+                          </div>
                         </div>
                       )}
                       <input
@@ -888,6 +980,33 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                     onInput={handleItemChange(index, "unitPrice")}
                     data-writable
                   />
+                  <select
+                    name={`item_${index}_tax_definition_id`}
+                    value={item.taxDefinitionId}
+                    class={`select select-bordered w-40 shrink-0 per-line-tax-select ${taxMode === "line" && hasTaxDefinitions ? "" : "hidden"}`}
+                    onInput={handleItemTaxDefinitionChange(index)}
+                    data-writable
+                    disabled={isDemo || taxMode !== "line"}
+                    title="Per-line tax definition"
+                  >
+                    <option value="">Custom tax</option>
+                    {(props.taxDefinitions || []).map((d) => {
+                      const code = (d.code || "").trim();
+                      const name = (d.name || "").trim();
+                      const label = code && name
+                        ? `${code} — ${name} (${d.percent}%)`
+                        : code
+                        ? `${code} (${d.percent}%)`
+                        : name
+                        ? `${name} (${d.percent}%)`
+                        : `${d.percent}%`;
+                      return (
+                        <option key={d.id} value={d.id}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
                   <input
                     type="number"
                     step="0.01"
@@ -978,16 +1097,50 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             id="tax-mode-select"
             class="select select-bordered w-full"
             value={taxMode}
-            onInput={(event) =>
-              setTaxMode(
-                (event.currentTarget as HTMLSelectElement)
-                  .value as "invoice" | "line",
-              )}
+            onInput={(event) => {
+              const v = (event.currentTarget as HTMLSelectElement)
+                .value as "invoice" | "line";
+              setTaxMode(v);
+              if (v === "line") setInvoiceTaxDefinitionId("");
+            }}
             data-writable
             disabled={isDemo}
           >
             <option value="invoice">Invoice total</option>
             <option value="line">Per line</option>
+          </select>
+        </label>
+        <label
+          class={`form-control ${taxMode === "invoice" && hasTaxDefinitions ? "" : "hidden"}`}
+        >
+          <div class="label">
+            <span class="label-text">Tax</span>
+          </div>
+          <select
+            name="taxDefinitionId"
+            class="select select-bordered w-full"
+            value={invoiceTaxDefinitionId}
+            onInput={handleInvoiceTaxDefinitionChange}
+            data-writable
+            disabled={isDemo || taxMode !== "invoice"}
+          >
+            <option value="">Custom tax</option>
+            {(props.taxDefinitions || []).map((d) => {
+              const code = (d.code || "").trim();
+              const name = (d.name || "").trim();
+              const label = code && name
+                ? `${code} (${d.percent}%)`
+                : code
+                ? `${code} (${d.percent}%)`
+                : name
+                ? `${name} (${d.percent}%)`
+                : `${d.percent}%`;
+              return (
+                <option key={d.id} value={d.id}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </label>
         <label
@@ -1003,10 +1156,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             name="taxRate"
             value={invoiceTaxRate}
             class="input input-bordered w-full"
-            onInput={(event) =>
+            onInput={(event) => {
+              setInvoiceTaxDefinitionId("");
               setInvoiceTaxRate(
                 (event.currentTarget as HTMLInputElement).value,
-              )}
+              );
+            }}
             data-writable
             disabled={isDemo || taxMode !== "invoice"}
             id="invoice-tax-rate-input"

@@ -83,6 +83,7 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
+      taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     // pass-through layout controls
     // brandLayout removed; always treating as logo-left in rendering
@@ -180,6 +181,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyCountryCode: settingsMap.companyCountryCode ||
       settingsMap.countryCode || "",
     currency: settingsMap.currency || "USD",
+      taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
@@ -241,6 +243,7 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
+      taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
@@ -288,6 +291,7 @@ publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
+      taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",

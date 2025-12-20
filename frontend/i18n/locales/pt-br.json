@@ -89,6 +89,8 @@
   "Templates": "Modelos",
   "Payments": "Pagamentos",
   "Tax": "Imposto",
+  "Tax label": "Rótulo do imposto",
+  "Tax Definitions": "Definições de imposto",
   "Numbering": "Numeração",
   "XML Export": "Exportação XML",
   "Export": "Exportar",

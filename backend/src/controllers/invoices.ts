@@ -15,6 +15,7 @@ import { generateShareToken, generateUUID } from "../utils/uuid.ts";
 
 type LineTaxInput = {
   percent: number;
+  taxDefinitionId?: string;
   code?: string;
   included?: boolean; // ignored; we use invoice-level pricesIncludeTax
   note?: string;
@@ -36,7 +37,7 @@ type PerLineCalc = {
   // For each item index, the taxable base (after discount) and per-rate tax amounts
   perItem: Array<{
     taxable: number;
-    taxes: Array<{ percent: number; amount: number; note?: string }>;
+    taxes: Array<{ percent: number; amount: number; note?: string; taxDefinitionId?: string }>;
   }>;
   // Summary grouped by percent
   summary: Array<{ percent: number; taxable: number; amount: number }>;
@@ -91,12 +92,17 @@ function calculatePerLineTotals(
       net = afterDiscount / (1 + rateSum);
     }
 
-    const itemTaxes: Array<{ percent: number; amount: number; note?: string }> =
+    const itemTaxes: Array<{ percent: number; amount: number; note?: string; taxDefinitionId?: string }> =
       [];
     for (const t of taxes) {
       const p = (Number(t.percent) || 0) / 100;
       const amt = r2(net * p);
-      itemTaxes.push({ percent: r2(p * 100), amount: amt, note: t.note });
+      itemTaxes.push({
+        percent: r2(p * 100),
+        amount: amt,
+        note: t.note,
+        taxDefinitionId: t.taxDefinitionId,
+      });
       const s = summaryMap.get(r2(p * 100)) || { taxable: 0, amount: 0 };
       s.taxable = r2(s.taxable + net);
       s.amount = r2(s.amount + amt);
@@ -336,7 +342,7 @@ export const createInvoice = (
             [
               generateUUID(),
               itemId,
-              null,
+              t.taxDefinitionId || null,
               t.percent,
               calc.taxable,
               t.amount,
@@ -364,6 +370,34 @@ export const createInvoice = (
           s.percent,
           s.taxable,
           s.amount,
+          new Date(),
+        ],
+      );
+    }
+  } else {
+    const rawTaxDefId = (data as { taxDefinitionId?: string | null })
+      .taxDefinitionId;
+    const taxDefinitionId = typeof rawTaxDefId === "string"
+      ? rawTaxDefId.trim()
+      : "";
+    if (taxDefinitionId) {
+      const r2 = (n: number) => Math.round(n * 100) / 100;
+      const percent = invoice.taxRate || 0;
+      const rate = Math.max(0, Number(percent) || 0) / 100;
+      const afterDiscount = r2(invoice.subtotal - invoice.discountAmount);
+      const taxable = pricesIncludeTax
+        ? (rate > 0 ? r2(afterDiscount / (1 + rate)) : afterDiscount)
+        : afterDiscount;
+      db.query(
+        `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          generateUUID(),
+          invoiceId,
+          taxDefinitionId,
+          percent,
+          taxable,
+          invoice.taxAmount,
           new Date(),
         ],
       );
@@ -454,6 +488,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
 
   // Attach per-item taxes
   type ItemTaxRow = {
+    taxDefinitionId?: string;
     percent: number;
     taxableAmount: number;
     amount: number;
@@ -464,18 +499,19 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
   if (items.length > 0) {
     const placeholders = items.map(() => "?").join(",");
     const taxRows = db.query(
-      `SELECT invoice_item_id, percent, taxable_amount, amount, included, note FROM invoice_item_taxes WHERE invoice_item_id IN (${placeholders})`,
+      `SELECT invoice_item_id, tax_definition_id, percent, taxable_amount, amount, included, note FROM invoice_item_taxes WHERE invoice_item_id IN (${placeholders})`,
       items.map((it) => it.id),
     );
     const taxesByItem = new Map<string, ItemTaxRow[]>();
     for (const r of taxRows) {
       const itemId = String((r as unknown[])[0]);
       const tax: ItemTaxRow = {
-        percent: Number((r as unknown[])[1]),
-        taxableAmount: Number((r as unknown[])[2]),
-        amount: Number((r as unknown[])[3]),
-        included: Boolean((r as unknown[])[4]),
-        note: (r as unknown[])[5] as string | undefined,
+        taxDefinitionId: (r as unknown[])[1] ? String((r as unknown[])[1]) : undefined,
+        percent: Number((r as unknown[])[2]),
+        taxableAmount: Number((r as unknown[])[3]),
+        amount: Number((r as unknown[])[4]),
+        included: Boolean((r as unknown[])[5]),
+        note: (r as unknown[])[6] as string | undefined,
       };
       if (!taxesByItem.has(itemId)) taxesByItem.set(itemId, []);
       taxesByItem.get(itemId)!.push(tax);
@@ -488,16 +524,16 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
 
   // Invoice tax summary
   const invTaxRows = db.query(
-    `SELECT id, invoice_id, percent, taxable_amount, tax_amount FROM invoice_taxes WHERE invoice_id = ?`,
+    `SELECT id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount FROM invoice_taxes WHERE invoice_id = ?`,
     [id],
   );
   const taxes = invTaxRows.map((r) => ({
     id: r[0] as string,
     invoiceId: r[1] as string,
-    taxDefinitionId: undefined,
-    percent: Number(r[2] as number),
-    taxableAmount: Number(r[3] as number),
-    taxAmount: Number(r[4] as number),
+    taxDefinitionId: r[2] ? String(r[2]) : undefined,
+    percent: Number(r[3] as number),
+    taxableAmount: Number(r[4] as number),
+    taxAmount: Number(r[5] as number),
   }));
 
   return {
@@ -557,6 +593,7 @@ export const getInvoiceByShareToken = (
 
   // Attach per-item taxes
   type ItemTaxRow2 = {
+    taxDefinitionId?: string;
     percent: number;
     taxableAmount: number;
     amount: number;
@@ -567,18 +604,19 @@ export const getInvoiceByShareToken = (
   if (items.length > 0) {
     const placeholders = items.map(() => "?").join(",");
     const taxRows = db.query(
-      `SELECT invoice_item_id, percent, taxable_amount, amount, included, note FROM invoice_item_taxes WHERE invoice_item_id IN (${placeholders})`,
+      `SELECT invoice_item_id, tax_definition_id, percent, taxable_amount, amount, included, note FROM invoice_item_taxes WHERE invoice_item_id IN (${placeholders})`,
       items.map((it) => it.id),
     );
     const taxesByItem = new Map<string, ItemTaxRow2[]>();
     for (const r of taxRows) {
       const itemId = String((r as unknown[])[0]);
       const tax: ItemTaxRow2 = {
-        percent: Number((r as unknown[])[1]),
-        taxableAmount: Number((r as unknown[])[2]),
-        amount: Number((r as unknown[])[3]),
-        included: Boolean((r as unknown[])[4]),
-        note: (r as unknown[])[5] as string | undefined,
+        taxDefinitionId: (r as unknown[])[1] ? String((r as unknown[])[1]) : undefined,
+        percent: Number((r as unknown[])[2]),
+        taxableAmount: Number((r as unknown[])[3]),
+        amount: Number((r as unknown[])[4]),
+        included: Boolean((r as unknown[])[5]),
+        note: (r as unknown[])[6] as string | undefined,
       };
       if (!taxesByItem.has(itemId)) taxesByItem.set(itemId, []);
       taxesByItem.get(itemId)!.push(tax);
@@ -591,16 +629,16 @@ export const getInvoiceByShareToken = (
 
   // Invoice tax summary
   const invTaxRows = db.query(
-    `SELECT id, invoice_id, percent, taxable_amount, tax_amount FROM invoice_taxes WHERE invoice_id = ?`,
+    `SELECT id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount FROM invoice_taxes WHERE invoice_id = ?`,
     [invoice.id],
   );
   const taxes = invTaxRows.map((r) => ({
     id: r[0] as string,
     invoiceId: r[1] as string,
-    taxDefinitionId: undefined,
-    percent: Number(r[2] as number),
-    taxableAmount: Number(r[3] as number),
-    taxAmount: Number(r[4] as number),
+    taxDefinitionId: r[2] ? String(r[2]) : undefined,
+    percent: Number(r[3] as number),
+    taxableAmount: Number(r[4] as number),
+    taxAmount: Number(r[5] as number),
   }));
 
   return {
@@ -812,7 +850,7 @@ export const updateInvoice = async (
               [
                 generateUUID(),
                 itemId,
-                null,
+                t.taxDefinitionId || null,
                 t.percent,
                 calc.taxable,
                 t.amount,
@@ -841,6 +879,57 @@ export const updateInvoice = async (
             s.percent,
             s.taxable,
             s.amount,
+            new Date(),
+          ],
+        );
+      }
+    }
+  }
+
+  // If using invoice-level tax (no per-line taxes), optionally persist a single invoice tax definition.
+  const existingHasPerLineTaxes = (existing.items || []).some((it) =>
+    Array.isArray(it.taxes) && it.taxes.length > 0
+  );
+  const nextHasPerLineTaxes = data.items ? !!perLineCalcUpdate : existingHasPerLineTaxes;
+
+  if (!nextHasPerLineTaxes) {
+    const hasTaxDefinitionIdInRequest = Object.prototype.hasOwnProperty.call(
+      data,
+      "taxDefinitionId",
+    );
+
+    if (data.items || hasTaxDefinitionIdInRequest) {
+      const rawTaxDefId = (data as { taxDefinitionId?: string | null })
+        .taxDefinitionId;
+      const requested = typeof rawTaxDefId === "string" ? rawTaxDefId.trim() : "";
+      const effectiveTaxDefinitionId = hasTaxDefinitionIdInRequest
+        ? (requested || undefined)
+        : (existing.taxes && existing.taxes.length > 0
+          ? existing.taxes[0].taxDefinitionId
+          : undefined);
+
+      // Replace existing invoice_taxes rows (invoice-level mode only)
+      db.query("DELETE FROM invoice_taxes WHERE invoice_id = ?", [id]);
+
+      if (effectiveTaxDefinitionId) {
+        const r2 = (n: number) => Math.round(n * 100) / 100;
+        const percent = (data.taxRate ?? existing.taxRate) || 0;
+        const rate = Math.max(0, Number(percent) || 0) / 100;
+        const includeTax = (data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false);
+        const afterDiscount = r2(totals.subtotal - totals.discountAmount);
+        const taxable = includeTax
+          ? (rate > 0 ? r2(afterDiscount / (1 + rate)) : afterDiscount)
+          : afterDiscount;
+        db.query(
+          `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            generateUUID(),
+            id,
+            effectiveTaxDefinitionId,
+            percent,
+            taxable,
+            totals.taxAmount,
             new Date(),
           ],
         );

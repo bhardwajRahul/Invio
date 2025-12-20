@@ -11,9 +11,17 @@ import {
 import { useTranslations } from "../../i18n/context.tsx";
 
 type Customer = { id: string; name: string };
+type TaxDefinition = {
+  id: string;
+  code?: string;
+  name?: string;
+  percent: number;
+  countryCode?: string;
+};
 type Data = {
   authed: boolean;
   customers?: Customer[];
+  taxDefinitions?: TaxDefinition[];
   currency?: string;
   paymentTerms?: string;
   defaultNotes?: string;
@@ -31,7 +39,7 @@ type Item = {
   quantity: number;
   unitPrice: number;
   notes?: string;
-  taxes?: { percent: number }[];
+  taxes?: { percent: number; taxDefinitionId?: string }[];
 };
 
 export const handler: Handlers<Data> = {
@@ -47,9 +55,12 @@ export const handler: Handlers<Data> = {
     }
     try {
       // Load customers and settings in parallel to get default currency
-      const [customers, settings] = await Promise.all([
+      const [customers, settings, taxDefinitions] = await Promise.all([
         backendGet("/api/v1/customers", auth) as Promise<Customer[]>,
         backendGet("/api/v1/settings", auth) as Promise<Record<string, string>>,
+        backendGet("/api/v1/tax-definitions", auth).catch(() => []) as Promise<
+          TaxDefinition[]
+        >,
       ]);
       const currency = (settings && settings.currency)
         ? settings.currency
@@ -80,6 +91,7 @@ export const handler: Handlers<Data> = {
       return ctx.render({
         authed: true,
         customers,
+        taxDefinitions,
         currency,
         paymentTerms,
         defaultNotes,
@@ -118,6 +130,8 @@ export const handler: Handlers<Data> = {
     const notes = String(form.get("notes") || "");
     const paymentTerms = String(form.get("paymentTerms") || "");
     const taxRate = Number(form.get("taxRate") || 0) || 0;
+    const invoiceTaxDefinitionId = String(form.get("taxDefinitionId") || "")
+      .trim();
     const pricesIncludeTax =
       String(form.get("pricesIncludeTax") || "false") === "true";
     const roundingMode = String(form.get("roundingMode") || "line");
@@ -143,6 +157,9 @@ export const handler: Handlers<Data> = {
       const taxPercent = parseFloat(
         (form.get(`item_${i}_tax_percent`) as string) || "0",
       );
+      const taxDefinitionId = String(
+        form.get(`item_${i}_tax_definition_id`) || "",
+      ).trim();
 
       const item: Item = {
         description,
@@ -152,7 +169,10 @@ export const handler: Handlers<Data> = {
       };
 
       if (taxMode === "line" && taxPercent > 0) {
-        item.taxes = [{ percent: taxPercent }];
+        item.taxes = [{
+          percent: taxPercent,
+          taxDefinitionId: taxDefinitionId || undefined,
+        }];
       }
 
       items.push(item);
@@ -227,6 +247,7 @@ export const handler: Handlers<Data> = {
       items,
     };
     if (taxMode === "invoice") {
+      payload.taxDefinitionId = invoiceTaxDefinitionId || null;
       const arr = payload.items as Array<Record<string, unknown>>;
       arr.forEach((i) => {
         if (i.taxes) delete i.taxes;
@@ -320,6 +341,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
         <InvoiceEditor
           mode="create"
           customers={customers}
+          taxDefinitions={props.data.taxDefinitions ?? []}
           currency={currency}
           status="draft"
           invoiceNumberPrefill={props.data.invoiceNumberPrefill}

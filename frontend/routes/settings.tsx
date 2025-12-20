@@ -5,6 +5,7 @@ import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
 import SettingsNav from "../islands/SettingsNav.tsx";
 import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
+import TaxDefinitionsManager from "../islands/TaxDefinitionsManager.tsx";
 import {
   LuAlertTriangle,
   LuBuilding2,
@@ -37,10 +38,19 @@ type Settings = Record<string, unknown> & {
   locale?: string;
 };
 type Template = { id: string; name: string; isDefault?: boolean; updatable?: boolean };
+type TaxDefinition = {
+  id: string;
+  code: string;
+  name: string;
+  percent: number;
+  countryCode?: string;
+  isActive?: boolean;
+};
 type Data = {
   authed: boolean;
   settings?: Settings;
   templates?: Template[];
+  taxDefinitions?: TaxDefinition[];
   error?: string;
 };
 
@@ -62,12 +72,13 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
         const data = await r.json();
         return !!data.demoMode;
       }).catch(() => false);
-      const [settings, templates, demoMode] = await Promise.all([
+      const [settings, templates, taxDefinitions, demoMode] = await Promise.all([
         backendGet("/api/v1/settings", auth) as Promise<Settings>,
         backendGet("/api/v1/templates", auth).catch(() => []) as Promise<Template[]>,
+        backendGet("/api/v1/tax-definitions", auth).catch(() => []) as Promise<TaxDefinition[]>,
         demoModePromise,
       ]);
-      return ctx.render({ authed: true, settings, templates, demoMode });
+      return ctx.render({ authed: true, settings, templates, taxDefinitions, demoMode });
     } catch (e) {
       // Try to still get demoMode if possible
       let demoMode = false;
@@ -149,6 +160,7 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       "defaultTaxRate",
       "defaultPricesIncludeTax",
       "defaultRoundingMode",
+      "taxLabel",
       // Numbering pattern
       "invoiceNumberPattern",
       // Toggle to enable/disable advanced invoice numbering pattern
@@ -217,6 +229,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
     { value: "en", labelKey: "English" },
     { value: "nl", labelKey: "Dutch" },
     { value: "de", labelKey: "German" },
+    { value: "pt", labelKey: "Portuguese (Brazil)" }
   ];
   // Use demoMode from backend /demo-mode route
   const demoMode = props.data.demoMode;
@@ -605,22 +618,35 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
           )}
 
           {section === "tax" && (
-            <form method="post" class="space-y-4" data-writable>
+            <div class="space-y-4">
               <h2 class="text-xl font-semibold">{t("Tax Settings")}</h2>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label class="form-control"><div class="label"><span class="label-text">{t("Default tax rate (%)")}</span></div><input type="number" step="0.01" min="0" name="defaultTaxRate" value={String((s.defaultTaxRate as number) ?? 0)} class="input input-bordered w-full" data-writable /></label>
-                <label class="form-control"><div class="label"><span class="label-text">{t("Prices include tax?")}</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} data-writable><option value="false">{t("No")}</option><option value="true">{t("Yes")}</option></select></label>
-                <label class="form-control"><div class="label"><span class="label-text">{t("Rounding mode")}</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} data-writable><option value="line">{t("Round per line")}</option><option value="total">{t("Round on totals")}</option></select></label>
-              </div>
-              
+
+              <form id="tax-settings-form" method="post" class="space-y-4" data-writable>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label class="form-control"><div class="label"><span class="label-text">{t("Tax label")}</span></div><input name="taxLabel" value={String((s.taxLabel as string) || t("Tax"))} class="input input-bordered w-full" placeholder="GST / HST / PST" data-writable /></label>
+                  <label class="form-control"><div class="label"><span class="label-text">{t("Default tax rate (%)")}</span></div><input type="number" step="0.01" min="0" name="defaultTaxRate" value={String((s.defaultTaxRate as number) ?? 0)} class="input input-bordered w-full" data-writable /></label>
+                  <label class="form-control"><div class="label"><span class="label-text">{t("Prices include tax?")}</span></div><select name="defaultPricesIncludeTax" class="select select-bordered w-full" value={(String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true") ? "true" : "false"} data-writable><option value="false">{t("No")}</option><option value="true">{t("Yes")}</option></select></label>
+                  <label class="form-control"><div class="label"><span class="label-text">{t("Rounding mode")}</span></div><select name="defaultRoundingMode" class="select select-bordered w-full" value={(s.defaultRoundingMode as string) || 'line'} data-writable><option value="line">{t("Round per line")}</option><option value="total">{t("Round on totals")}</option></select></label>
+                </div>
+              </form>
+
+              <TaxDefinitionsManager
+                taxDefinitions={(props.data.taxDefinitions ?? []) as TaxDefinition[]}
+                demoMode={demoMode}
+              />
+
               <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" data-writable>
+                <button
+                  type="submit"
+                  form="tax-settings-form"
+                  class="btn btn-primary"
+                  data-writable
+                >
                   <LuSave size={16} />
                   {t("Save Changes")}
                 </button>
               </div>
-            </form>
+            </div>
           )}
 
           {section === "numbering" && (

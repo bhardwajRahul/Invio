@@ -89,6 +89,8 @@
   "Payments": "Zahlungen",
   "Tax": "Steuern",
   "Numbering": "Nummerierung",
+    "Tax label": "Steuerbezeichnung",
+    "Tax Definitions": "Steuerdefinitionen",
   "XML Export": "XML-Export",
   "Export": "Export",
   "Localization": "Lokalisierung",

@@ -195,10 +195,13 @@ function buildContext(
   const requestedLocale = localeOverride ?? invoice.locale ?? settings?.locale;
   const { locale: resolvedLocale, labels } = getInvoiceLabels(requestedLocale);
   const currency = invoice.currency || settings?.currency || "USD";
+  const taxLabel = (settings?.taxLabel && String(settings.taxLabel).trim())
+    ? String(settings.taxLabel).trim()
+    : labels.taxLabel;
   // Build tax summary from normalized taxes if present
   let taxSummary = (invoice.taxes && invoice.taxes.length > 0)
     ? invoice.taxes.map((t) => ({
-      label: `${labels.taxLabel} ${t.percent}%`,
+      label: `${taxLabel} ${t.percent}%`,
       percent: t.percent,
       taxable: formatMoney(t.taxableAmount, currency, numberFormat || "comma"),
       amount: formatMoney(t.taxAmount, currency, numberFormat || "comma"),
@@ -212,7 +215,7 @@ function buildContext(
       (invoice.subtotal || 0) - (invoice.discountAmount || 0),
     );
     taxSummary = [{
-      label: `${labels.taxLabel} ${percent}%`,
+      label: `${taxLabel} ${percent}%`,
       percent,
       taxable: formatMoney(taxableBase, currency, numberFormat || "comma"),
       amount: formatMoney(invoice.taxAmount, currency, numberFormat || "comma"),

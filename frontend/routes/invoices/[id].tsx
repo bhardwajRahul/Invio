@@ -184,6 +184,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
   const currency = (inv?.currency as string) || "USD";
   const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
   const numberFormat = getNumberFormat(props.data.settings);
+  const taxLabel = String((props.data.settings?.taxLabel as string) || "Tax");
   const fmtMoney = (v?: number) => formatMoney(v, currency, numberFormat);
   const fmtDate = (d?: string | Date) => {
     if (!d) return "";
@@ -439,7 +440,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       <tbody>
                         {inv.taxes.map((t) => (
                           <tr>
-                            <td>VAT {t.percent}%</td>
+                            <td>{taxLabel} {t.percent}%</td>
                             <td class="text-right">
                               {fmtMoney(t.taxableAmount)}
                             </td>

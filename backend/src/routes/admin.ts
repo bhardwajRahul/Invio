@@ -34,6 +34,13 @@ import {
   getCustomers,
   updateCustomer,
 } from "../controllers/customers.ts";
+import {
+  createTaxDefinition,
+  deleteTaxDefinition,
+  getTaxDefinitionById,
+  getTaxDefinitions,
+  updateTaxDefinition,
+} from "../controllers/taxDefinitions.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
@@ -130,6 +137,11 @@ adminRoutes.use(
 
 adminRoutes.use(
   "/templates/*",
+  requireAdminAuth,
+);
+
+adminRoutes.use(
+  "/tax-definitions/*",
   requireAdminAuth,
 );
 
@@ -283,6 +295,69 @@ adminRoutes.get("/templates", async (c) => {
     }
   } catch { /* ignore */ }
   return c.json(templates);
+});
+
+// Tax definition routes
+adminRoutes.get("/tax-definitions", (c) => {
+  try {
+    const list = getTaxDefinitions();
+    return c.json(list);
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
+adminRoutes.get("/tax-definitions/:id", (c) => {
+  try {
+    const id = c.req.param("id");
+    const tax = getTaxDefinitionById(id);
+    if (!tax) return c.json({ error: "Not found" }, 404);
+    return c.json(tax);
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
+adminRoutes.post("/tax-definitions", async (c) => {
+  const data = await c.req.json();
+  try {
+    const created = createTaxDefinition(data);
+    return c.json(created, 201);
+  } catch (e) {
+    const msg = String(e);
+    if (/unique constraint failed: tax_definitions\.code/i.test(msg)) {
+      return c.json({ error: "Tax code already exists" }, 409);
+    }
+    return c.json({ error: msg }, 400);
+  }
+});
+
+adminRoutes.put("/tax-definitions/:id", async (c) => {
+  const data = await c.req.json();
+  try {
+    const id = c.req.param("id");
+    const updated = updateTaxDefinition(id, data);
+    return c.json(updated);
+  } catch (e) {
+    const msg = String(e);
+    if (msg === "NOT_FOUND") return c.json({ error: "Not found" }, 404);
+    if (/unique constraint failed: tax_definitions\.code/i.test(msg)) {
+      return c.json({ error: "Tax code already exists" }, 409);
+    }
+    return c.json({ error: msg }, 400);
+  }
+});
+
+adminRoutes.delete("/tax-definitions/:id", (c) => {
+  try {
+    const id = c.req.param("id");
+    const result = deleteTaxDefinition(id);
+    return c.json(result);
+  } catch (e) {
+    const msg = String(e);
+    if (msg === "NOT_FOUND") return c.json({ error: "Not found" }, 404);
+    return c.json({ error: msg }, 400);
+  }
 });
 
 adminRoutes.post("/templates", async (c) => {
@@ -640,6 +715,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
+    taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
@@ -703,6 +779,7 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
+    taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",

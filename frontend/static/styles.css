@@ -3888,6 +3888,20 @@ input.tab:checked + .tab-content,
   position: absolute;
 }
 
+.select-sm {
+  height: 2rem;
+  min-height: 2rem;
+  padding-left: 0.75rem;
+  padding-right: 2rem;
+  font-size: 0.875rem;
+  line-height: 2rem;
+}
+
+[dir="rtl"] .select-sm {
+  padding-left: 2rem;
+  padding-right: 0.75rem;
+}
+
 .steps-horizontal .step {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -4148,10 +4162,6 @@ input.tab:checked + .tab-content,
   margin-right: 0.25rem;
 }
 
-.mt-4 {
-  margin-top: 1rem;
-}
-
 .block {
   display: block;
 }
@@ -4268,6 +4278,10 @@ input.tab:checked + .tab-content,
   width: 100%;
 }
 
+.w-44 {
+  width: 11rem;
+}
+
 .min-w-0 {
   min-width: 0px;
 }
@@ -4306,10 +4320,6 @@ input.tab:checked + .tab-content,
 
 .cursor-not-allowed {
   cursor: not-allowed;
-}
-
-.list-inside {
-  list-style-position: inside;
 }
 
 .list-disc {
@@ -4525,9 +4535,9 @@ input.tab:checked + .tab-content,
   padding-bottom: 1rem;
 }
 
-.py-8 {
-  padding-top: 2rem;
-  padding-bottom: 2rem;
+.py-6 {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .pl-3 {

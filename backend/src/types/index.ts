@@ -92,6 +92,7 @@ export interface BusinessSettings {
   companyTaxId?: string;
   companyCountryCode?: string; // ISO alpha-2
   currency: string;
+  taxLabel?: string; // e.g. "GST", "VAT", "Sales tax"
   logo?: string;
   paymentMethods?: string;
   bankAccount?: string;
@@ -147,6 +148,7 @@ export interface CreateInvoiceRequest {
   discountAmount?: number;
   discountPercentage?: number;
   taxRate?: number;
+  taxDefinitionId?: string | null;
 
   // Tax behavior flags
   pricesIncludeTax?: boolean;
@@ -165,6 +167,7 @@ export interface CreateInvoiceRequest {
     // Optional per-line taxes (advanced). If omitted, falls back to invoice-level taxRate
     taxes?: Array<{
       percent: number; // e.g., 20 for 20%
+      taxDefinitionId?: string;
       code?: string; // e.g., "S" (standard), "Z" (zero), etc.
       included?: boolean; // whether line unitPrice includes this tax
       note?: string;

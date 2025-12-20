@@ -14,7 +14,14 @@ type Item = {
   quantity: number;
   unitPrice: number;
   notes?: string;
-  taxes?: Array<{ percent: number }>;
+  taxes?: Array<{ percent: number; taxDefinitionId?: string }>;
+};
+type TaxDefinition = {
+  id: string;
+  code?: string;
+  name?: string;
+  percent: number;
+  countryCode?: string;
 };
 type Invoice = {
   id: string;
@@ -36,6 +43,7 @@ type Data = {
   authed: boolean;
   invoice?: Invoice;
   settings?: Record<string, string>;
+  taxDefinitions?: TaxDefinition[];
   error?: string;
 };
 
@@ -64,11 +72,13 @@ export const handler: Handlers<Data> = {
         });
       }
       // Also fetch settings for numberFormat
-      const settings = await backendGet("/api/v1/settings", auth) as Record<
-        string,
-        string
-      >;
-      return ctx.render({ authed: true, invoice, settings });
+      const [settings, taxDefinitions] = await Promise.all([
+        backendGet("/api/v1/settings", auth) as Promise<Record<string, string>>,
+        backendGet("/api/v1/tax-definitions", auth).catch(() => []) as Promise<
+          TaxDefinition[]
+        >,
+      ]);
+      return ctx.render({ authed: true, invoice, settings, taxDefinitions });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
     }
@@ -96,6 +106,8 @@ export const handler: Handlers<Data> = {
       | "paid"
       | "overdue";
     const taxRate = Number(form.get("taxRate") || 0) || 0;
+    const invoiceTaxDefinitionId = String(form.get("taxDefinitionId") || "")
+      .trim();
     const pricesIncludeTax =
       String(form.get("pricesIncludeTax") || "false") === "true";
     const roundingMode = String(form.get("roundingMode") || "line");
@@ -121,6 +133,9 @@ export const handler: Handlers<Data> = {
       const taxPercent = parseFloat(
         (form.get(`item_${i}_tax_percent`) as string) || "0",
       );
+      const taxDefinitionId = String(
+        form.get(`item_${i}_tax_definition_id`) || "",
+      ).trim();
 
       const item: Item = {
         description,
@@ -130,7 +145,10 @@ export const handler: Handlers<Data> = {
       };
 
       if (taxMode === "line" && taxPercent > 0) {
-        item.taxes = [{ percent: taxPercent }];
+        item.taxes = [{
+          percent: taxPercent,
+          taxDefinitionId: taxDefinitionId || undefined,
+        }];
       }
 
       items.push(item);
@@ -156,6 +174,9 @@ export const handler: Handlers<Data> = {
         notes,
         paymentTerms,
         taxRate: taxMode === "invoice" ? taxRate : 0,
+        taxDefinitionId: taxMode === "invoice"
+          ? (invoiceTaxDefinitionId || null)
+          : undefined,
         pricesIncludeTax,
         roundingMode,
         invoiceNumber: invoiceNumber || undefined,
@@ -227,6 +248,13 @@ export default function EditInvoicePage(props: PageProps<Data>) {
             currency={inv.currency}
             status={inv.status}
             invoiceNumber={inv.invoiceNumber}
+            taxDefinitions={props.data.taxDefinitions ?? []}
+            taxDefinitionId={(inv.items &&
+                inv.items.some((i) => i.taxes && i.taxes.length))
+              ? undefined
+              : (inv.taxes && inv.taxes.length > 0
+                ? (inv.taxes[0] as { taxDefinitionId?: string }).taxDefinitionId
+                : undefined)}
             taxRate={inv.taxRate as number}
             pricesIncludeTax={inv.pricesIncludeTax as boolean}
             roundingMode={inv.roundingMode as string}
@@ -245,8 +273,12 @@ export default function EditInvoicePage(props: PageProps<Data>) {
                 const single = it.taxes && it.taxes.length === 1
                   ? it.taxes[0].percent
                   : undefined;
-                return { ...it, taxPercent: single } as Item & {
+                const singleDef = it.taxes && it.taxes.length === 1
+                  ? it.taxes[0].taxDefinitionId
+                  : undefined;
+                return { ...it, taxPercent: single, taxDefinitionId: singleDef } as Item & {
                   taxPercent?: number;
+                  taxDefinitionId?: string;
                 };
               })}
             demoMode={demoMode}

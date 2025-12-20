@@ -7,6 +7,9 @@ import * as $_middleware from "./routes/_middleware.ts";
 import * as $api_admin_export_full from "./routes/api/admin/export/full.ts";
 import * as $api_auth_login from "./routes/api/auth/login.ts";
 import * as $api_templates_install from "./routes/api/templates/install.ts";
+import * as $api_v1_tax_definitions_id_ from "./routes/api/v1/tax-definitions/[id].ts";
+import * as $api_v1_tax_definitions_shared from "./routes/api/v1/tax-definitions/_shared.ts";
+import * as $api_v1_tax_definitions_index from "./routes/api/v1/tax-definitions/index.ts";
 import * as $customers_id_ from "./routes/customers/[id].tsx";
 import * as $customers_id_cannot_delete from "./routes/customers/[id]/cannot-delete.tsx";
 import * as $customers_id_edit from "./routes/customers/[id]/edit.tsx";
@@ -40,6 +43,7 @@ import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
 import * as $InvoiceFormButton from "./islands/InvoiceFormButton.tsx";
 import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
 import * as $SettingsNav from "./islands/SettingsNav.tsx";
+import * as $TaxDefinitionsManager from "./islands/TaxDefinitionsManager.tsx";
 import * as $ThemeToggle from "./islands/ThemeToggle.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
@@ -50,6 +54,10 @@ const manifest = {
     "./routes/api/admin/export/full.ts": $api_admin_export_full,
     "./routes/api/auth/login.ts": $api_auth_login,
     "./routes/api/templates/install.ts": $api_templates_install,
+    "./routes/api/v1/tax-definitions/[id].ts": $api_v1_tax_definitions_id_,
+    "./routes/api/v1/tax-definitions/_shared.ts":
+      $api_v1_tax_definitions_shared,
+    "./routes/api/v1/tax-definitions/index.ts": $api_v1_tax_definitions_index,
     "./routes/customers/[id].tsx": $customers_id_,
     "./routes/customers/[id]/cannot-delete.tsx": $customers_id_cannot_delete,
     "./routes/customers/[id]/edit.tsx": $customers_id_edit,
@@ -90,6 +98,7 @@ const manifest = {
     "./islands/InvoiceFormButton.tsx": $InvoiceFormButton,
     "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
     "./islands/SettingsNav.tsx": $SettingsNav,
+    "./islands/TaxDefinitionsManager.tsx": $TaxDefinitionsManager,
     "./islands/ThemeToggle.tsx": $ThemeToggle,
   },
   baseUrl: import.meta.url,
