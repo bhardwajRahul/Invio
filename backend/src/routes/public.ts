@@ -175,6 +175,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
     companyAddress: settingsMap.companyAddress || "",
+    companyCity: settingsMap.companyCity || "",
+    companyPostalCode: settingsMap.companyPostalCode || "",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
@@ -239,6 +241,8 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
     companyAddress: settingsMap.companyAddress || "",
+    companyCity: settingsMap.companyCity || "",
+    companyPostalCode: settingsMap.companyPostalCode || "",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",

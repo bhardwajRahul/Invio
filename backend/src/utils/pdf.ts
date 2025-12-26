@@ -10,6 +10,7 @@ import {
 import puppeteer from "puppeteer-core";
 import { generateInvoiceXML, XMLProfile } from "./xmlProfiles.ts";
 import { generateZugferdXMP } from "./xmp.ts";
+import { fromFileUrl, join } from "std/path";
 import {
   BusinessSettings,
   InvoiceWithDetails,
@@ -195,6 +196,13 @@ function buildContext(
   const requestedLocale = localeOverride ?? invoice.locale ?? settings?.locale;
   const { locale: resolvedLocale, labels } = getInvoiceLabels(requestedLocale);
   const currency = invoice.currency || settings?.currency || "USD";
+  const companyPostalCity = (() => {
+    const parts = [
+      (settings?.companyPostalCode || "").trim(),
+      (settings?.companyCity || "").trim(),
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(" ") : undefined;
+  })();
   const taxLabel = (settings?.taxLabel && String(settings.taxLabel).trim())
     ? String(settings.taxLabel).trim()
     : labels.taxLabel;
@@ -225,6 +233,9 @@ function buildContext(
     // Company
     companyName: settings?.companyName || "Your Company",
     companyAddress: settings?.companyAddress || "",
+    companyCity: (settings?.companyCity || "").trim() || undefined,
+    companyPostalCode: (settings?.companyPostalCode || "").trim() || undefined,
+    companyPostalCity,
     companyEmail: settings?.companyEmail || "",
     companyPhone: settings?.companyPhone || "",
     companyTaxId: settings?.companyTaxId || "",
@@ -242,6 +253,16 @@ function buildContext(
     customerEmail: invoice.customer.email,
     customerPhone: invoice.customer.phone,
     customerAddress: invoice.customer.address,
+    customerCity: invoice.customer.city,
+    customerPostalCode: invoice.customer.postalCode,
+    customerCountryCode: invoice.customer.countryCode,
+    customerPostalCity: (() => {
+      const parts = [
+        (invoice.customer.postalCode || "").trim(),
+        (invoice.customer.city || "").trim(),
+      ].filter(Boolean);
+      return parts.length > 0 ? parts.join(" ") : undefined;
+    })(),
     customerTaxId: invoice.customer.taxId,
 
     // Items
@@ -314,12 +335,13 @@ export async function generateInvoicePDF(
     opts?.numberFormat,
     opts?.locale ?? invoiceData.locale ?? inlined?.locale,
   );
-  // First, attempt Puppeteer-based rendering
-  let pdfBytes = await tryPuppeteerPdf(html);
-  if (!pdfBytes) {
-    throw new Error(
-      "Chromium-based PDF rendering failed. Install Google Chrome/Chromium or set PUPPETEER_EXECUTABLE_PATH.",
-    );
+  // Render via Puppeteer (Chromium)
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await tryPuppeteerPdf(html);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Chromium-based PDF rendering failed: ${msg}`);
   }
 
   const pdfaResult = await convertPdfToPdfA3(pdfBytes);
@@ -399,18 +421,79 @@ export function buildInvoiceHTML(
   });
 }
 
-async function tryPuppeteerPdf(html: string): Promise<Uint8Array | null> {
-  try {
+async function tryPuppeteerPdf(html: string): Promise<Uint8Array> {
+  const os = Deno.build.os;
+  const isWindows = os === "windows";
+  const isLinux = os === "linux";
+
+  const cleanupUserDataDir = async (dir?: string) => {
+    if (!dir) return;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await Deno.remove(dir, { recursive: true });
+        break;
+      } catch (err) {
+        const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+        const transient = msg.includes("ebusy") || msg.includes("busy") || msg.includes("access is denied") ||
+          msg.includes("eperm") || msg.includes("locked");
+        if (!transient) break;
+        await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+      }
+    }
+  };
+
+  const baseArgs = [
+    "--font-render-hinting=medium",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--hide-scrollbars",
+  ];
+  // Linux containers commonly need sandbox disabled.
+  // On Windows/macOS these flags are unnecessary and can sometimes cause odd behavior.
+  const forceNoSandbox = (Deno.env.get("INVIO_PUPPETEER_NO_SANDBOX") || "").trim() === "1";
+  if (isLinux || forceNoSandbox) {
+    baseArgs.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
+  }
+  if (isWindows) {
+    baseArgs.push("--disable-gpu", "--disable-software-rasterizer");
+  }
+
+  const looksLikeTargetClosed = (err: unknown): boolean => {
+    const msg = err instanceof Error ? err.message : String(err);
+    return msg.includes("Target closed") || msg.includes("IO.read") || msg.includes("Protocol error (IO.read)");
+  };
+
+  const renderOnce = async (extraArgs: string[] = []): Promise<Uint8Array> => {
+    let userDataDir: string | undefined;
     const { executablePath, channel } = await resolveChromiumLaunchConfig();
+
+    const dumpIo = (Deno.env.get("INVIO_PUPPETEER_DUMPIO") || "").trim() === "1";
+    const pipePref = (Deno.env.get("INVIO_PUPPETEER_PIPE") || "").trim();
+    const usePipe = pipePref
+      ? pipePref === "1"
+      : isWindows;
+
     const launchOptions: NonNullable<Parameters<typeof puppeteer.launch>[0]> = {
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--font-render-hinting=medium",
-        "--disable-dev-shm-usage",
-      ],
+      args: [...baseArgs, ...extraArgs],
+      // Give Chromium a little more time on slower Windows machines.
+      timeout: 60000,
+      protocolTimeout: 60000,
+      dumpio: dumpIo,
+      pipe: usePipe,
     };
+
+    try {
+      userDataDir = await Deno.makeTempDir({ prefix: "invio-puppeteer-profile-" });
+      (launchOptions as { userDataDir?: string }).userDataDir = userDataDir;
+    } catch {
+      userDataDir = undefined;
+    }
 
     if (executablePath) {
       launchOptions.executablePath = executablePath;
@@ -418,9 +501,11 @@ async function tryPuppeteerPdf(html: string): Promise<Uint8Array | null> {
       (launchOptions as { channel?: string }).channel = channel;
     }
 
-    const browser = await puppeteer.launch(launchOptions);
+    let browser: any;
+    let page: any;
     try {
-      const page = await browser.newPage();
+      browser = await puppeteer.launch(launchOptions);
+      page = await browser.newPage();
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
       const pdf = await page.pdf({
         format: "A4",
@@ -430,12 +515,32 @@ async function tryPuppeteerPdf(html: string): Promise<Uint8Array | null> {
       });
       return new Uint8Array(pdf);
     } finally {
-      await browser.close();
+      if (page) {
+        try {
+          await page.close();
+        } catch {
+          // ignore
+        }
+      }
+      if (browser) {
+        try {
+          await browser.close();
+        } catch {
+          // ignore
+        }
+      }
+      await cleanupUserDataDir(userDataDir);
     }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("Puppeteer PDF render failed:", msg);
-    return null;
+  };
+
+  try {
+    return await renderOnce();
+  } catch (err) {
+    if (looksLikeTargetClosed(err)) {
+      // Retry once; Chromium can exit early on some Windows setups (AV hooks, GPU/driver quirks).
+      return await renderOnce(["--disable-features=RendererCodeIntegrity"]);
+    }
+    throw err;
   }
 }
 
@@ -476,13 +581,13 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
   try {
     await Deno.writeFile(inputPath, pdfBytes);
 
-    // Resolve asset paths
-    // Assuming running from project root or similar structure. 
-    // Best effort to find assets relative to this file or CWD.
-    // In Deno, import.meta.url is reliable.
-    const assetsDir = new URL("../assets/", import.meta.url).pathname;
-    const iccPath = `${assetsDir}AdobeCompat-v2.icc`;
-    const defTemplatePath = `${assetsDir}PDFA_def.ps`;
+    // Resolve asset paths relative to this file.
+    // IMPORTANT: on Windows, `new URL(...).pathname` yields `/C:/...` which isn't a valid FS path.
+    const assetsDir = fromFileUrl(new URL("../assets/", import.meta.url));
+    const iccPathFs = join(assetsDir, "AdobeCompat-v2.icc");
+    const defTemplatePath = join(assetsDir, "PDFA_def.ps");
+    // Ghostscript/PostScript file paths are safest with forward slashes.
+    const iccPath = iccPathFs.replaceAll("\\", "/");
 
     // Read and prepare PDFA_def.ps
     let defContent = await Deno.readTextFile(defTemplatePath);
@@ -504,7 +609,7 @@ async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | nul
       "-dCompressPages=false",
       "-dWriteObjStms=false",
       "-dWriteXRefStm=false",
-      `--permit-file-read=${iccPath}`,
+      `--permit-file-read=${iccPathFs}`,
       `-sOutputFile=${outputPath}`,
       defPath, // The definition file must come before the input file
       inputPath,

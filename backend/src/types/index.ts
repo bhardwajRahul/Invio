@@ -205,6 +205,9 @@ export interface TemplateContext {
   // Company info
   companyName: string;
   companyAddress: string;
+  companyCity?: string;
+  companyPostalCode?: string;
+  companyPostalCity?: string;
   companyEmail: string;
   companyPhone: string;
   companyTaxId?: string;
@@ -222,6 +225,10 @@ export interface TemplateContext {
   customerEmail?: string;
   customerPhone?: string;
   customerAddress?: string;
+  customerCity?: string;
+  customerPostalCode?: string;
+  customerCountryCode?: string;
+  customerPostalCity?: string;
   customerTaxId?: string;
 
   // Items

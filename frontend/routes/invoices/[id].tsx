@@ -29,7 +29,14 @@ import {
 type Invoice = {
   id: string;
   invoiceNumber?: string;
-  customer?: { name?: string; email?: string; address?: string };
+  customer?: {
+    name?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    countryCode?: string;
+  };
   items?: { description: string }[];
   currency?: string;
   subtotal?: number;
@@ -465,7 +472,18 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               <span class="opacity-70">Email:</span> {inv.customer?.email}
             </div>
             <div class="sm:col-span-2">
-              <span class="opacity-70">Address:</span> {inv.customer?.address}
+                <span class="opacity-70">Address:</span>
+                {" "}
+                {(() => {
+                  const line1 = (inv.customer?.address || "").trim();
+                  const line2 = [
+                    (inv.customer?.postalCode || "").trim(),
+                    (inv.customer?.city || "").trim(),
+                  ].filter(Boolean).join(" ");
+                  const line3 = (inv.customer?.countryCode || "").trim();
+                  const lines = [line1, line2, line3].filter(Boolean);
+                  return lines.length > 0 ? lines.join(" · ") : "";
+                })()}
             </div>
             <div>
               <span class="opacity-70">Issue Date:</span>{" "}

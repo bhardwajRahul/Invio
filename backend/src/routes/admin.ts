@@ -464,6 +464,8 @@ adminRoutes.post("/templates/:id/preview", async (c) => {
     customerName: "John Doe",
     customerEmail: "john@example.com",
     customerAddress: "456 Client Ave, City, State 54321",
+    customerPostalCity: "54321 City",
+    customerCountryCode: "US",
     highlightColor: data.highlightColor || "#2563eb",
     highlightColorLight: data.highlightColorLight || "#dbeafe",
     subtotal: 2500.00,
@@ -711,6 +713,8 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
     companyAddress: settingsMap.companyAddress || "",
+    companyCity: settingsMap.companyCity || "",
+    companyPostalCode: settingsMap.companyPostalCode || "",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
@@ -775,6 +779,8 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
     companyAddress: settingsMap.companyAddress || "",
+    companyCity: settingsMap.companyCity || "",
+    companyPostalCode: settingsMap.companyPostalCode || "",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
@@ -872,6 +878,8 @@ adminRoutes.get("/invoices/:id/ubl.xml", async (c) => {
   const businessSettings = {
     companyName: map.companyName || "Your Company",
     companyAddress: map.companyAddress || "",
+    companyCity: map.companyCity || "",
+    companyPostalCode: map.companyPostalCode || "",
     companyEmail: map.companyEmail || "",
     companyPhone: map.companyPhone || "",
     companyTaxId: map.companyTaxId || "",
@@ -919,6 +927,8 @@ adminRoutes.get("/invoices/:id/xml", async (c) => {
   const businessSettings = {
     companyName: map.companyName || "Your Company",
     companyAddress: map.companyAddress || "",
+    companyCity: map.companyCity || "",
+    companyPostalCode: map.companyPostalCode || "",
     companyEmail: map.companyEmail || "",
     companyPhone: map.companyPhone || "",
     companyTaxId: map.companyTaxId || "",

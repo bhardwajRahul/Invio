@@ -122,23 +122,32 @@ export function resetDatabaseFromDemo(): void {
 }
 
 function insertBuiltinTemplates(database: DB) {
-  const filePathForId = (id: string): string => {
+  const fileUrlForId = (id: string): URL => {
     switch (id) {
       case "professional-modern":
-        return "./static/templates/professional-modern.html";
+        return new URL(
+          "../../static/templates/professional-modern.html",
+          import.meta.url,
+        );
       case "minimalist-clean":
-        return "./static/templates/minimalist-clean.html";
+        return new URL(
+          "../../static/templates/minimalist-clean.html",
+          import.meta.url,
+        );
       default:
         throw new Error(`Unknown template id: ${id}`);
     }
   };
 
   const loadHtml = (id: string): string => {
-    const path = filePathForId(id);
+    const url = fileUrlForId(id);
     try {
-      return Deno.readTextFileSync(path);
+      return Deno.readTextFileSync(url);
     } catch (e) {
-      console.error(`Failed to read template file ${path}:`, e);
+      console.error(
+        `Failed to read template file ${url.toString()} (cwd=${Deno.cwd()}):`,
+        e,
+      );
       return "<html><body><p>Template unavailable.</p></body></html>";
     }
   };
