@@ -35,12 +35,35 @@ import {
   updateCustomer,
 } from "../controllers/customers.ts";
 import {
+  createProduct,
+  deleteProduct,
+  getProductById,
+  getProducts,
+  isProductUsedInInvoices,
+  reactivateProduct,
+  updateProduct,
+} from "../controllers/products.ts";
+import {
   createTaxDefinition,
   deleteTaxDefinition,
   getTaxDefinitionById,
   getTaxDefinitions,
   updateTaxDefinition,
 } from "../controllers/taxDefinitions.ts";
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  getCategoryById,
+  isCategoryUsed,
+  updateCategory,
+  createUnit,
+  deleteUnit,
+  getUnits,
+  getUnitById,
+  isUnitUsed,
+  updateUnit,
+} from "../controllers/productOptions.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
@@ -132,6 +155,11 @@ adminRoutes.use(
 
 adminRoutes.use(
   "/customers/*",
+  requireAdminAuth,
+);
+
+adminRoutes.use(
+  "/products/*",
   requireAdminAuth,
 );
 
@@ -690,6 +718,203 @@ adminRoutes.delete("/customers/:id", async (c) => {
   const id = c.req.param("id");
   await deleteCustomer(id);
   return c.json({ success: true });
+});
+
+// Product routes
+adminRoutes.get("/products", (c) => {
+  const url = new URL(c.req.url);
+  const includeInactive =
+    url.searchParams.get("includeInactive")?.toLowerCase() === "true";
+  const products = getProducts(includeInactive);
+  return c.json(products);
+});
+
+adminRoutes.get("/products/:id", (c) => {
+  const id = c.req.param("id");
+  const product = getProductById(id);
+  if (!product) {
+    return c.json({ error: "Product not found" }, 404);
+  }
+  return c.json(product);
+});
+
+adminRoutes.post("/products", async (c) => {
+  const data = await c.req.json();
+  try {
+    const product = createProduct(data);
+    return c.json(product, 201);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.put("/products/:id", async (c) => {
+  const id = c.req.param("id");
+  const data = await c.req.json();
+  try {
+    const product = updateProduct(id, data);
+    if (!product) {
+      return c.json({ error: "Product not found" }, 404);
+    }
+    return c.json(product);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.delete("/products/:id", (c) => {
+  const id = c.req.param("id");
+  try {
+    deleteProduct(id);
+    return c.json({ success: true });
+  } catch (e) {
+    const msg = String(e);
+    if (msg.includes("not found")) {
+      return c.json({ error: "Product not found" }, 404);
+    }
+    return c.json({ error: msg }, 400);
+  }
+});
+
+// Check if product is used in invoices
+adminRoutes.get("/products/:id/usage", (c) => {
+  const id = c.req.param("id");
+  const product = getProductById(id);
+  if (!product) {
+    return c.json({ error: "Product not found" }, 404);
+  }
+  const usedInInvoices = isProductUsedInInvoices(id);
+  return c.json({ usedInInvoices });
+});
+
+// Reactivate a soft-deleted product
+adminRoutes.post("/products/:id/reactivate", (c) => {
+  const id = c.req.param("id");
+  try {
+    const product = reactivateProduct(id);
+    if (!product) {
+      return c.json({ error: "Product not found" }, 404);
+    }
+    return c.json(product);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+// Product Categories
+adminRoutes.get("/product-categories", (c) => {
+  const categories = getCategories();
+  return c.json(categories);
+});
+
+adminRoutes.get("/product-categories/:id", (c) => {
+  const id = c.req.param("id");
+  const category = getCategoryById(id);
+  if (!category) {
+    return c.json({ error: "Category not found" }, 404);
+  }
+  return c.json(category);
+});
+
+adminRoutes.post("/product-categories", async (c) => {
+  const data = await c.req.json();
+  try {
+    const category = createCategory(data);
+    return c.json(category, 201);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.put("/product-categories/:id", async (c) => {
+  const id = c.req.param("id");
+  const data = await c.req.json();
+  try {
+    const category = updateCategory(id, data);
+    if (!category) {
+      return c.json({ error: "Category not found" }, 404);
+    }
+    return c.json(category);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.delete("/product-categories/:id", (c) => {
+  const id = c.req.param("id");
+  try {
+    const deleted = deleteCategory(id);
+    if (!deleted) {
+      return c.json({ error: "Category not found" }, 404);
+    }
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.get("/product-categories/:id/usage", (c) => {
+  const id = c.req.param("id");
+  const usage = isCategoryUsed(id);
+  return c.json(usage);
+});
+
+// Product Units
+adminRoutes.get("/product-units", (c) => {
+  const units = getUnits();
+  return c.json(units);
+});
+
+adminRoutes.get("/product-units/:id", (c) => {
+  const id = c.req.param("id");
+  const unit = getUnitById(id);
+  if (!unit) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+  return c.json(unit);
+});
+
+adminRoutes.post("/product-units", async (c) => {
+  const data = await c.req.json();
+  try {
+    const unit = createUnit(data);
+    return c.json(unit, 201);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.put("/product-units/:id", async (c) => {
+  const id = c.req.param("id");
+  const data = await c.req.json();
+  try {
+    const unit = updateUnit(id, data);
+    if (!unit) {
+      return c.json({ error: "Unit not found" }, 404);
+    }
+    return c.json(unit);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.delete("/product-units/:id", (c) => {
+  const id = c.req.param("id");
+  try {
+    const deleted = deleteUnit(id);
+    if (!deleted) {
+      return c.json({ error: "Unit not found" }, 404);
+    }
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+adminRoutes.get("/product-units/:id/usage", (c) => {
+  const id = c.req.param("id");
+  const usage = isUnitUsed(id);
+  return c.json(usage);
 });
 
 // Authenticated HTML/PDF generation for invoices by ID (no share token required)

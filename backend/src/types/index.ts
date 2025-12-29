@@ -13,6 +13,20 @@ export interface Customer {
   createdAt: Date;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  unitPrice: number;
+  sku?: string;
+  unit?: string; // piece, hour, day, kg, m, etc.
+  category?: string; // service, goods, subscription, etc.
+  taxDefinitionId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -50,6 +64,7 @@ export interface Invoice {
 export interface InvoiceItem {
   id: string;
   invoiceId: string;
+  productId?: string;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -189,6 +204,16 @@ export interface CreateCustomerRequest {
   postalCode?: string;
   countryCode?: string; // ISO alpha-2
   taxId?: string;
+}
+
+export interface CreateProductRequest {
+  name: string;
+  description?: string;
+  unitPrice: number;
+  sku?: string;
+  unit?: string;
+  category?: string;
+  taxDefinitionId?: string;
 }
 
 export interface InvoiceWithDetails extends Invoice {
