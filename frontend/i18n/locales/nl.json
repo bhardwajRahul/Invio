@@ -219,5 +219,6 @@
   "Please select a valid image file.": "Selecteer een geldig afbeeldingsbestand.",
   "File size must be less than 5MB.": "Bestandsgrootte moet minder dan 5 MB zijn.",
   "Dark": "Donker",
-  "Light": "Licht"
+  "Light": "Licht",
+  "Too many login attempts. Please try again in {{minutes}} minute(s).": "Te veel inlogpogingen. Probeer het over {{minutes}} minuut/minuten opnieuw."
 }

@@ -219,5 +219,6 @@
   "Please select a valid image file.": "Please select a valid image file.",
   "File size must be less than 5MB.": "File size must be less than 5MB.",
   "Dark": "Dark",
-  "Light": "Light"
+  "Light": "Light",
+  "Too many login attempts. Please try again in {{minutes}} minute(s).": "Too many login attempts. Please try again in {{minutes}} minute(s)."
 }

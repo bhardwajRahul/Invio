@@ -218,5 +218,6 @@
   "Please select a valid image file.": "Bitte wählen Sie eine gültige Bilddatei.",
   "File size must be less than 5MB.": "Dateigröße muss kleiner als 5 MB sein.",
   "Dark": "Dunkel",
-  "Light": "Hell"
+  "Light": "Hell",
+  "Too many login attempts. Please try again in {{minutes}} minute(s).": "Zu viele Anmeldeversuche. Bitte versuchen Sie es in {{minutes}} Minute(n) erneut."
 }
