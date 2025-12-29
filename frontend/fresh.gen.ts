@@ -26,6 +26,10 @@ import * as $invoices_index from "./routes/invoices/index.tsx";
 import * as $invoices_new from "./routes/invoices/new.tsx";
 import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
+import * as $products_id_ from "./routes/products/[id].tsx";
+import * as $products_id_edit from "./routes/products/[id]/edit.tsx";
+import * as $products_index from "./routes/products/index.tsx";
+import * as $products_new from "./routes/products/new.tsx";
 import * as $public_invoices_share_token_html from "./routes/public/invoices/[share_token]/html.ts";
 import * as $public_invoices_share_token_index from "./routes/public/invoices/[share_token]/index.tsx";
 import * as $public_invoices_share_token_pdf from "./routes/public/invoices/[share_token]/pdf.ts";
@@ -41,6 +45,7 @@ import * as $ExportAll from "./islands/ExportAll.tsx";
 import * as $InstallTemplateForm from "./islands/InstallTemplateForm.tsx";
 import * as $InvoiceEditorIsland from "./islands/InvoiceEditorIsland.tsx";
 import * as $InvoiceFormButton from "./islands/InvoiceFormButton.tsx";
+import * as $ProductOptionsManager from "./islands/ProductOptionsManager.tsx";
 import * as $SettingsEnhancements from "./islands/SettingsEnhancements.tsx";
 import * as $SettingsNav from "./islands/SettingsNav.tsx";
 import * as $TaxDefinitionsManager from "./islands/TaxDefinitionsManager.tsx";
@@ -74,6 +79,10 @@ const manifest = {
     "./routes/invoices/new.tsx": $invoices_new,
     "./routes/login.tsx": $login,
     "./routes/logout.ts": $logout,
+    "./routes/products/[id].tsx": $products_id_,
+    "./routes/products/[id]/edit.tsx": $products_id_edit,
+    "./routes/products/index.tsx": $products_index,
+    "./routes/products/new.tsx": $products_new,
     "./routes/public/invoices/[share_token]/html.ts":
       $public_invoices_share_token_html,
     "./routes/public/invoices/[share_token]/index.tsx":
@@ -96,6 +105,7 @@ const manifest = {
     "./islands/InstallTemplateForm.tsx": $InstallTemplateForm,
     "./islands/InvoiceEditorIsland.tsx": $InvoiceEditorIsland,
     "./islands/InvoiceFormButton.tsx": $InvoiceFormButton,
+    "./islands/ProductOptionsManager.tsx": $ProductOptionsManager,
     "./islands/SettingsEnhancements.tsx": $SettingsEnhancements,
     "./islands/SettingsNav.tsx": $SettingsNav,
     "./islands/TaxDefinitionsManager.tsx": $TaxDefinitionsManager,

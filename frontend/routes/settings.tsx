@@ -6,6 +6,7 @@ import SettingsNav from "../islands/SettingsNav.tsx";
 import ThemeToggle from "../islands/ThemeToggle.tsx";
 import ExportAll from "../islands/ExportAll.tsx";
 import TaxDefinitionsManager from "../islands/TaxDefinitionsManager.tsx";
+import ProductOptionsManager from "../islands/ProductOptionsManager.tsx";
 import {
   LuAlertTriangle,
   LuBuilding2,
@@ -19,6 +20,7 @@ import {
   LuDownload,
   LuSave,
   LuLanguages,
+  LuPackage,
 } from "../components/icons.tsx";
 import {
   backendGet,
@@ -46,11 +48,27 @@ type TaxDefinition = {
   countryCode?: string;
   isActive?: boolean;
 };
+type ProductCategory = {
+  id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isBuiltin: boolean;
+};
+type ProductUnit = {
+  id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isBuiltin: boolean;
+};
 type Data = {
   authed: boolean;
   settings?: Settings;
   templates?: Template[];
   taxDefinitions?: TaxDefinition[];
+  productCategories?: ProductCategory[];
+  productUnits?: ProductUnit[];
   error?: string;
 };
 
@@ -72,13 +90,15 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
         const data = await r.json();
         return !!data.demoMode;
       }).catch(() => false);
-      const [settings, templates, taxDefinitions, demoMode] = await Promise.all([
+      const [settings, templates, taxDefinitions, productCategories, productUnits, demoMode] = await Promise.all([
         backendGet("/api/v1/settings", auth) as Promise<Settings>,
         backendGet("/api/v1/templates", auth).catch(() => []) as Promise<Template[]>,
         backendGet("/api/v1/tax-definitions", auth).catch(() => []) as Promise<TaxDefinition[]>,
+        backendGet("/api/v1/product-categories", auth).catch(() => []) as Promise<ProductCategory[]>,
+        backendGet("/api/v1/product-units", auth).catch(() => []) as Promise<ProductUnit[]>,
         demoModePromise,
       ]);
-      return ctx.render({ authed: true, settings, templates, taxDefinitions, demoMode });
+      return ctx.render({ authed: true, settings, templates, taxDefinitions, productCategories, productUnits, demoMode });
     } catch (e) {
       // Try to still get demoMode if possible
       let demoMode = false;
@@ -244,6 +264,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
     "templates",
     "payments",
     "tax",
+    "products",
     "numbering",
     "xml",
     "export",
@@ -284,6 +305,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               templates: t("Templates"),
               payments: t("Payments"),
               tax: t("Tax"),
+              products: t("Products"),
               numbering: t("Numbering"),
               xml: t("XML Export"),
               export: t("Export"),
@@ -298,6 +320,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
             { value: link("templates"), label: t("Templates"), icon: LuLayoutTemplate, show: hasTemplates },
             { value: link("payments"), label: t("Payments"), icon: LuCreditCard },
             { value: link("tax"), label: t("Tax"), icon: LuPercent },
+            { value: link("products"), label: t("Products"), icon: LuPackage },
             { value: link("numbering"), label: t("Numbering"), icon: LuHash },
             { value: link("xml"), label: t("XML Export"), icon: LuFileCode2 },
             { value: link("export"), label: t("Export"), icon: LuDownload },
@@ -351,6 +374,12 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               <a href={link("tax")} class={section === "tax" ? "active" : undefined}>
                 <LuPercent size={20} class="mr-2" />
                 {t("Tax")}
+              </a>
+            </li>
+            <li>
+              <a href={link("products")} class={section === "products" ? "active" : undefined}>
+                <LuPackage size={20} class="mr-2" />
+                {t("Products")}
               </a>
             </li>
             <li>
@@ -646,6 +675,19 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
                   {t("Save Changes")}
                 </button>
               </div>
+            </div>
+          )}
+
+          {section === "products" && (
+            <div class="space-y-4">
+              <h2 class="text-xl font-semibold">{t("Product Settings")}</h2>
+              <p class="text-sm opacity-70">{t("Product settings helper")}</p>
+
+              <ProductOptionsManager
+                categories={(props.data.productCategories ?? []) as ProductCategory[]}
+                units={(props.data.productUnits ?? []) as ProductUnit[]}
+                demoMode={demoMode}
+              />
             </div>
           )}
 
