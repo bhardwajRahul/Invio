@@ -6,6 +6,7 @@ import {
   backendPut,
   getAuthHeaderFromCookie,
 } from "../../../utils/backend.ts";
+import { useTranslations } from "../../../i18n/context.tsx";
 
 type Customer = {
   id: string;
@@ -80,6 +81,7 @@ export const handler: Handlers<Data> = {
 };
 
 export default function EditCustomerPage(props: PageProps<Data>) {
+  const { t } = useTranslations();
   const demoMode = ((props.data as unknown) as { settings?: Record<string, unknown> }).settings?.demoMode === "true";
   const c = props.data.customer;
   return (
@@ -92,14 +94,14 @@ export default function EditCustomerPage(props: PageProps<Data>) {
       {c && (
         <form method="post" class="space-y-4" data-writable>
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <h1 class="text-2xl font-semibold">Edit Customer</h1>
+            <h1 class="text-2xl font-semibold">{t("Edit Customer")}</h1>
             <div class="flex items-center gap-2 w-full sm:w-auto">
               <a href={`/customers/${c.id}`} class="btn btn-ghost btn-sm flex-1 sm:flex-none">
-                Cancel
+                {t("Cancel")}
               </a>
               <button type="submit" class="btn btn-primary flex-1 sm:flex-none" data-writable disabled={demoMode}>
                 <LuSave size={16} />
-                Save
+                {t("Save")}
               </button>
             </div>
           </div>
@@ -107,7 +109,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
           <div class="space-y-3">
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Name <span class="text-error">*</span></span>
+                <span class="label-text">{t("Name")} <span class="text-error">*</span></span>
               </div>
               <input
                 name="name"
@@ -120,7 +122,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Contact Name</span>
+                <span class="label-text">{t("Contact Name")}</span>
               </div>
               <input
                 name="contactName"
@@ -133,7 +135,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">
                 <div class="label">
-                  <span class="label-text">Email</span>
+                  <span class="label-text">{t("Email")}</span>
                 </div>
                 <input
                   type="email"
@@ -146,7 +148,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               </label>
               <label class="form-control">
                 <div class="label">
-                  <span class="label-text">Phone</span>
+                  <span class="label-text">{t("Phone")}</span>
                 </div>
                 <input
                   name="phone"
@@ -159,7 +161,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
             </div>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Address</span>
+                <span class="label-text">{t("Address")}</span>
               </div>
               <textarea
                 name="address"
@@ -174,7 +176,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">
                 <div class="label">
-                  <span class="label-text">City</span>
+                  <span class="label-text">{t("City")}</span>
                 </div>
                 <input
                   name="city"
@@ -186,7 +188,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               </label>
               <label class="form-control">
                 <div class="label">
-                  <span class="label-text">Postal Code</span>
+                  <span class="label-text">{t("Postal Code")}</span>
                 </div>
                 <input
                   name="postalCode"
@@ -199,7 +201,7 @@ export default function EditCustomerPage(props: PageProps<Data>) {
             </div>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Tax ID</span>
+                <span class="label-text">{t("Tax ID")}</span>
               </div>
               <input
                 name="taxId"
@@ -211,14 +213,14 @@ export default function EditCustomerPage(props: PageProps<Data>) {
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Country Code (ISO alpha-2)</span>
+                <span class="label-text">{t("Country Code (ISO alpha-2)")}</span>
               </div>
               <input
                 name="countryCode"
                 value={c.countryCode || ""}
                 class="input input-bordered w-full"
                 maxlength={2}
-                placeholder="e.g. US, NL, DE"
+                placeholder={t("Country code placeholder")}
                 data-writable
                 disabled={demoMode}
               />
