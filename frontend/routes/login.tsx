@@ -3,7 +3,12 @@ import { Layout } from "../components/Layout.tsx";
 import { setAuthCookieHeaders, BACKEND_URL } from "../utils/backend.ts";
 import { useTranslations } from "../i18n/context.tsx";
 
-type Data = { error: string | null; username?: string; demoMode?: boolean };
+type Data = {
+  error: string | null;
+  errorParams?: Record<string, string | number>;
+  username?: string;
+  demoMode?: boolean;
+};
 
 export const handler: Handlers<Data> = {
   async GET(_req, ctx) {
@@ -48,6 +53,16 @@ export const handler: Handlers<Data> = {
         }
         if (resp.status === 401) {
           return ctx.render({ error: "Invalid credentials", username });
+        }
+        if (resp.status === 429) {
+          // Rate limited - extract retry time if available
+          const retryAfter = (parsedError as { retryAfter?: number })?.retryAfter;
+          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15;
+          return ctx.render({
+            error: "Too many login attempts. Please try again in {{minutes}} minute(s).",
+            errorParams: { minutes },
+            username,
+          });
         }
         let message: string | null = null;
         if (parsedError && typeof parsedError === "object") {
@@ -119,7 +134,7 @@ export default function LoginPage(props: PageProps<Data>) {
 
               {props.data.error && (
                 <div class="alert alert-error mb-3">
-                  <span>{t(props.data.error)}</span>
+                  <span>{t(props.data.error, props.data.errorParams)}</span>
                 </div>
               )}
 
