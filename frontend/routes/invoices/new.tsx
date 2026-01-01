@@ -18,9 +18,18 @@ type TaxDefinition = {
   percent: number;
   countryCode?: string;
 };
+type Product = {
+  id: string;
+  name: string;
+  description?: string;
+  unitPrice: number;
+  sku?: string;
+  taxDefinitionId?: string;
+};
 type Data = {
   authed: boolean;
   customers?: Customer[];
+  products?: Product[];
   taxDefinitions?: TaxDefinition[];
   currency?: string;
   paymentTerms?: string;
@@ -54,9 +63,10 @@ export const handler: Handlers<Data> = {
       });
     }
     try {
-      // Load customers and settings in parallel to get default currency
-      const [customers, settings, taxDefinitions] = await Promise.all([
+      // Load customers, products, and settings in parallel
+      const [customers, products, settings, taxDefinitions] = await Promise.all([
         backendGet("/api/v1/customers", auth) as Promise<Customer[]>,
+        backendGet("/api/v1/products", auth).catch(() => []) as Promise<Product[]>,
         backendGet("/api/v1/settings", auth) as Promise<Record<string, string>>,
         backendGet("/api/v1/tax-definitions", auth).catch(() => []) as Promise<
           TaxDefinition[]
@@ -91,6 +101,7 @@ export const handler: Handlers<Data> = {
       return ctx.render({
         authed: true,
         customers,
+        products,
         taxDefinitions,
         currency,
         paymentTerms,
@@ -341,6 +352,7 @@ export default function NewInvoicePage(props: PageProps<Data>) {
         <InvoiceEditor
           mode="create"
           customers={customers}
+          products={props.data.products ?? []}
           taxDefinitions={props.data.taxDefinitions ?? []}
           currency={currency}
           status="draft"

@@ -3,6 +3,7 @@ import { Breadcrumbs } from "./Breadcrumbs.tsx";
 import {
   LuLayoutDashboard,
   LuReceiptText,
+  LuPackage,
   LuUsers,
   LuSettings,
   LuLogOut,
@@ -62,6 +63,11 @@ export function Layout(
                   </a>
                 </li>
                 <li>
+                  <a href="/products">
+                    <LuPackage size={16} />{t("Products")}
+                  </a>
+                </li>
+                <li>
                   <a href="/customers">
                     <LuUsers size={16} />{t("Customers")}
                   </a>
@@ -109,6 +115,11 @@ export function Layout(
                   <li>
                     <a href="/invoices">
                       <LuReceiptText size={16} />{t("Invoices")}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products">
+                      <LuPackage size={16} />{t("Products")}
                     </a>
                   </li>
                   <li>

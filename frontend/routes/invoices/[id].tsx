@@ -25,6 +25,7 @@ import {
   backendPut,
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
+import { useTranslations } from "../../i18n/context.tsx";
 
 type Invoice = {
   id: string;
@@ -187,11 +188,12 @@ export const handler: Handlers<Data> = {
 };
 
 export default function InvoiceDetail(props: PageProps<Data>) {
+  const { t } = useTranslations();
   const inv = props.data.invoice;
   const currency = (inv?.currency as string) || "USD";
   const dateFormat = props.data.dateFormat || "YYYY-MM-DD";
   const numberFormat = getNumberFormat(props.data.settings);
-  const taxLabel = String((props.data.settings?.taxLabel as string) || "Tax");
+  const taxLabel = String((props.data.settings?.taxLabel as string) || t("Tax"));
   const fmtMoney = (v?: number) => formatMoney(v, currency, numberFormat);
   const fmtDate = (d?: string | Date) => {
     if (!d) return "";
@@ -223,9 +225,9 @@ export default function InvoiceDetail(props: PageProps<Data>) {
         <div class="alert alert-success mb-4 shadow">
           <LuCheckCircle size={20} />
           <div class="flex-1">
-            <div class="font-medium">Invoice published</div>
+            <div class="font-medium">{t("Invoice published")}</div>
             <div class="text-sm opacity-80 break-all">
-              Public link:{" "}
+              {t("Public link")}:{" "}
               <a
                 id="public-link-url"
                 class="link"
@@ -243,17 +245,17 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               target="_blank"
               href={`/public/invoices/${props.data.invoice.shareToken}`}
             >
-              Open
+              {t("Open")}
             </a>
             <button id="copy-public-link" type="button" class="btn btn-xs">
-              Copy link
+              {t("Copy link")}
             </button>
             <a
               class="btn btn-xs btn-primary"
               href={`/public/invoices/${props.data.invoice.shareToken}/pdf`}
               target="_blank"
             >
-              Download PDF
+              {t("Download PDF")}
             </a>
           </div>
           <CopyPublicLink />
@@ -263,7 +265,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
       <div class="flex items-center justify-between mb-4 gap-2">
         <div class="flex items-center gap-3">
           <h1 class="text-2xl font-semibold">
-            Invoice {inv?.invoiceNumber || inv?.id}
+            {t("Invoice #")} {inv?.invoiceNumber || inv?.id}
           </h1>
           {inv?.status && (
             <span
@@ -277,7 +279,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                   : ""
               }`}
             >
-              {isOverdue && inv?.status !== "paid" ? "overdue" : inv?.status}
+              {isOverdue && inv?.status !== "paid" ? t("Overdue") : t(inv?.status === "draft" ? "Draft" : inv?.status === "sent" ? "Sent" : inv?.status === "paid" ? "Paid" : "Overdue")}
             </span>
           )}
         </div>
@@ -286,7 +288,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
             {(inv.status === "draft" && !isOverdue) && (
               <a href={`/invoices/${inv.id}/edit`} class="btn btn-sm">
                 <LuPencil size={16} />
-                Edit
+                {t("Edit")}
               </a>
             )}
             {/* Contextual primary action */}
@@ -296,10 +298,10 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                 <button
                   type="submit"
                   class="btn btn-sm btn-success"
-                  title="Make public and mark as sent"
+                  title={t("Make public and mark as sent")}
                 >
                   <LuUpload size={16} />
-                  Publish
+                  {t("Publish")}
                 </button>
               </form>
             )}
@@ -309,10 +311,10 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                 <button
                   type="submit"
                   class="btn btn-sm btn-primary"
-                  title="Mark as Paid"
+                  title={t("Mark as Paid")}
                 >
                   <LuCheck size={16} />
-                  Mark as Paid
+                  {t("Mark as Paid")}
                 </button>
               </form>
             )}
@@ -320,7 +322,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
             <div class="dropdown dropdown-end">
               <div tabIndex={0} role="button" class="btn btn-ghost btn-sm">
                 <LuMoreHorizontal size={16} />
-                More
+                {t("More")}
               </div>
               <ul
                 tabIndex={0}
@@ -333,18 +335,18 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     class="flex items-center gap-2"
                   >
                     <LuCopy size={16} />
-                    Duplicate
+                    {t("Duplicate")}
                   </button>
                 </li>
                 <li>
                   <a
                     href={`/invoices/${inv.id}/xml`}
                     target="_blank"
-                    title="Download XML (uses default profile from Settings)"
+                    title={t("Download XML (uses default profile from Settings)")}
                     class="flex items-center gap-2"
                   >
                     <LuFileText size={16} />
-                    Download XML
+                    {t("Download XML")}
                   </a>
                 </li>
                 {inv.status !== "draft" && (
@@ -355,7 +357,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       class="flex items-center gap-2"
                     >
                       <LuShieldOff size={16} />
-                      Unpublish
+                      {t("Unpublish")}
                     </button>
                   </li>
                 )}
@@ -367,7 +369,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       class="flex items-center gap-2"
                     >
                       <LuSend size={16} />
-                      Mark as Sent
+                      {t("Mark as Sent")}
                     </button>
                   </li>
                 )}
@@ -379,7 +381,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                       class="flex items-center gap-2"
                     >
                       <LuExternalLink size={16} />
-                      View public link
+                      {t("View public link")}
                     </a>
                   </li>
                 )}
@@ -390,7 +392,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     class="flex items-center gap-2 text-error"
                   >
                     <LuTrash2 size={16} />
-                    Delete
+                    {t("Delete")}
                   </button>
                 </li>
               </ul>
@@ -413,7 +415,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               id={`inv-${inv.id}-delete`}
               method="post"
               class="hidden"
-              data-confirm="Delete this invoice? This cannot be undone."
+              data-confirm={t("Delete this invoice? This cannot be undone.")}
             >
               <input type="hidden" name="intent" value="delete" />
             </form>
@@ -429,36 +431,36 @@ export default function InvoiceDetail(props: PageProps<Data>) {
         <div class="space-y-2">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-              <span class="opacity-70">Customer:</span> {inv.customer?.name}
+              <span class="opacity-70">{t("Customer")}:</span> {inv.customer?.name}
             </div>
             <div>
               {inv.taxes && inv.taxes.length > 0 && (
                 <div class="pt-2">
-                  <div class="font-medium mb-1">Tax Summary</div>
+                  <div class="font-medium mb-1">{t("Tax Summary")}</div>
                   <div class="overflow-x-auto">
                     <table class="table table-xs w-auto">
                       <thead>
                         <tr>
-                          <th class="text-left">Rate</th>
-                          <th class="text-right">Taxable</th>
-                          <th class="text-right">Tax</th>
+                          <th class="text-left">{t("Rate")}</th>
+                          <th class="text-right">{t("Taxable")}</th>
+                          <th class="text-right">{t("Tax")}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {inv.taxes.map((t) => (
+                        {inv.taxes.map((tax) => (
                           <tr>
-                            <td>{taxLabel} {t.percent}%</td>
+                            <td>{taxLabel} {tax.percent}%</td>
                             <td class="text-right">
-                              {fmtMoney(t.taxableAmount)}
+                              {fmtMoney(tax.taxableAmount)}
                             </td>
-                            <td class="text-right">{fmtMoney(t.taxAmount)}</td>
+                            <td class="text-right">{fmtMoney(tax.taxAmount)}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr>
                           <td class="text-right font-medium" colspan={2}>
-                            Tax Total
+                            {t("Tax Total")}
                           </td>
                           <td class="text-right font-medium">
                             {fmtMoney(inv.taxAmount)}
@@ -469,10 +471,10 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                   </div>
                 </div>
               )}
-              <span class="opacity-70">Email:</span> {inv.customer?.email}
+              <span class="opacity-70">{t("Email")}:</span> {inv.customer?.email}
             </div>
             <div class="sm:col-span-2">
-                <span class="opacity-70">Address:</span>
+                <span class="opacity-70">{t("Address")}:</span>
                 {" "}
                 {(() => {
                   const line1 = (inv.customer?.address || "").trim();
@@ -486,57 +488,57 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                 })()}
             </div>
             <div>
-              <span class="opacity-70">Issue Date:</span>{" "}
+              <span class="opacity-70">{t("Issue Date")}:</span>{" "}
               {fmtDate(inv.issueDate)}
             </div>
             <div>
-              <span class="opacity-70">Due Date:</span> {fmtDate(inv.dueDate)}
+              <span class="opacity-70">{t("Due Date")}:</span> {fmtDate(inv.dueDate)}
               {" "}
               {isOverdue && inv.status !== "paid" && (
-                <span class="badge badge-error ml-2">Overdue</span>
+                <span class="badge badge-error ml-2">{t("Overdue")}</span>
               )}
             </div>
             <div>
-              <span class="opacity-70">Subtotal:</span> {fmtMoney(inv.subtotal)}
+              <span class="opacity-70">{t("Subtotal")}:</span> {fmtMoney(inv.subtotal)}
             </div>
             <div>
-              <span class="opacity-70">Tax:</span> {fmtMoney(inv.taxAmount)}
+              <span class="opacity-70">{t("Tax")}:</span> {fmtMoney(inv.taxAmount)}
             </div>
             <div class="text-xs opacity-70">
               {typeof inv.taxRate === "number"
-                ? `Tax rate: ${inv.taxRate}%`
+                ? `${t("Tax rate")}: ${inv.taxRate}%`
                 : ""}
               {typeof inv.pricesIncludeTax === "boolean"
-                ? ` · Prices include tax: ${
-                  inv.pricesIncludeTax ? "Yes" : "No"
+                ? ` · ${t("Prices include tax")}: ${
+                  inv.pricesIncludeTax ? t("Yes") : t("No")
                 }`
                 : ""}
-              {inv.roundingMode ? ` · Rounding: ${inv.roundingMode}` : ""}
+              {inv.roundingMode ? ` · ${t("Rounding")}: ${inv.roundingMode === "line" ? t("Round per line") : t("Round on totals")}` : ""}
               {(() => {
                 const mode = (inv.taxes && inv.taxes.length)
                   ? "line"
                   : "invoice";
-                return ` · Tax mode: ${
-                  mode === "line" ? "Per line" : "Invoice total"
+                return ` · ${t("Tax mode")}: ${
+                  mode === "line" ? t("Per line") : t("Invoice total")
                 }`;
               })()}
             </div>
             <div>
-              <span class="opacity-70">Discount:</span>{" "}
+              <span class="opacity-70">{t("Discount")}:</span>{" "}
               {fmtMoney(inv.discountAmount)}
             </div>
             <div>
-              <span class="opacity-70">Total:</span>{" "}
+              <span class="opacity-70">{t("Total")}:</span>{" "}
               <span class="font-medium">{fmtMoney(inv.total)}</span>
             </div>
           </div>
           {inv.paymentTerms && (
             <div>
-              <span class="opacity-70">Payment Terms:</span> {inv.paymentTerms}
+              <span class="opacity-70">{t("Payment Terms")}:</span> {inv.paymentTerms}
             </div>
           )}
           {inv.items && inv.items.length > 0 && (
-            <div class="opacity-60 text-xs">{inv.items.length} item(s)</div>
+            <div class="opacity-60 text-xs">{t("{{count}} item(s)", { count: inv.items.length })}</div>
           )}
           <div class="pt-4 flex gap-2 items-center flex-wrap">
             <a
@@ -545,14 +547,14 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               target="_blank"
             >
               <LuFileCode2 size={16} />
-              View HTML
+              {t("View HTML")}
             </a>
             <a
               class="btn btn-sm btn-primary"
               href={`/invoices/${inv.id}/pdf`}
             >
               <LuDownload size={16} />
-              Download PDF
+              {t("Download PDF")}
             </a>
             {/* Public share link (visible when published i.e., not draft) */}
             {inv.status && inv.status !== "draft" && inv.shareToken && (
@@ -562,7 +564,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                 target="_blank"
               >
                 <LuExternalLink size={16} />
-                View public link
+                {t("View public link")}
               </a>
             )}
           </div>
