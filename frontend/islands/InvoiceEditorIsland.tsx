@@ -8,6 +8,7 @@ import {
 } from "preact/hooks";
 import { LuGripVertical, LuPlus, LuSave } from "../components/icons.tsx";
 import { formatMoney } from "../utils/format.ts";
+import { useTranslations } from "../i18n/context.tsx";
 
 type Customer = { id: string; name: string };
 type TaxDefinition = {
@@ -123,6 +124,7 @@ const blankInlineCustomer: InlineCustomer = {
 };
 
 export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
+  const { t } = useTranslations();
   const hasTaxDefinitions = (props.taxDefinitions?.length || 0) > 0;
   const numberFormat = props.numberFormat === "period" ? "period" : "comma";
   const initialItems = props.items && props.items.length > 0
@@ -304,15 +306,15 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
     isCreateMode && selectedCustomerId === "__create__";
   const customerError = isCreateMode && !inlineCustomerRequired &&
       !selectedCustomerId
-    ? "Please select a customer."
+    ? t("Please select a customer.")
     : undefined;
   const inlineCustomerError = inlineCustomerRequired &&
       !inlineCustomer.name.trim()
-    ? "Customer name is required."
+    ? t("Customer name is required.")
     : undefined;
   const itemsError = hasItemWithDescription
     ? undefined
-    : "Add at least one item with a description.";
+    : t("Add at least one item with a description.");
   const isValid = !itemsError && !customerError && !inlineCustomerError;
 
   // Recalculate totals whenever line items or tax settings change.
@@ -505,7 +507,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             disabled={!isValid}
           >
             <LuSave size={16} />
-            <span>Save</span>
+            <span>{t("Save")}</span>
           </button>
         </div>
       )}
@@ -514,7 +516,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
         <div class="form-control">
           <div class="label">
             <span class="label-text">
-              Customer <span aria-hidden="true" class="text-error">*</span>
+              {t("Customer")} <span aria-hidden="true" class="text-error">*</span>
             </span>
           </div>
           {isCreateMode
@@ -530,13 +532,13 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                   aria-describedby={customerDescribedBy}
                   data-writable
                 >
-                  <option value="">Select customer</option>
+                  <option value="">{t("Select customer")}</option>
                   {props.customers?.map((customer) => (
                     <option value={customer.id} key={customer.id}>
                       {customer.name}
                     </option>
                   ))}
-                  <option value="__create__">Add new customer…</option>
+                  <option value="__create__">{t("Add new customer")}</option>
                 </select>
                 <div
                   id="customer-error"
@@ -559,13 +561,13 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
 
         <div class="form-control">
           <div class="label">
-            <span class="label-text">Invoice Number</span>
+            <span class="label-text">{t("Invoice Number")}</span>
           </div>
           <input
             name="invoiceNumber"
             value={invoiceNumber}
             class="input input-bordered w-full"
-            placeholder="e.g. INV-2025-001"
+            placeholder={t("Invoice number placeholder")}
             onInput={(event) =>
               setInvoiceNumber(
                 (event.currentTarget as HTMLInputElement).value,
@@ -582,7 +584,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
 
         <div class="form-control">
           <div class="label">
-            <span class="label-text">Currency</span>
+            <span class="label-text">{t("Currency")}</span>
           </div>
           <input
             name="currency"
@@ -597,7 +599,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
 
         <div class="form-control">
           <div class="label">
-            <span class="label-text">Status</span>
+            <span class="label-text">{t("Status")}</span>
           </div>
           <select
             name="status"
@@ -611,17 +613,17 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             data-writable
             disabled={isDemo}
           >
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
+            <option value="draft">{t("Draft")}</option>
+            <option value="sent">{t("Sent")}</option>
+            <option value="paid">{t("Paid")}</option>
+            <option value="overdue">{t("Overdue")}</option>
           </select>
         </div>
       </div>
 
       {inlineCustomerRequired && (
         <div class="rounded-box border border-base-300 bg-base-200/40 p-4 space-y-3">
-          <h3 class="text-sm font-semibold">New customer details</h3>
+          <h3 class="text-sm font-semibold">{t("New customer details")}</h3>
           <div
             id="inline-customer-error"
             class={`text-error text-xs ${inlineCustomerError ? "" : "hidden"}`}
@@ -632,7 +634,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             <label class="form-control sm:col-span-2">
               <div class="label">
                 <span class="label-text">
-                  Customer name <span aria-hidden="true" class="text-error">*</span>
+                  {t("Customer name")} <span aria-hidden="true" class="text-error">*</span>
                 </span>
               </div>
               <input
@@ -644,12 +646,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 data-writable
                 disabled={isDemo}
                 aria-describedby="inline-customer-error"
-                placeholder="Acme Corp"
+                placeholder={t("Customer name placeholder")}
               />
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Email</span>
+                <span class="label-text">{t("Email")}</span>
               </div>
               <input
                 type="email"
@@ -659,12 +661,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 class="input input-bordered w-full"
                 data-writable
                 disabled={isDemo}
-                placeholder="billing@example.com"
+                placeholder={t("Email placeholder")}
               />
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Phone</span>
+                <span class="label-text">{t("Phone")}</span>
               </div>
               <input
                 name="inlineCustomerPhone"
@@ -673,12 +675,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 class="input input-bordered w-full"
                 data-writable
                 disabled={isDemo}
-                placeholder="+1 555 0100"
+                placeholder={t("Phone placeholder")}
               />
             </label>
             <label class="form-control sm:col-span-2">
               <div class="label">
-                <span class="label-text">Address</span>
+                <span class="label-text">{t("Address")}</span>
               </div>
               <textarea
                 name="inlineCustomerAddress"
@@ -688,12 +690,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 rows={3}
                 data-writable
                 disabled={isDemo}
-                placeholder="123 Main Street"
+                placeholder={t("Address placeholder")}
               />
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">City</span>
+                <span class="label-text">{t("City")}</span>
               </div>
               <input
                 name="inlineCustomerCity"
@@ -702,12 +704,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 class="input input-bordered w-full"
                 data-writable
                 disabled={isDemo}
-                placeholder="Amsterdam"
+                placeholder={t("City placeholder")}
               />
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Postal code</span>
+                <span class="label-text">{t("Postal Code")}</span>
               </div>
               <input
                 name="inlineCustomerPostalCode"
@@ -716,12 +718,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 class="input input-bordered w-full"
                 data-writable
                 disabled={isDemo}
-                placeholder="1234 AB"
+                placeholder={t("Postal code placeholder")}
               />
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Tax ID</span>
+                <span class="label-text">{t("Tax ID")}</span>
               </div>
               <input
                 name="inlineCustomerTaxId"
@@ -730,12 +732,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 class="input input-bordered w-full"
                 data-writable
                 disabled={isDemo}
-                placeholder="NL123456789B01"
+                placeholder={t("Tax ID placeholder")}
               />
             </label>
             <label class="form-control">
               <div class="label">
-                <span class="label-text">Country code</span>
+                <span class="label-text">{t("Country code")}</span>
               </div>
               <input
                 name="inlineCustomerCountryCode"
@@ -744,7 +746,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                 class="input input-bordered w-full"
                 data-writable
                 disabled={isDemo}
-                placeholder="NL"
+                placeholder={t("Country code placeholder")}
               />
             </label>
           </div>
@@ -755,7 +757,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="form-control">
             <div class="label">
-              <span class="label-text">Issue Date</span>
+              <span class="label-text">{t("Issue Date")}</span>
             </div>
             <input
               type="date"
@@ -770,7 +772,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
           </label>
           <label class="form-control">
             <div class="label">
-              <span class="label-text">Due Date</span>
+              <span class="label-text">{t("Due Date")}</span>
             </div>
             <input
               type="date"
@@ -789,9 +791,9 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="block text-sm">
-            Items <span aria-hidden="true" class="text-error">*</span>
+            {t("Items")} <span aria-hidden="true" class="text-error">*</span>
             <span class="ml-2 text-xs text-base-content/50 font-normal">
-              (Ctrl/Cmd+Enter to add)
+              ({t("Ctrl+Enter to add")})
             </span>
           </label>
           <button
@@ -803,7 +805,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             disabled={isDemo}
           >
             <LuPlus size={16} />
-            <span class="ml-2">Add item</span>
+            <span class="ml-2">{t("Add item")}</span>
           </button>
         </div>
         <div
@@ -815,20 +817,20 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
 
         <div class="items-header hidden lg:flex flex-row flex-nowrap items-center gap-2 mb-1 text-xs text-base-content/60 font-medium">
           <div class="w-6 shrink-0"></div>
-          <div class="flex-1 min-w-0 pl-3">Description</div>
-          <div class="w-16 sm:w-20 shrink-0 text-center">Quantity</div>
-          <div class="w-24 shrink-0 text-center">Price</div>
+          <div class="flex-1 min-w-0 pl-3">{t("Description")}</div>
+          <div class="w-16 sm:w-20 shrink-0 text-center">{t("Quantity")}</div>
+          <div class="w-24 shrink-0 text-center">{t("Price")}</div>
           <div
             class={`w-40 shrink-0 text-center per-line-tax-select ${taxMode === "line" && hasTaxDefinitions ? "" : "hidden"}`}
           >
-            Tax
+            {t("Tax")}
           </div>
           <div
             class={`w-24 shrink-0 text-center per-line-tax-input ${taxMode === "line" ? "" : "hidden"}`}
           >
-            Tax %
+            {t("Tax %")}
           </div>
-          <div class="w-40 max-w-xs shrink-0 text-center">Notes</div>
+          <div class="w-40 max-w-xs shrink-0 text-center">{t("Notes")}</div>
           <div class="w-8 shrink-0"></div>
         </div>
 
@@ -860,7 +862,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                     <button
                       type="button"
                       class="drag-handle btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100"
-                      aria-label="Drag to reorder"
+                      aria-label={t("Drag to reorder")}
                       tabIndex={-1}
                     >
                       <LuGripVertical size={16} />
@@ -884,7 +886,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                       <input
                         name={`item_${index}_description`}
                         value={item.description}
-                        placeholder="Description *"
+                        placeholder={t("Description") + " *"}
                         class="input input-bordered w-full"
                         onInput={handleItemChange(index, "description")}
                         data-writable
@@ -892,7 +894,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                       />
                       <div class="grid grid-cols-2 gap-2">
                         <div>
-                          <label class="label py-1"><span class="label-text text-xs">Quantity</span></label>
+                          <label class="label py-1"><span class="label-text text-xs">{t("Quantity")}</span></label>
                           <input
                             type="number"
                             step="0.01"
@@ -905,7 +907,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                           />
                         </div>
                         <div>
-                          <label class="label py-1"><span class="label-text text-xs">Price</span></label>
+                          <label class="label py-1"><span class="label-text text-xs">{t("Price")}</span></label>
                           <input
                             type="number"
                             step="0.01"
@@ -922,7 +924,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                         <div class={`grid ${hasTaxDefinitions ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
                           {hasTaxDefinitions && (
                             <div>
-                              <label class="label py-1"><span class="label-text text-xs">Tax</span></label>
+                              <label class="label py-1"><span class="label-text text-xs">{t("Tax")}</span></label>
                               <select
                                 name={`item_${index}_tax_definition_id`}
                                 value={item.taxDefinitionId}
@@ -930,9 +932,9 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                                 onInput={handleItemTaxDefinitionChange(index)}
                                 data-writable
                                 disabled={isDemo || taxMode !== "line"}
-                                title="Per-line tax definition"
+                                title={t("Per-line tax rate (%)")}
                               >
-                                <option value="">Custom tax</option>
+                                <option value="">{t("Custom tax")}</option>
                                 {(props.taxDefinitions || []).map((d) => {
                                   const code = (d.code || "").trim();
                                   const name = (d.name || "").trim();
@@ -953,7 +955,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                             </div>
                           )}
                           <div>
-                            <label class="label py-1"><span class="label-text text-xs">Tax %</span></label>
+                            <label class="label py-1"><span class="label-text text-xs">{t("Tax %")}</span></label>
                             <input
                               type="number"
                               step="0.01"
@@ -965,7 +967,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                               onInput={handleItemChange(index, "taxPercent")}
                               data-writable
                               disabled={taxMode !== "line"}
-                              title="Per-line tax rate (%)"
+                              title={t("Per-line tax rate (%)")}
                             />
                           </div>
                         </div>
@@ -973,7 +975,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                       <input
                         name={`item_${index}_notes`}
                         value={item.notes}
-                        placeholder="Notes (optional)"
+                        placeholder={t("Notes (optional)")}
                         class="input input-bordered w-full input-sm"
                         onInput={handleItemChange(index, "notes")}
                         data-writable
@@ -982,7 +984,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                     <button
                       type="button"
                       class="remove-item btn btn-ghost btn-square btn-sm shrink-0"
-                      aria-label="Remove item"
+                      aria-label={t("Remove item")}
                       onClick={() => handleRemoveItem(item.id)}
                       data-writable
                     >
@@ -996,7 +998,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                   <button
                     type="button"
                     class="drag-handle btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100"
-                    aria-label="Drag to reorder"
+                    aria-label={t("Drag to reorder")}
                     tabIndex={-1}
                   >
                     <LuGripVertical size={16} />
@@ -1019,7 +1021,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                   <input
                     name={`item_${index}_description`}
                     value={item.description}
-                    placeholder="Description"
+                    placeholder={t("Description")}
                     class="input input-bordered flex-1 min-w-0"
                     onInput={handleItemChange(index, "description")}
                     data-writable
@@ -1052,9 +1054,9 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                     onInput={handleItemTaxDefinitionChange(index)}
                     data-writable
                     disabled={isDemo || taxMode !== "line"}
-                    title="Per-line tax definition"
+                    title={t("Per-line tax rate (%)")}
                   >
-                    <option value="">Custom tax</option>
+                    <option value="">{t("Custom tax")}</option>
                     {(props.taxDefinitions || []).map((d) => {
                       const code = (d.code || "").trim();
                       const name = (d.name || "").trim();
@@ -1078,17 +1080,17 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                     min="0"
                     name={`item_${index}_tax_percent`}
                     value={item.taxPercent}
-                    placeholder="Tax %"
+                    placeholder={t("Tax %")}
                     class={`input input-bordered w-24 shrink-0 per-line-tax-input ${taxMode === "line" ? "" : "hidden"}`}
                     onInput={handleItemChange(index, "taxPercent")}
                     data-writable
                     disabled={taxMode !== "line"}
-                    title="Per-line tax rate (%)"
+                    title={t("Per-line tax rate (%)")}
                   />
                   <input
                     name={`item_${index}_notes`}
                     value={item.notes}
-                    placeholder="Notes"
+                    placeholder={t("Notes")}
                     class="input input-bordered w-40 max-w-xs shrink-0"
                     onInput={handleItemChange(index, "notes")}
                     data-writable
@@ -1096,7 +1098,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                   <button
                     type="button"
                     class="remove-item btn btn-ghost btn-square btn-sm shrink-0"
-                    aria-label="Remove item"
+                    aria-label={t("Remove item")}
                     onClick={() => handleRemoveItem(item.id)}
                     data-writable
                   >
@@ -1113,7 +1115,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div class="flex flex-col sm:flex-row gap-3 sm:gap-6">
             <div class="flex justify-between sm:block">
-              <span class="text-base-content/60">Subtotal:</span>
+              <span class="text-base-content/60">{t("Subtotal")}:</span>
               <span class="font-semibold sm:ml-2" id="preview-subtotal">
                 {totals.subtotal}
               </span>
@@ -1122,14 +1124,14 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
               id="preview-tax-container"
               class={Math.abs(totals.rawTax) < 0.005 ? "hidden" : "flex justify-between sm:block"}
             >
-              <span class="text-base-content/60">Tax:</span>
+              <span class="text-base-content/60">{t("Tax")}:</span>
               <span class="font-semibold sm:ml-2" id="preview-tax">
                 {totals.tax}
               </span>
             </div>
           </div>
           <div class="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0">
-            <span class="text-base-content/60">Total:</span>
+            <span class="text-base-content/60">{t("Total")}:</span>
             <span class="font-bold text-lg ml-2" id="preview-total">
               {totals.total}
             </span>
@@ -1142,20 +1144,20 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
           <kbd class="kbd kbd-xs">Ctrl</kbd>
           +
           <kbd class="kbd kbd-xs">S</kbd>
-          Save
+          {t("Save")}
         </span>
         <span class="hidden sm:inline">
           <kbd class="kbd kbd-xs">Ctrl</kbd>
           +
           <kbd class="kbd kbd-xs">Enter</kbd>
-          Add item
+          {t("Add item")}
         </span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label class="form-control">
           <div class="label">
-            <span class="label-text">Tax Mode</span>
+            <span class="label-text">{t("Tax Mode")}</span>
           </div>
           <select
             name="taxMode"
@@ -1171,15 +1173,15 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             data-writable
             disabled={isDemo}
           >
-            <option value="invoice">Invoice total</option>
-            <option value="line">Per line</option>
+            <option value="invoice">{t("Invoice total")}</option>
+            <option value="line">{t("Per line")}</option>
           </select>
         </label>
         <label
           class={`form-control ${taxMode === "invoice" && hasTaxDefinitions ? "" : "hidden"}`}
         >
           <div class="label">
-            <span class="label-text">Tax</span>
+            <span class="label-text">{t("Tax")}</span>
           </div>
           <select
             name="taxDefinitionId"
@@ -1189,7 +1191,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             data-writable
             disabled={isDemo || taxMode !== "invoice"}
           >
-            <option value="">Custom tax</option>
+            <option value="">{t("Custom tax")}</option>
             {(props.taxDefinitions || []).map((d) => {
               const code = (d.code || "").trim();
               const name = (d.name || "").trim();
@@ -1212,7 +1214,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
           class={`form-control ${taxMode === "invoice" ? "" : "hidden"}`}
         >
           <div class="label">
-            <span class="label-text">Tax Rate (%)</span>
+            <span class="label-text">{t("Tax Rate (%)")}</span>
           </div>
           <input
             type="number"
@@ -1234,7 +1236,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
         </label>
         <label class="form-control">
           <div class="label">
-            <span class="label-text">Prices include tax?</span>
+            <span class="label-text">{t("Prices include tax?")}</span>
           </div>
           <select
             name="pricesIncludeTax"
@@ -1249,13 +1251,13 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             data-writable
             disabled={isDemo}
           >
-            <option value="false">No</option>
-            <option value="true">Yes</option>
+            <option value="false">{t("No")}</option>
+            <option value="true">{t("Yes")}</option>
           </select>
         </label>
         <label class="form-control">
           <div class="label">
-            <span class="label-text">Rounding mode</span>
+            <span class="label-text">{t("Rounding mode")}</span>
           </div>
           <select
             name="roundingMode"
@@ -1271,8 +1273,8 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             data-writable
             disabled={isDemo}
           >
-            <option value="line">Round per line</option>
-            <option value="total">Round on totals</option>
+            <option value="line">{t("Round per line")}</option>
+            <option value="total">{t("Round on totals")}</option>
           </select>
         </label>
       </div>
@@ -1280,12 +1282,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label class="form-control">
           <div class="label">
-            <span class="label-text">Payment Terms</span>
+            <span class="label-text">{t("Payment Terms")}</span>
           </div>
           <input
             name="paymentTerms"
             value={paymentTerms}
-            placeholder="e.g. Due in 30 days"
+            placeholder={t("Payment terms placeholder")}
             class="input input-bordered w-full"
             onInput={(event) =>
               setPaymentTerms((event.currentTarget as HTMLInputElement).value)}
@@ -1295,7 +1297,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
         </label>
         <label class="form-control">
           <div class="label">
-            <span class="label-text">Notes</span>
+            <span class="label-text">{t("Notes")}</span>
           </div>
           <textarea
             name="notes"
