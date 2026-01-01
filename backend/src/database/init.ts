@@ -363,6 +363,100 @@ function ensureSchemaUpgrades(database: DB) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Ensure products table exists
+    database.execute(`
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        unit_price NUMERIC NOT NULL DEFAULT 0,
+        sku TEXT,
+        unit TEXT DEFAULT 'piece',
+        category TEXT,
+        tax_definition_id TEXT REFERENCES tax_definitions(id),
+        is_active BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Ensure product_categories table exists
+    database.execute(`
+      CREATE TABLE IF NOT EXISTS product_categories (
+        id TEXT PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        is_builtin BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Ensure product_units table exists
+    database.execute(`
+      CREATE TABLE IF NOT EXISTS product_units (
+        id TEXT PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        is_builtin BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Insert default categories if not exist
+    const defaultCategories = [
+      { code: "service", name: "Service", sort: 1 },
+      { code: "goods", name: "Goods", sort: 2 },
+      { code: "subscription", name: "Subscription", sort: 3 },
+      { code: "other", name: "Other", sort: 4 },
+    ];
+    for (const cat of defaultCategories) {
+      try {
+        database.query(
+          "INSERT OR IGNORE INTO product_categories (id, code, name, sort_order, is_builtin) VALUES (?, ?, ?, ?, 1)",
+          [cat.code, cat.code, cat.name, cat.sort],
+        );
+      } catch { /* ignore */ }
+    }
+
+    // Insert default units if not exist
+    const defaultUnits = [
+      { code: "piece", name: "Piece", sort: 1 },
+      { code: "hour", name: "Hour", sort: 2 },
+      { code: "day", name: "Day", sort: 3 },
+      { code: "kg", name: "Kilogram", sort: 4 },
+      { code: "m", name: "Meter", sort: 5 },
+      { code: "lump_sum", name: "Lump Sum", sort: 6 },
+    ];
+    for (const unit of defaultUnits) {
+      try {
+        database.query(
+          "INSERT OR IGNORE INTO product_units (id, code, name, sort_order, is_builtin) VALUES (?, ?, ?, ?, 1)",
+          [unit.code, unit.code, unit.name, unit.sort],
+        );
+      } catch { /* ignore */ }
+    }
+
+    // Ensure invoice_items.product_id exists
+    const itemCols = database.query(
+      "PRAGMA table_info(invoice_items)",
+    ) as unknown[] as Array<unknown[]>;
+    const itemColNames = new Set(itemCols.map((r) => String(r[1])));
+    if (!itemColNames.has("product_id")) {
+      try {
+        database.execute(
+          "ALTER TABLE invoice_items ADD COLUMN product_id TEXT REFERENCES products(id)",
+        );
+        console.log("✅ Added invoice_items.product_id column");
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/duplicate column|already exists/i.test(msg)) {
+          console.warn("Could not add invoice_items.product_id:", msg);
+        }
+      }
+    }
   } catch (e) {
     console.warn("Schema upgrade check failed:", e);
   }

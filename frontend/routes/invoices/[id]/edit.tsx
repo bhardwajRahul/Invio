@@ -23,6 +23,14 @@ type TaxDefinition = {
   percent: number;
   countryCode?: string;
 };
+type Product = {
+  id: string;
+  name: string;
+  description?: string;
+  unitPrice: number;
+  sku?: string;
+  taxDefinitionId?: string;
+};
 type Invoice = {
   id: string;
   invoiceNumber?: string;
@@ -42,6 +50,7 @@ type Invoice = {
 type Data = {
   authed: boolean;
   invoice?: Invoice;
+  products?: Product[];
   settings?: Record<string, string>;
   taxDefinitions?: TaxDefinition[];
   error?: string;
@@ -71,14 +80,15 @@ export const handler: Handlers<Data> = {
           headers: { Location: `/invoices/${id}` },
         });
       }
-      // Also fetch settings for numberFormat
-      const [settings, taxDefinitions] = await Promise.all([
+      // Also fetch settings, products, and tax definitions
+      const [settings, products, taxDefinitions] = await Promise.all([
         backendGet("/api/v1/settings", auth) as Promise<Record<string, string>>,
+        backendGet("/api/v1/products", auth).catch(() => []) as Promise<Product[]>,
         backendGet("/api/v1/tax-definitions", auth).catch(() => []) as Promise<
           TaxDefinition[]
         >,
       ]);
-      return ctx.render({ authed: true, invoice, settings, taxDefinitions });
+      return ctx.render({ authed: true, invoice, products, settings, taxDefinitions });
     } catch (e) {
       return ctx.render({ authed: true, error: String(e) });
     }
@@ -245,6 +255,7 @@ export default function EditInvoicePage(props: PageProps<Data>) {
           <InvoiceEditor
             mode="edit"
             customerName={inv.customer?.name}
+            products={props.data.products ?? []}
             currency={inv.currency}
             status={inv.status}
             invoiceNumber={inv.invoiceNumber}

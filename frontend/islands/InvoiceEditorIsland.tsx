@@ -18,6 +18,14 @@ type TaxDefinition = {
   percent: number;
   countryCode?: string;
 };
+type Product = {
+  id: string;
+  name: string;
+  description?: string;
+  unitPrice: number;
+  sku?: string;
+  taxDefinitionId?: string;
+};
 type IncomingItem = {
   description: string;
   quantity: number;
@@ -30,6 +38,7 @@ type IncomingItem = {
 export type InvoiceEditorProps = {
   mode: "create" | "edit";
   customers?: Customer[];
+  products?: Product[];
   taxDefinitions?: TaxDefinition[];
   selectedCustomerId?: string;
   customerName?: string;
@@ -57,6 +66,7 @@ export type InvoiceEditorProps = {
 
 type ItemState = {
   id: string;
+  productId: string;
   description: string;
   quantity: string;
   unitPrice: string;
@@ -86,6 +96,7 @@ function nextItemId(): string {
 function mapItem(item?: IncomingItem): ItemState {
   return {
     id: nextItemId(),
+    productId: "",
     description: item?.description ?? "",
     quantity: item ? String(item.quantity ?? 1) : "1",
     unitPrice: item ? String(item.unitPrice ?? 0) : "0",
@@ -178,14 +189,6 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
   const isCreateMode = props.mode === "create";
   const isDemo = !!props.demoMode;
 
-  // Reset items when server-side data changes (e.g. after validation errors).
-  useEffect(() => {
-    const next = props.items && props.items.length > 0
-      ? props.items.map((item) => mapItem(item))
-      : [mapItem()];
-    setItems(next);
-  }, [props.items]);
-
   const handleAddItem = useCallback(() => {
     setItems((prev) => [...prev, mapItem()]);
   }, []);
@@ -235,6 +238,36 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
       });
     },
     [props.taxDefinitions],
+  );
+
+  const handleProductSelect = useCallback(
+    (index: number) => (event: Event) => {
+      const productId = (event.currentTarget as HTMLSelectElement).value;
+      const product = (props.products ?? []).find((p) => p.id === productId);
+      setItems((prev) => {
+        const next = [...prev];
+        if (product) {
+          const taxDef = product.taxDefinitionId
+            ? (props.taxDefinitions ?? []).find((d) => d.id === product.taxDefinitionId)
+            : undefined;
+          next[index] = {
+            ...next[index],
+            productId,
+            description: product.description || product.name,
+            unitPrice: String(product.unitPrice),
+            taxDefinitionId: product.taxDefinitionId || "",
+            taxPercent: taxDef ? String(taxDef.percent) : next[index].taxPercent,
+          };
+        } else {
+          next[index] = {
+            ...next[index],
+            productId: "",
+          };
+        }
+        return next;
+      });
+    },
+    [props.products, props.taxDefinitions],
   );
 
   const handleInvoiceTaxDefinitionChange = useCallback((event: Event) => {
@@ -437,10 +470,12 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.ctrlKey && (event.key === "s" || event.key === "S")) {
+      // Support both Ctrl (Windows/Linux) and Cmd (macOS)
+      const modifierPressed = event.ctrlKey || event.metaKey;
+      if (modifierPressed && (event.key === "s" || event.key === "S")) {
         event.preventDefault();
         formRef.current?.requestSubmit();
-      } else if (event.ctrlKey && event.key === "Enter") {
+      } else if (modifierPressed && event.key === "Enter") {
         event.preventDefault();
         handleAddItem();
       }
@@ -833,6 +868,21 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                       <LuGripVertical size={16} />
                     </button>
                     <div class="flex-1 space-y-2">
+                      {(props.products?.length ?? 0) > 0 && (
+                        <select
+                          value={item.productId}
+                          class="select select-bordered w-full select-sm"
+                          onChange={handleProductSelect(index)}
+                          data-writable
+                        >
+                          <option value="">Select product or enter custom...</option>
+                          {(props.products ?? []).map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} {p.sku ? `(${p.sku})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       <input
                         name={`item_${index}_description`}
                         value={item.description}
@@ -953,6 +1003,21 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
                   >
                     <LuGripVertical size={16} />
                   </button>
+                  {(props.products?.length ?? 0) > 0 && (
+                    <select
+                      value={item.productId}
+                      class="select select-bordered w-48 shrink-0"
+                      onChange={handleProductSelect(index)}
+                      data-writable
+                    >
+                      <option value="">Select product...</option>
+                      {(props.products ?? []).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} {p.sku ? `(${p.sku})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     name={`item_${index}_description`}
                     value={item.description}
