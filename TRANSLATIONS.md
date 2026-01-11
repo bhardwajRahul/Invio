@@ -49,79 +49,79 @@ Translations file: `frontend/i18n/locales/nl.json`
 > [!NOTE]
 > These translation appear in the reference language (en), but are missing in this language.
 
-- Upload Logo Image
-- Price
-- Rounding
-- Prices include tax
-- Public link
-- Server error. Please try again later.
-- Suggested accent colors from logo:
-- Round per line
-- Set default
-- Professional Modern
-- Status
-- Save Changes
-- Remove item
+- Update
+- Theme
+- Render invoices in
+- Version
+- Tax %
+- Save
 - Tax mode
 - Tax Summary
-- Tax ID
-- Total
-- Unpublish
-- Re-enter admin password
-- Save
-- Toggle light/dark theme
-- Theme
-- Round on totals
 - XML Export Settings
-- Sent
-- Settings heading
-- View all
-- XML Export
-- Update
-- UBL 2.1 (PEPPOL BIS)
-- Tax rate
-- Rate
 - Select customer
-- Tax Mode
-- Rounding mode
-- Search
-- Version
-- Switch between Light and Dark (DaisyUI)
-- Settings
-- YYYY-MM-DD (2025-01-15)
-- View HTML
-- Publish
-- Render invoices in
-- XML profiles helper
-- Tax ID placeholder
-- username
-- Postal Code
-- Preparing export...
-- Tax Settings
-- Username
-- Thousands separator
-- Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB
-- Prices include tax?
-- Tax label
-- Templates
-- Template install failed with status {{status}}
 - Taxable
-- Re-enter admin username
-- Recent Invoices
-- Yes
-- View public link
-- Sign in
-- Unable to connect to server. Please check your connection and try again.
-- Tax Definitions
-- What you need to do:
-- Tax Rate (%)
-- Tax
-- Tax Total
-- Tax %
-- Postal code placeholder
-- Total Billed
 - Then return to the customer page and try again
-- Portuguese (Brazil)
+- Template install failed with status {{status}}
+- Yes
+- Toggle light/dark theme
+- XML Export
+- Tax Definitions
+- Switch between Light and Dark (DaisyUI)
+- Tax Mode
 - Subtotal
+- Tax ID placeholder
+- Settings heading
+- Tax ID
+- View public link
+- Unable to connect to server. Please check your connection and try again.
+- Total
+- Tax label
+- Tax Settings
+- Round on totals
+- What you need to do:
+- Postal Code
+- Total Billed
+- Prices include tax
+- Rounding mode
+- Re-enter admin password
+- Upload Logo Image
+- XML profiles helper
+- Settings
+- Server error. Please try again later.
+- Tax Rate (%)
+- Tax rate
 - Quantity
+- Professional Modern
+- Unpublish
+- Tax
+- Prices include tax?
+- View HTML
+- Rate
+- Public link
+- Preparing export...
+- Recent Invoices
+- Portuguese (Brazil)
+- Sent
+- Rounding
+- Search
+- Save Changes
+- YYYY-MM-DD (2025-01-15)
+- Set default
+- Status
+- Round per line
+- username
+- Templates
+- Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB
+- Thousands separator
+- Price
+- Postal code placeholder
+- Suggested accent colors from logo:
+- Username
+- Publish
+- Tax Total
+- Sign in
+- View all
+- Re-enter admin username
+- Remove item
+- UBL 2.1 (PEPPOL BIS)
 
