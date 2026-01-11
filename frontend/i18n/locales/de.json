@@ -121,7 +121,6 @@
   "Exporting...": "Export läuft...",
   "Factur-X / ZUGFeRD 2.2 (BASIC)": "Factur-X / ZUGFeRD 2.2 (BASIC)",
   "FatturaPA 1.9": "FatturaPA 1.9",
-  "File size must be less than 5MB.": "Dateigröße muss kleiner als 5 MB sein.",
   "German": "Deutsch",
   "Go to Invoices": "Zu Rechnungen",
   "Highlight Color": "Akzentfarbe",
@@ -148,7 +147,6 @@
   "Invoice published": "Rechnung veröffentlicht",
   "Invoice total": "Rechnungssumme",
   "Invoices list summary": "Es werden {{visible}} von {{total}} Rechnungen angezeigt",
-  "Light": "Hell",
   "Localization": "Lokalisierung",
   "Localization settings heading": "Lokalisierungs-Einstellungen",
   "Login": "Anmelden",
@@ -198,7 +196,6 @@
   "Please select a customer.": "Bitte einen Kunden auswählen.",
   "Please select a valid image file.": "Bitte ein valides Bildformat auswählen.",
   "Portuguese (Brazil)": "Portugisisch (Brasilien)",
-  "Postal Code": "Postleitzahl",
   "Postal code placeholder": "1i0557",
   "Preparing export...": "Export in Vorbereitung...",
   "Price": "Preis",
@@ -270,9 +267,7 @@
   "Yes": "Ja",
   "YYYY-MM-DD (2025-01-15)": "JJJJ-MM-TT (2025-01-15)",
   "File size must be less than 5MB.": "Dateigröße muss kleiner als 5MB sein.",
-  "Dark": "Dunkel",
   "Light": "Hell",
-<<<<<<< HEAD
   "Too many login attempts. Please try again in {{minutes}} minute(s).": "Zu viele Anmeldeversuche. Bitte versuchen Sie es in {{minutes}} Minute(n) erneut.",
   "Products": "Produkte",
   "Product": "Produkt",
@@ -315,7 +310,3 @@
   "Subscription": "Abonnement",
   "Other": "Sonstige"
 }
-=======
-  "Too many login attempts. Please try again in {{minutes}} minute(s).": "Zu viele Anmledeversuche. Bitte versuchen sie es in {{minutes}} Minute(n) erneut."
-}
->>>>>>> 95485e7508adcd1beb887633da418d3034845788
