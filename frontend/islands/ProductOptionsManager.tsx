@@ -5,6 +5,7 @@
  */
 import { useState } from "preact/hooks";
 import { LuPlus, LuPencil, LuTrash2, LuAlertTriangle } from "../components/icons.tsx";
+import { useTranslations } from "../i18n/context.tsx";
 
 type ProductCategory = {
   id: string;
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export default function ProductOptionsManager(props: Props) {
+  const { t } = useTranslations();
   const [categories, setCategories] = useState(props.categories);
   const [units, setUnits] = useState(props.units);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -64,7 +66,7 @@ export default function ProductOptionsManager(props: Props) {
 
   const handleSaveCategory = async () => {
     if (!categoryForm.code.trim() || !categoryForm.name.trim()) {
-      setError("Code and name are required");
+      setError(t("Code and name are required"));
       return;
     }
     setLoading(true);
@@ -81,7 +83,7 @@ export default function ProductOptionsManager(props: Props) {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to save category");
+        throw new Error(data.error || t("Failed to save category"));
       }
       const saved = await res.json();
       if (editingCategoryId) {
@@ -99,17 +101,17 @@ export default function ProductOptionsManager(props: Props) {
 
   const handleDeleteCategory = async (cat: ProductCategory) => {
     if (cat.isBuiltin) {
-      setError("Cannot delete built-in category");
+      setError(t("Cannot delete built-in category"));
       return;
     }
-    if (!confirm(`Delete category "${cat.name}"? This cannot be undone.`)) return;
+    if (!confirm(t("Delete category confirm", { name: cat.name }))) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/v1/product-categories/${cat.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to delete category");
+        throw new Error(data.error || t("Failed to delete category"));
       }
       setCategories(cats => cats.filter(c => c.id !== cat.id));
     } catch (e) {
@@ -143,7 +145,7 @@ export default function ProductOptionsManager(props: Props) {
 
   const handleSaveUnit = async () => {
     if (!unitForm.code.trim() || !unitForm.name.trim()) {
-      setError("Code and name are required");
+      setError(t("Code and name are required"));
       return;
     }
     setLoading(true);
@@ -160,7 +162,7 @@ export default function ProductOptionsManager(props: Props) {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to save unit");
+        throw new Error(data.error || t("Failed to save unit"));
       }
       const saved = await res.json();
       if (editingUnitId) {
@@ -178,17 +180,17 @@ export default function ProductOptionsManager(props: Props) {
 
   const handleDeleteUnit = async (unit: ProductUnit) => {
     if (unit.isBuiltin) {
-      setError("Cannot delete built-in unit");
+      setError(t("Cannot delete built-in unit"));
       return;
     }
-    if (!confirm(`Delete unit "${unit.name}"? This cannot be undone.`)) return;
+    if (!confirm(t("Delete unit confirm", { name: unit.name }))) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/v1/product-units/${unit.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to delete unit");
+        throw new Error(data.error || t("Failed to delete unit"));
       }
       setUnits(us => us.filter(u => u.id !== unit.id));
     } catch (e) {
@@ -204,14 +206,14 @@ export default function ProductOptionsManager(props: Props) {
         <div class="alert alert-error">
           <LuAlertTriangle size={20} />
           <span>{error}</span>
-          <button type="button" class="btn btn-ghost btn-sm" onClick={() => setError(null)}>Dismiss</button>
+          <button type="button" class="btn btn-ghost btn-sm" onClick={() => setError(null)}>{t("Dismiss")}</button>
         </div>
       )}
 
       {/* Categories Section */}
       <div class="space-y-4">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold">Product Categories</h3>
+          <h3 class="text-lg font-semibold">{t("Product Categories")}</h3>
           <button
             type="button"
             onClick={handleAddCategory}
@@ -219,7 +221,7 @@ export default function ProductOptionsManager(props: Props) {
             disabled={props.demoMode || loading}
           >
             <LuPlus size={16} class="mr-1" />
-            Add category
+            {t("Add category")}
           </button>
         </div>
 
@@ -227,34 +229,34 @@ export default function ProductOptionsManager(props: Props) {
           <div class="card bg-base-200 p-4 space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">
-                <div class="label"><span class="label-text">Code *</span></div>
+                <div class="label"><span class="label-text">{t("Code")} *</span></div>
                 <input
                   type="text"
                   value={categoryForm.code}
                   onInput={(e) => setCategoryForm({ ...categoryForm, code: (e.target as HTMLInputElement).value })}
                   class="input input-bordered w-full"
-                  placeholder="e.g., electronics"
+                  placeholder={t("Category code placeholder")}
                   disabled={props.demoMode || loading}
                 />
               </label>
               <label class="form-control">
-                <div class="label"><span class="label-text">Name *</span></div>
+                <div class="label"><span class="label-text">{t("Name")} *</span></div>
                 <input
                   type="text"
                   value={categoryForm.name}
                   onInput={(e) => setCategoryForm({ ...categoryForm, name: (e.target as HTMLInputElement).value })}
                   class="input input-bordered w-full"
-                  placeholder="e.g., Electronics"
+                  placeholder={t("Category name placeholder")}
                   disabled={props.demoMode || loading}
                 />
               </label>
             </div>
             <div class="flex gap-2">
               <button type="button" onClick={handleSaveCategory} class="btn btn-primary" disabled={props.demoMode || loading}>
-                {loading ? "Saving..." : (editingCategoryId ? "Update" : "Create")}
+                {loading ? t("Saving...") : (editingCategoryId ? t("Update") : t("Create"))}
               </button>
               <button type="button" onClick={handleCancelCategory} class="btn btn-ghost" disabled={loading}>
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </div>
@@ -262,14 +264,14 @@ export default function ProductOptionsManager(props: Props) {
 
         <div class="space-y-2">
           {categories.length === 0 ? (
-            <div class="text-center py-6 text-base-content/60">No categories yet.</div>
+            <div class="text-center py-6 text-base-content/60">{t("No categories yet.")}</div>
           ) : categories.map((cat) => (
             <div key={cat.id} class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100">
               <div class="flex-1">
                 <div class="font-medium">{cat.name}</div>
                 <div class="text-sm text-base-content/60">
                   {cat.code}
-                  {cat.isBuiltin && <span class="badge badge-ghost badge-sm ml-2">Built-in</span>}
+                  {cat.isBuiltin && <span class="badge badge-ghost badge-sm ml-2">{t("Built-in")}</span>}
                 </div>
               </div>
               <div class="flex gap-2">
@@ -278,7 +280,7 @@ export default function ProductOptionsManager(props: Props) {
                   onClick={() => handleEditCategory(cat)}
                   class="btn btn-sm btn-ghost"
                   disabled={props.demoMode || loading}
-                  title="Edit"
+                  title={t("Edit")}
                 >
                   <LuPencil size={16} />
                 </button>
@@ -288,7 +290,7 @@ export default function ProductOptionsManager(props: Props) {
                     onClick={() => handleDeleteCategory(cat)}
                     class="btn btn-sm btn-ghost text-error"
                     disabled={props.demoMode || loading}
-                    title="Delete"
+                    title={t("Delete")}
                   >
                     <LuTrash2 size={16} />
                   </button>
@@ -304,7 +306,7 @@ export default function ProductOptionsManager(props: Props) {
       {/* Units Section */}
       <div class="space-y-4">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold">Product Units</h3>
+          <h3 class="text-lg font-semibold">{t("Product Units")}</h3>
           <button
             type="button"
             onClick={handleAddUnit}
@@ -312,7 +314,7 @@ export default function ProductOptionsManager(props: Props) {
             disabled={props.demoMode || loading}
           >
             <LuPlus size={16} class="mr-1" />
-            Add unit
+            {t("Add unit")}
           </button>
         </div>
 
@@ -320,34 +322,34 @@ export default function ProductOptionsManager(props: Props) {
           <div class="card bg-base-200 p-4 space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">
-                <div class="label"><span class="label-text">Code *</span></div>
+                <div class="label"><span class="label-text">{t("Code")} *</span></div>
                 <input
                   type="text"
                   value={unitForm.code}
                   onInput={(e) => setUnitForm({ ...unitForm, code: (e.target as HTMLInputElement).value })}
                   class="input input-bordered w-full"
-                  placeholder="e.g., pack"
+                  placeholder={t("Unit code placeholder")}
                   disabled={props.demoMode || loading}
                 />
               </label>
               <label class="form-control">
-                <div class="label"><span class="label-text">Name *</span></div>
+                <div class="label"><span class="label-text">{t("Name")} *</span></div>
                 <input
                   type="text"
                   value={unitForm.name}
                   onInput={(e) => setUnitForm({ ...unitForm, name: (e.target as HTMLInputElement).value })}
                   class="input input-bordered w-full"
-                  placeholder="e.g., Pack"
+                  placeholder={t("Unit name placeholder")}
                   disabled={props.demoMode || loading}
                 />
               </label>
             </div>
             <div class="flex gap-2">
               <button type="button" onClick={handleSaveUnit} class="btn btn-primary" disabled={props.demoMode || loading}>
-                {loading ? "Saving..." : (editingUnitId ? "Update" : "Create")}
+                {loading ? t("Saving...") : (editingUnitId ? t("Update") : t("Create"))}
               </button>
               <button type="button" onClick={handleCancelUnit} class="btn btn-ghost" disabled={loading}>
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </div>
@@ -355,14 +357,14 @@ export default function ProductOptionsManager(props: Props) {
 
         <div class="space-y-2">
           {units.length === 0 ? (
-            <div class="text-center py-6 text-base-content/60">No units yet.</div>
+            <div class="text-center py-6 text-base-content/60">{t("No units yet.")}</div>
           ) : units.map((unit) => (
             <div key={unit.id} class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100">
               <div class="flex-1">
                 <div class="font-medium">{unit.name}</div>
                 <div class="text-sm text-base-content/60">
                   {unit.code}
-                  {unit.isBuiltin && <span class="badge badge-ghost badge-sm ml-2">Built-in</span>}
+                  {unit.isBuiltin && <span class="badge badge-ghost badge-sm ml-2">{t("Built-in")}</span>}
                 </div>
               </div>
               <div class="flex gap-2">
@@ -371,7 +373,7 @@ export default function ProductOptionsManager(props: Props) {
                   onClick={() => handleEditUnit(unit)}
                   class="btn btn-sm btn-ghost"
                   disabled={props.demoMode || loading}
-                  title="Edit"
+                  title={t("Edit")}
                 >
                   <LuPencil size={16} />
                 </button>
@@ -381,7 +383,7 @@ export default function ProductOptionsManager(props: Props) {
                     onClick={() => handleDeleteUnit(unit)}
                     class="btn btn-sm btn-ghost text-error"
                     disabled={props.demoMode || loading}
-                    title="Delete"
+                    title={t("Delete")}
                   >
                     <LuTrash2 size={16} />
                   </button>

@@ -41,4 +41,4 @@ jobs:
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: Update missing translations, sort translations
-          file_pattern: "TRANSLATIONS.md frontend/i18n/locales/*.json"
+          file_pattern: "frontend/i18n/locales/*.json TRANSLATIONS.md"
