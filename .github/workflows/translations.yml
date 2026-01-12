@@ -40,5 +40,5 @@ jobs:
         run: python .github/scripts/translations.py
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: Sort translation files
-          file_pattern: "frontend/i18n/locales/*.json"
+          commit_message: Update missing translations, sort translations
+          file_pattern: "frontend/i18n/locales/*.json TRANSLATIONS.md"

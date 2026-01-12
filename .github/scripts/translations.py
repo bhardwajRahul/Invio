@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+from datetime import datetime
 
 
 main_locale = "en"
@@ -77,6 +78,44 @@ for lang in result:
         print("  Additional translations: 0")
 
     print()
+
+# Generate TRANSLATIONS.md
+md_path = root / "TRANSLATIONS.md"
+with open(md_path, "w") as f:
+    f.write("# Translation Status\n\n")
+    f.write(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+    f.write(f"Reference locale (en): **{len(en_keys)} keys**\n\n")
+
+    f.write("## Overview\n\n")
+    f.write("| Locale | File | Missing | Additional | Status |\n")
+    f.write("|--------|------|---------|------------|--------|\n")
+
+    for lang in result:
+        missing = lang["missing"]["count"]
+        additional = lang["additional"]["count"]
+        status = "✅" if missing == 0 else "❌"
+        f.write(f"| {lang['lang']} | {lang['file']} | {missing} | {additional} | {status} |\n")
+
+    f.write("\n## Details\n\n")
+
+    for lang in result:
+        f.write(f"### {lang['lang']} ({lang['file']})\n\n")
+
+        if lang["missing"]["count"] > 0:
+            f.write(f"**Missing translations ({lang['missing']['count']}):**\n\n")
+            for key in sorted(lang["missing"]["keys"]):
+                f.write(f"- `{key}`\n")
+            f.write("\n")
+        else:
+            f.write("✅ All translations complete\n\n")
+
+        if lang["additional"]["count"] > 0:
+            f.write(f"**Additional translations ({lang['additional']['count']}):**\n\n")
+            for key in sorted(lang["additional"]["keys"]):
+                f.write(f"- `{key}`\n")
+            f.write("\n")
+
+print(f"Generated {md_path}")
 
 if has_issues:
     print("Some translations are missing!")
