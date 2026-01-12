@@ -20,3 +20,6 @@
 
 # Development documentation (internal use only)
 .coding/
+
+# Auto-generated translation report
+TRANSLATIONS.md
