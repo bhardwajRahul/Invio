@@ -49,79 +49,79 @@ Translations file: `frontend/i18n/locales/nl.json`
 > [!NOTE]
 > These translation appear in the reference language (en), but are missing in this language.
 
-- Update
-- Theme
-- Render invoices in
-- Version
-- Tax %
-- Save
-- Tax mode
-- Tax Summary
-- XML Export Settings
-- Select customer
-- Taxable
+- Round per line
 - Then return to the customer page and try again
 - Template install failed with status {{status}}
-- Yes
-- Toggle light/dark theme
-- XML Export
-- Tax Definitions
-- Switch between Light and Dark (DaisyUI)
-- Tax Mode
-- Subtotal
-- Tax ID placeholder
-- Settings heading
-- Tax ID
-- View public link
-- Unable to connect to server. Please check your connection and try again.
-- Total
-- Tax label
-- Tax Settings
-- Round on totals
-- What you need to do:
-- Postal Code
-- Total Billed
-- Prices include tax
-- Rounding mode
-- Re-enter admin password
-- Upload Logo Image
-- XML profiles helper
-- Settings
-- Server error. Please try again later.
-- Tax Rate (%)
-- Tax rate
-- Quantity
-- Professional Modern
-- Unpublish
-- Tax
-- Prices include tax?
-- View HTML
-- Rate
-- Public link
-- Preparing export...
-- Recent Invoices
-- Portuguese (Brazil)
-- Sent
-- Rounding
-- Search
-- Save Changes
 - YYYY-MM-DD (2025-01-15)
+- XML Export
+- Professional Modern
 - Set default
-- Status
-- Round per line
-- username
-- Templates
-- Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB
-- Thousands separator
-- Price
-- Postal code placeholder
-- Suggested accent colors from logo:
-- Username
 - Publish
+- username
 - Tax Total
+- Server error. Please try again later.
+- Switch between Light and Dark (DaisyUI)
+- Postal code placeholder
+- Settings
+- Price
+- Render invoices in
+- Suggested accent colors from logo:
+- Templates
+- Tax label
+- Upload Logo Image
+- Save Changes
+- Rounding mode
 - Sign in
+- Toggle light/dark theme
+- Search
+- View HTML
+- Quantity
+- Tax rate
+- Unable to connect to server. Please check your connection and try again.
+- Tax Settings
 - View all
-- Re-enter admin username
+- Portuguese (Brazil)
+- Taxable
+- Tax %
+- Status
+- Preparing export...
+- Total
 - Remove item
+- Username
+- Sent
+- Tax Definitions
+- Settings heading
+- Subtotal
+- Version
+- Theme
+- Postal Code
+- Re-enter admin password
+- Tax ID
+- Tax ID placeholder
+- Rounding
+- View public link
+- Prices include tax
+- Re-enter admin username
+- Tax Mode
+- Select an image file to upload (PNG, JPG, SVG, etc.) - max 5MB
+- Select customer
+- What you need to do:
+- Unpublish
+- Recent Invoices
+- Round on totals
+- Save
+- Prices include tax?
+- Public link
+- XML Export Settings
+- XML profiles helper
+- Tax mode
+- Total Billed
+- Yes
+- Tax Summary
+- Rate
+- Update
+- Thousands separator
 - UBL 2.1 (PEPPOL BIS)
+- Tax Rate (%)
+- Tax
 
