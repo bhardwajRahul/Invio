@@ -1,6 +1,6 @@
 # Translation Status
 
-Last updated: 2026-01-12 13:23:37
+Last updated: 2026-01-12 17:55:28
 
 Reference locale (en): **342 keys**
 
@@ -8,13 +8,13 @@ Reference locale (en): **342 keys**
 
 | Locale | File | Missing | Additional | Status |
 |--------|------|---------|------------|--------|
-| nl | nl.json | 0 | 0 | ✅ |
-| de | de.json | 0 | 0 | ✅ |
 | pt-br | pt-br.json | 0 | 0 | ✅ |
+| de | de.json | 0 | 0 | ✅ |
+| nl | nl.json | 0 | 0 | ✅ |
 
 ## Details
 
-### nl (nl.json)
+### pt-br (pt-br.json)
 
 ✅ All translations complete
 
@@ -22,7 +22,7 @@ Reference locale (en): **342 keys**
 
 ✅ All translations complete
 
-### pt-br (pt-br.json)
+### nl (nl.json)
 
 ✅ All translations complete
 
