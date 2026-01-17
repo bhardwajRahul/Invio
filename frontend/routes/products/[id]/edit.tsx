@@ -72,12 +72,12 @@ export const handler: Handlers<Data> = {
     const form = await req.formData();
     const payload = {
       name: String(form.get("name") || ""),
-      description: String(form.get("description") || "") || undefined,
+      description: String(form.get("description") || ""),
       unitPrice: parseFloat(String(form.get("unitPrice") || "0")),
-      sku: String(form.get("sku") || "") || undefined,
-      unit: String(form.get("unit") || "") || undefined,
-      category: String(form.get("category") || "") || undefined,
-      taxDefinitionId: String(form.get("taxDefinitionId") || "") || undefined,
+      sku: String(form.get("sku") || ""),
+      unit: String(form.get("unit") || ""),
+      category: String(form.get("category") || ""),
+      taxDefinitionId: String(form.get("taxDefinitionId") || ""),
       isActive: form.get("isActive") === "true",
     };
     if (!payload.name) return new Response("Name is required", { status: 400 });
