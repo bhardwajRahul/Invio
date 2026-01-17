@@ -7,6 +7,7 @@ import * as $_middleware from "./routes/_middleware.ts";
 import * as $api_admin_export_full from "./routes/api/admin/export/full.ts";
 import * as $api_auth_login from "./routes/api/auth/login.ts";
 import * as $api_templates_install from "./routes/api/templates/install.ts";
+import * as $api_v1_rest_ from "./routes/api/v1/[...rest].ts";
 import * as $api_v1_tax_definitions_id_ from "./routes/api/v1/tax-definitions/[id].ts";
 import * as $api_v1_tax_definitions_shared from "./routes/api/v1/tax-definitions/_shared.ts";
 import * as $api_v1_tax_definitions_index from "./routes/api/v1/tax-definitions/index.ts";
@@ -59,6 +60,7 @@ const manifest = {
     "./routes/api/admin/export/full.ts": $api_admin_export_full,
     "./routes/api/auth/login.ts": $api_auth_login,
     "./routes/api/templates/install.ts": $api_templates_install,
+    "./routes/api/v1/[...rest].ts": $api_v1_rest_,
     "./routes/api/v1/tax-definitions/[id].ts": $api_v1_tax_definitions_id_,
     "./routes/api/v1/tax-definitions/_shared.ts":
       $api_v1_tax_definitions_shared,
