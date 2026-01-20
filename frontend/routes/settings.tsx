@@ -630,7 +630,7 @@ export default function SettingsPage(props: PageProps<Data & { demoMode: boolean
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control"><div class="label"><span class="label-text">{t("Payment Methods")}</span></div><input name="paymentMethods" value={(s.paymentMethods as string) || t("Bank Transfer")}
                   class="input input-bordered w-full" data-writable /></label>
-                <label class="form-control"><div class="label"><span class="label-text">{t("Bank Account")}</span></div><input name="bankAccount" value={(s.bankAccount as string) || ""} class="input input-bordered w-full" data-writable /></label>
+                <label class="form-control"><div class="label"><span class="label-text">{t("Bank Account")}</span></div><textarea name="bankAccount" class="textarea textarea-bordered w-full" rows={3} data-writable>{(s.bankAccount as string) || ""}</textarea></label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control"><div class="label"><span class="label-text">{t("Payment Terms")}</span></div><input name="paymentTerms" value={(s.paymentTerms as string) || t("Due in 30 days")} class="input input-bordered w-full" data-writable /></label>
