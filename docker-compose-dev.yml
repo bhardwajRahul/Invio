@@ -33,7 +33,7 @@ services:
       - "${FRONTEND_PORT:-8000}:${FRONTEND_PORT_INTERNAL:-8000}"
     restart: unless-stopped
     # Use dev mode with hot reload - no pre-built snapshot needed
-    command: ["deno", "run", "-A", "--watch=static/,routes/,islands/,components/", "dev.ts"]
+    command: ["deno", "run", "-A", "--watch=static/,routes/,islands/,components/", "dev.ts", "--port", "${FRONTEND_PORT_INTERNAL:-8000}"]
 
 volumes:
   invio_data:
