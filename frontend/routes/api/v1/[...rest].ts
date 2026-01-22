@@ -1,5 +1,5 @@
-import { Handlers } from "$fresh/server.ts";
 import { proxyRequest } from "../../../utils/backend.ts";
+import { Handlers } from "fresh/compat";
 
 function fullPath(req: Request) {
   const u = new URL(req.url);
@@ -7,19 +7,29 @@ function fullPath(req: Request) {
 }
 
 export const handler: Handlers = {
-  async GET(req) {
+  async GET(ctx) {
+    const req = ctx.req;
+
     return await proxyRequest(req, fullPath(req));
   },
-  async POST(req) {
+  async POST(ctx) {
+    const req = ctx.req;
+
     return await proxyRequest(req, fullPath(req));
   },
-  async PUT(req) {
+  async PUT(ctx) {
+    const req = ctx.req;
+
     return await proxyRequest(req, fullPath(req));
   },
-  async PATCH(req) {
+  async PATCH(ctx) {
+    const req = ctx.req;
+
     return await proxyRequest(req, fullPath(req));
   },
-  async DELETE(req) {
+  async DELETE(ctx) {
+    const req = ctx.req;
+
     return await proxyRequest(req, fullPath(req));
   },
   async OPTIONS(req) {

@@ -4,7 +4,12 @@
  * Allows CRUD operations with deletion protection for items in use.
  */
 import { useState } from "preact/hooks";
-import { LuPlus, LuPencil, LuTrash2, LuAlertTriangle } from "../components/icons.tsx";
+import {
+  LuAlertTriangle,
+  LuPencil,
+  LuPlus,
+  LuTrash2,
+} from "../components/icons.tsx";
 import { useTranslations } from "../i18n/context.tsx";
 
 type ProductCategory = {
@@ -35,7 +40,9 @@ export default function ProductOptionsManager(props: Props) {
   const [units, setUnits] = useState(props.units);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showUnitForm, setShowUnitForm] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null,
+  );
   const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
   const [categoryForm, setCategoryForm] = useState({ code: "", name: "" });
   const [unitForm, setUnitForm] = useState({ code: "", name: "" });
@@ -87,9 +94,9 @@ export default function ProductOptionsManager(props: Props) {
       }
       const saved = await res.json();
       if (editingCategoryId) {
-        setCategories(cats => cats.map(c => c.id === saved.id ? saved : c));
+        setCategories((cats) => cats.map((c) => c.id === saved.id ? saved : c));
       } else {
-        setCategories(cats => [...cats, saved]);
+        setCategories((cats) => [...cats, saved]);
       }
       handleCancelCategory();
     } catch (e) {
@@ -108,12 +115,14 @@ export default function ProductOptionsManager(props: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/product-categories/${cat.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/product-categories/${cat.id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || t("Failed to delete category"));
       }
-      setCategories(cats => cats.filter(c => c.id !== cat.id));
+      setCategories((cats) => cats.filter((c) => c.id !== cat.id));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -166,9 +175,9 @@ export default function ProductOptionsManager(props: Props) {
       }
       const saved = await res.json();
       if (editingUnitId) {
-        setUnits(us => us.map(u => u.id === saved.id ? saved : u));
+        setUnits((us) => us.map((u) => u.id === saved.id ? saved : u));
       } else {
-        setUnits(us => [...us, saved]);
+        setUnits((us) => [...us, saved]);
       }
       handleCancelUnit();
     } catch (e) {
@@ -187,12 +196,14 @@ export default function ProductOptionsManager(props: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/product-units/${unit.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/product-units/${unit.id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || t("Failed to delete unit"));
       }
-      setUnits(us => us.filter(u => u.id !== unit.id));
+      setUnits((us) => us.filter((u) => u.id !== unit.id));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -206,7 +217,13 @@ export default function ProductOptionsManager(props: Props) {
         <div class="alert alert-error">
           <LuAlertTriangle size={20} />
           <span>{error}</span>
-          <button type="button" class="btn btn-ghost btn-sm" onClick={() => setError(null)}>{t("Dismiss")}</button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            onClick={() => setError(null)}
+          >
+            {t("Dismiss")}
+          </button>
         </div>
       )}
 
@@ -229,22 +246,34 @@ export default function ProductOptionsManager(props: Props) {
           <div class="card bg-base-200 p-4 space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">
-                <div class="label"><span class="label-text">{t("Code")} *</span></div>
+                <div class="label">
+                  <span class="label-text">{t("Code")} *</span>
+                </div>
                 <input
                   type="text"
                   value={categoryForm.code}
-                  onInput={(e) => setCategoryForm({ ...categoryForm, code: (e.target as HTMLInputElement).value })}
+                  onInput={(e) =>
+                    setCategoryForm({
+                      ...categoryForm,
+                      code: (e.target as HTMLInputElement).value,
+                    })}
                   class="input input-bordered w-full"
                   placeholder={t("Category code placeholder")}
                   disabled={props.demoMode || loading}
                 />
               </label>
               <label class="form-control">
-                <div class="label"><span class="label-text">{t("Name")} *</span></div>
+                <div class="label">
+                  <span class="label-text">{t("Name")} *</span>
+                </div>
                 <input
                   type="text"
                   value={categoryForm.name}
-                  onInput={(e) => setCategoryForm({ ...categoryForm, name: (e.target as HTMLInputElement).value })}
+                  onInput={(e) =>
+                    setCategoryForm({
+                      ...categoryForm,
+                      name: (e.target as HTMLInputElement).value,
+                    })}
                   class="input input-bordered w-full"
                   placeholder={t("Category name placeholder")}
                   disabled={props.demoMode || loading}
@@ -252,10 +281,22 @@ export default function ProductOptionsManager(props: Props) {
               </label>
             </div>
             <div class="flex gap-2">
-              <button type="button" onClick={handleSaveCategory} class="btn btn-primary" disabled={props.demoMode || loading}>
-                {loading ? t("Saving...") : (editingCategoryId ? t("Update") : t("Create"))}
+              <button
+                type="button"
+                onClick={handleSaveCategory}
+                class="btn btn-primary"
+                disabled={props.demoMode || loading}
+              >
+                {loading
+                  ? t("Saving...")
+                  : (editingCategoryId ? t("Update") : t("Create"))}
               </button>
-              <button type="button" onClick={handleCancelCategory} class="btn btn-ghost" disabled={loading}>
+              <button
+                type="button"
+                onClick={handleCancelCategory}
+                class="btn btn-ghost"
+                disabled={loading}
+              >
                 {t("Cancel")}
               </button>
             </div>
@@ -263,41 +304,52 @@ export default function ProductOptionsManager(props: Props) {
         )}
 
         <div class="space-y-2">
-          {categories.length === 0 ? (
-            <div class="text-center py-6 text-base-content/60">{t("No categories yet.")}</div>
-          ) : categories.map((cat) => (
-            <div key={cat.id} class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100">
-              <div class="flex-1">
-                <div class="font-medium">{cat.name}</div>
-                <div class="text-sm text-base-content/60">
-                  {cat.code}
-                  {cat.isBuiltin && <span class="badge badge-ghost badge-sm ml-2">{t("Built-in")}</span>}
-                </div>
+          {categories.length === 0
+            ? (
+              <div class="text-center py-6 text-base-content/60">
+                {t("No categories yet.")}
               </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleEditCategory(cat)}
-                  class="btn btn-sm btn-ghost"
-                  disabled={props.demoMode || loading}
-                  title={t("Edit")}
-                >
-                  <LuPencil size={16} />
-                </button>
-                {!cat.isBuiltin && (
+            )
+            : categories.map((cat) => (
+              <div
+                key={cat.id}
+                class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100"
+              >
+                <div class="flex-1">
+                  <div class="font-medium">{cat.name}</div>
+                  <div class="text-sm text-base-content/60">
+                    {cat.code}
+                    {cat.isBuiltin && (
+                      <span class="badge badge-ghost badge-sm ml-2">
+                        {t("Built-in")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div class="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleDeleteCategory(cat)}
-                    class="btn btn-sm btn-ghost text-error"
+                    onClick={() => handleEditCategory(cat)}
+                    class="btn btn-sm btn-ghost"
                     disabled={props.demoMode || loading}
-                    title={t("Delete")}
+                    title={t("Edit")}
                   >
-                    <LuTrash2 size={16} />
+                    <LuPencil size={16} />
                   </button>
-                )}
+                  {!cat.isBuiltin && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCategory(cat)}
+                      class="btn btn-sm btn-ghost text-error"
+                      disabled={props.demoMode || loading}
+                      title={t("Delete")}
+                    >
+                      <LuTrash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
@@ -322,22 +374,34 @@ export default function ProductOptionsManager(props: Props) {
           <div class="card bg-base-200 p-4 space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">
-                <div class="label"><span class="label-text">{t("Code")} *</span></div>
+                <div class="label">
+                  <span class="label-text">{t("Code")} *</span>
+                </div>
                 <input
                   type="text"
                   value={unitForm.code}
-                  onInput={(e) => setUnitForm({ ...unitForm, code: (e.target as HTMLInputElement).value })}
+                  onInput={(e) =>
+                    setUnitForm({
+                      ...unitForm,
+                      code: (e.target as HTMLInputElement).value,
+                    })}
                   class="input input-bordered w-full"
                   placeholder={t("Unit code placeholder")}
                   disabled={props.demoMode || loading}
                 />
               </label>
               <label class="form-control">
-                <div class="label"><span class="label-text">{t("Name")} *</span></div>
+                <div class="label">
+                  <span class="label-text">{t("Name")} *</span>
+                </div>
                 <input
                   type="text"
                   value={unitForm.name}
-                  onInput={(e) => setUnitForm({ ...unitForm, name: (e.target as HTMLInputElement).value })}
+                  onInput={(e) =>
+                    setUnitForm({
+                      ...unitForm,
+                      name: (e.target as HTMLInputElement).value,
+                    })}
                   class="input input-bordered w-full"
                   placeholder={t("Unit name placeholder")}
                   disabled={props.demoMode || loading}
@@ -345,10 +409,22 @@ export default function ProductOptionsManager(props: Props) {
               </label>
             </div>
             <div class="flex gap-2">
-              <button type="button" onClick={handleSaveUnit} class="btn btn-primary" disabled={props.demoMode || loading}>
-                {loading ? t("Saving...") : (editingUnitId ? t("Update") : t("Create"))}
+              <button
+                type="button"
+                onClick={handleSaveUnit}
+                class="btn btn-primary"
+                disabled={props.demoMode || loading}
+              >
+                {loading
+                  ? t("Saving...")
+                  : (editingUnitId ? t("Update") : t("Create"))}
               </button>
-              <button type="button" onClick={handleCancelUnit} class="btn btn-ghost" disabled={loading}>
+              <button
+                type="button"
+                onClick={handleCancelUnit}
+                class="btn btn-ghost"
+                disabled={loading}
+              >
                 {t("Cancel")}
               </button>
             </div>
@@ -356,41 +432,52 @@ export default function ProductOptionsManager(props: Props) {
         )}
 
         <div class="space-y-2">
-          {units.length === 0 ? (
-            <div class="text-center py-6 text-base-content/60">{t("No units yet.")}</div>
-          ) : units.map((unit) => (
-            <div key={unit.id} class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100">
-              <div class="flex-1">
-                <div class="font-medium">{unit.name}</div>
-                <div class="text-sm text-base-content/60">
-                  {unit.code}
-                  {unit.isBuiltin && <span class="badge badge-ghost badge-sm ml-2">{t("Built-in")}</span>}
-                </div>
+          {units.length === 0
+            ? (
+              <div class="text-center py-6 text-base-content/60">
+                {t("No units yet.")}
               </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleEditUnit(unit)}
-                  class="btn btn-sm btn-ghost"
-                  disabled={props.demoMode || loading}
-                  title={t("Edit")}
-                >
-                  <LuPencil size={16} />
-                </button>
-                {!unit.isBuiltin && (
+            )
+            : units.map((unit) => (
+              <div
+                key={unit.id}
+                class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100"
+              >
+                <div class="flex-1">
+                  <div class="font-medium">{unit.name}</div>
+                  <div class="text-sm text-base-content/60">
+                    {unit.code}
+                    {unit.isBuiltin && (
+                      <span class="badge badge-ghost badge-sm ml-2">
+                        {t("Built-in")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div class="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleDeleteUnit(unit)}
-                    class="btn btn-sm btn-ghost text-error"
+                    onClick={() => handleEditUnit(unit)}
+                    class="btn btn-sm btn-ghost"
                     disabled={props.demoMode || loading}
-                    title={t("Delete")}
+                    title={t("Edit")}
                   >
-                    <LuTrash2 size={16} />
+                    <LuPencil size={16} />
                   </button>
-                )}
+                  {!unit.isBuiltin && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUnit(unit)}
+                      class="btn btn-sm btn-ghost text-error"
+                      disabled={props.demoMode || loading}
+                      title={t("Delete")}
+                    >
+                      <LuTrash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
     </div>

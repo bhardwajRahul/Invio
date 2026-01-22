@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { ComponentChildren } from "preact";
 import { useContext } from "preact/hooks";
-import { LocalizationConfig, DEFAULT_LOCALIZATION } from "./mod.ts";
+import { DEFAULT_LOCALIZATION, LocalizationConfig } from "./mod.ts";
 
 export const LocalizationContext = createContext<LocalizationConfig>(
   DEFAULT_LOCALIZATION,
