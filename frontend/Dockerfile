@@ -38,4 +38,4 @@ ENV PORT=8000 \
 EXPOSE 8000
 
 # Run the production preview server
-CMD ["deno", "task", "start"]
+CMD ["sh", "-c", "deno serve -A --port=$PORT _fresh/server.js"]
