@@ -696,16 +696,18 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
               <div class="label">
                 <span class="label-text">{t("Address")}</span>
               </div>
+              <br></br>
               <textarea
                 name="inlineCustomerAddress"
                 value={inlineCustomer.address}
                 onInput={handleInlineCustomerChange("address")}
-                class="textarea textarea-bordered"
+                class="textarea textarea-bordered w-full"
                 rows={3}
                 data-writable
                 disabled={isDemo}
                 placeholder={t("Address placeholder")}
               />
+              <br></br>
             </label>
             <label class="form-control">
               <div class="label">

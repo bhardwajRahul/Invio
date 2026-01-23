@@ -534,14 +534,16 @@ export default function SettingsPage(
                 <div class="label">
                   <span class="label-text">{t("Company Address")}</span>
                 </div>
+                <br></br>
                 <textarea
                   name="companyAddress"
-                  class="textarea textarea-bordered"
+                  class="textarea textarea-bordered w-full"
                   rows={2}
                   data-writable
                 >
                   {(s.companyAddress as string) || ""}
                 </textarea>
+                <br></br>
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
