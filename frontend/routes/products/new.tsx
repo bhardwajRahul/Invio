@@ -164,12 +164,14 @@ export default function NewProductPage(props: PageProps<Data>) {
             <div class="label">
               <span class="label-text">{t("Description")}</span>
             </div>
+            <br></br>
             <textarea
               name="description"
-              class="textarea textarea-bordered"
+              class="textarea textarea-bordered w-full"
               rows={3}
               data-writable
             />
+            <br></br>
           </label>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
