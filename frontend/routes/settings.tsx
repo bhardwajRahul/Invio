@@ -540,9 +540,11 @@ export default function SettingsPage(
                   class="textarea textarea-bordered w-full"
                   rows={2}
                   data-writable
-                >
-                  {(s.companyAddress as string) || ""}
-                </textarea>
+                  defaultValue={(s.companyAddress as string) || ""}
+                />
+                {s.companyAddress && (
+                  <div class="mt-2 text-sm opacity-70" dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(s.companyAddress as string) }} />
+                )}
                 <br></br>
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -974,9 +976,11 @@ export default function SettingsPage(
                     class="textarea textarea-bordered w-full"
                     rows={3}
                     data-writable
-                  >
-                    {(s.bankAccount as string) || ""}
-                  </textarea>
+                    defaultValue={(s.bankAccount as string) || ""}
+                  />
+                  {s.bankAccount && (
+                    <div class="mt-2 text-sm opacity-70" dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(s.bankAccount as string) }} />
+                  )}
                 </label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

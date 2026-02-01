@@ -1,3 +1,15 @@
+// Format text for HTML display: replace newlines with <br> and escape HTML
+export function formatTextWithLinebreaks(text?: string): string {
+  if (!text) return "";
+  // Escape HTML special chars, then replace newlines
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/\r?\n/g, "<br />");
+}
 // Utility functions for formatting numbers and currency
 export function formatMoney(
   value: number | undefined,

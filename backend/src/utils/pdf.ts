@@ -252,7 +252,7 @@ function buildContext(
     customerContactName: invoice.customer.contactName,
     customerEmail: invoice.customer.email,
     customerPhone: invoice.customer.phone,
-    customerAddress: invoice.customer.address,
+    customerAddress: _escapeHtmlWithBreaks(invoice.customer.address),
     customerCity: invoice.customer.city,
     customerPostalCode: invoice.customer.postalCode,
     customerCountryCode: invoice.customer.countryCode,

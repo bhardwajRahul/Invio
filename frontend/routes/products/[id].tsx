@@ -279,7 +279,7 @@ export default function ProductDetail(props: PageProps<Data>) {
             {p.description && (
               <div>
                 <div class="text-sm opacity-70">{t("Description")}</div>
-                <div class="whitespace-pre-wrap">{p.description}</div>
+                <div class="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(p.description) }} />
               </div>
             )}
 

@@ -126,7 +126,8 @@ export default function CustomerDetail(props: PageProps<Data>) {
           )}
           {c.address && (
             <div>
-              <span class="opacity-70">{t("Address")}:</span> {c.address}
+              <span class="opacity-70">{t("Address")}:</span>{" "}
+              <span dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(c.address) }} />
             </div>
           )}
           {(c.city || c.postalCode) && (
