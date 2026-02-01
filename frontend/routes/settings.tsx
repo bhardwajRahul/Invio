@@ -22,6 +22,7 @@ import {
   LuSave,
   LuSun,
 } from "../components/icons.tsx";
+import { formatTextWithLinebreaks } from "../utils/format.ts";
 import {
   backendDelete,
   backendGet,
