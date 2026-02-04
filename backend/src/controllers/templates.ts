@@ -1,8 +1,9 @@
 import { getDatabase } from "../database/init.ts";
-import { Template } from "../types/index.ts";
+import { Template, TemplateType } from "../types/index.ts";
 import { generateUUID } from "../utils/uuid.ts";
 import { parse as parseYaml } from "yaml";
 import { dirname, isAbsolute, normalize, relative, resolve } from "std/path";
+import { ZipReader } from "https://deno.land/x/zipjs@v2.7.34/index.js";
 // Manifest-based installer (MVP): one HTML file + optional fonts (ignored for now)
 
 type ManifestHTML = {
@@ -208,6 +209,7 @@ export async function installTemplateFromManifest(manifestUrl: string) {
       .trim(),
     html,
     isDefault: false,
+    templateType: "remote",
   });
   return saved;
 }
@@ -215,21 +217,22 @@ export async function installTemplateFromManifest(manifestUrl: string) {
 export const getTemplates = () => {
   const db = getDatabase();
   const results = db.query(
-    "SELECT id, name, html, is_default, created_at FROM templates ORDER BY created_at DESC",
+    "SELECT id, name, html, is_default, template_type, created_at FROM templates ORDER BY created_at DESC",
   );
   return results.map((row: unknown[]) => ({
     id: row[0] as string,
     name: row[1] as string,
     html: row[2] as string,
     isDefault: row[3] as boolean,
-    createdAt: new Date(row[4] as string),
+    templateType: (row[4] as TemplateType) || "builtin",
+    createdAt: new Date(row[5] as string),
   }));
 };
 
 export const getTemplateById = (id: string) => {
   const db = getDatabase();
   const rows = db.query(
-    "SELECT id, name, html, is_default, created_at FROM templates WHERE id = ? LIMIT 1",
+    "SELECT id, name, html, is_default, template_type, created_at FROM templates WHERE id = ? LIMIT 1",
     [id],
   );
   if (rows.length === 0) {
@@ -241,7 +244,8 @@ export const getTemplateById = (id: string) => {
     name: row[1] as string,
     html: row[2] as string,
     isDefault: Boolean(row[3]),
-    createdAt: new Date(row[4] as string),
+    templateType: (row[4] as TemplateType) || "builtin",
+    createdAt: new Date(row[5] as string),
   } as Template;
 };
 
@@ -259,6 +263,7 @@ function loadBuiltinTemplate(): Template | null {
       name: "Professional Modern",
       html,
       isDefault: true,
+      templateType: "builtin",
       createdAt: new Date(0),
     };
   } catch (error) {
@@ -271,7 +276,7 @@ function loadBuiltinTemplate(): Template | null {
 export const getDefaultTemplate = (): Template | null => {
   const db = getDatabase();
   const defaultRows = db.query(
-    "SELECT id, name, html, is_default, created_at FROM templates WHERE is_default = 1 ORDER BY created_at DESC LIMIT 1",
+    "SELECT id, name, html, is_default, template_type, created_at FROM templates WHERE is_default = 1 ORDER BY created_at DESC LIMIT 1",
   );
   if (defaultRows.length > 0) {
     const row = defaultRows[0] as unknown[];
@@ -280,12 +285,13 @@ export const getDefaultTemplate = (): Template | null => {
       name: row[1] as string,
       html: row[2] as string,
       isDefault: Boolean(row[3]),
-      createdAt: new Date(row[4] as string),
+      templateType: (row[4] as TemplateType) || "builtin",
+      createdAt: new Date(row[5] as string),
     };
   }
 
   const anyRows = db.query(
-    "SELECT id, name, html, is_default, created_at FROM templates ORDER BY created_at DESC LIMIT 1",
+    "SELECT id, name, html, is_default, template_type, created_at FROM templates ORDER BY created_at DESC LIMIT 1",
   );
   if (anyRows.length > 0) {
     const row = anyRows[0] as unknown[];
@@ -294,7 +300,8 @@ export const getDefaultTemplate = (): Template | null => {
       name: row[1] as string,
       html: row[2] as string,
       isDefault: Boolean(row[3]),
-      createdAt: new Date(row[4] as string),
+      templateType: (row[4] as TemplateType) || "builtin",
+      createdAt: new Date(row[5] as string),
     };
   }
 
@@ -417,6 +424,7 @@ export const createTemplate = (data: Partial<Template>) => {
     name: data.name!,
     html: data.html!,
     isDefault: data.isDefault || false,
+    templateType: data.templateType || "local",
     createdAt: new Date(),
   };
 
@@ -426,12 +434,13 @@ export const createTemplate = (data: Partial<Template>) => {
   }
 
   db.query(
-    "INSERT INTO templates (id, name, html, is_default, created_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO templates (id, name, html, is_default, template_type, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     [
       template.id,
       template.name,
       template.html,
       template.isDefault,
+      template.templateType,
       template.createdAt,
     ],
   );
@@ -449,12 +458,13 @@ export const upsertTemplateWithId = (
     db.query("UPDATE templates SET is_default = 0 WHERE id != ?", [id]);
   }
   db.query(
-    "INSERT OR REPLACE INTO templates (id, name, html, is_default, created_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT OR REPLACE INTO templates (id, name, html, is_default, template_type, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     [
       id,
       data.name || id,
       data.html || "",
       data.isDefault || false,
+      data.templateType || "remote",
       new Date().toISOString(),
     ],
   );
@@ -474,7 +484,7 @@ export const updateTemplate = (id: string, data: Partial<Template>) => {
   );
 
   const result = db.query(
-    "SELECT id, name, html, is_default, created_at FROM templates WHERE id = ?",
+    "SELECT id, name, html, is_default, template_type, created_at FROM templates WHERE id = ?",
     [id],
   );
   if (result.length > 0) {
@@ -484,7 +494,8 @@ export const updateTemplate = (id: string, data: Partial<Template>) => {
       name: row[1] as string,
       html: row[2] as string,
       isDefault: row[3] as boolean,
-      createdAt: new Date(row[4] as string),
+      templateType: (row[4] as TemplateType) || "builtin",
+      createdAt: new Date(row[5] as string),
     };
   }
   return null;
@@ -513,3 +524,174 @@ export const setDefaultTemplate = (id: string) => {
   db.query("UPDATE templates SET is_default = 1 WHERE id = ?", [id]);
   return true;
 };
+
+// Local zip manifest schema (similar to remote manifests)
+type LocalManifest = {
+  id: string;
+  name: string;
+  version?: string;
+  html: {
+    path: string;
+  };
+};
+
+function assertLocalManifestShape(m: unknown): asserts m is LocalManifest {
+  if (!m || typeof m !== "object") {
+    throw new Error("Manifest must be an object");
+  }
+  const r = m as Record<string, unknown>;
+  for (const k of ["id", "name", "html"]) {
+    if (!(k in r)) throw new Error(`Manifest missing ${k}`);
+  }
+  const html = r.html as Record<string, unknown>;
+  if (!html || typeof html.path !== "string") {
+    throw new Error("html.path is required");
+  }
+}
+
+// Install a template from an uploaded .zip file (local template)
+export async function installLocalTemplateFromZip(
+  zipData: Uint8Array,
+): Promise<Template> {
+  // Create a blob from the zip data for the ZipReader
+  const blob = new Blob([zipData]);
+  const zipReader = new ZipReader(blob.stream());
+
+  try {
+    const entries = await zipReader.getEntries();
+
+    // Detect if files are in a subfolder (Windows-style zip)
+    // Look for manifest at root first, then check for single subfolder
+    let rootPrefix = "";
+    let manifestEntry = entries.find(
+      (e: { filename: string }) =>
+        e.filename === "manifest.yaml" ||
+        e.filename === "manifest.yml" ||
+        e.filename === "manifest.json",
+    );
+
+    if (!manifestEntry) {
+      // Check if there's a single root folder containing the manifest
+      const topLevelDirs = new Set<string>();
+      for (const entry of entries) {
+        const parts = entry.filename.split("/");
+        if (parts.length > 1 && parts[0]) {
+          topLevelDirs.add(parts[0]);
+        }
+      }
+
+      // If there's exactly one top-level directory, look for manifest inside it
+      if (topLevelDirs.size === 1) {
+        const folderName = [...topLevelDirs][0];
+        rootPrefix = `${folderName}/`;
+        manifestEntry = entries.find(
+          (e: { filename: string }) =>
+            e.filename === `${rootPrefix}manifest.yaml` ||
+            e.filename === `${rootPrefix}manifest.yml` ||
+            e.filename === `${rootPrefix}manifest.json`,
+        );
+      }
+    }
+
+    if (!manifestEntry) {
+      throw new Error(
+        "No manifest.yaml or manifest.json found in zip root (or single subfolder)",
+      );
+    }
+
+    // Read and parse manifest using a simpler approach
+    const manifestChunks: Uint8Array[] = [];
+    const manifestWriter = new WritableStream<Uint8Array>({
+      write(chunk: Uint8Array) {
+        manifestChunks.push(chunk);
+      },
+    });
+    await manifestEntry.getData!(manifestWriter);
+    const manifestBytes = new Uint8Array(
+      manifestChunks.reduce((acc: number, c: Uint8Array) => acc + c.length, 0),
+    );
+    let offset = 0;
+    for (const chunk of manifestChunks) {
+      manifestBytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    const manifestText = new TextDecoder().decode(manifestBytes);
+
+    let manifest: LocalManifest;
+    try {
+      manifest = parseYaml(manifestText) as LocalManifest;
+    } catch (_e) {
+      try {
+        manifest = JSON.parse(manifestText) as LocalManifest;
+      } catch {
+        throw new Error("Manifest parse failed");
+      }
+    }
+    assertLocalManifestShape(manifest);
+
+    const manifestId = enforceSafeIdentifier(manifest.id, "manifest.id");
+    const manifestVersion = manifest.version
+      ? enforceSafeIdentifier(manifest.version, "manifest.version")
+      : "1.0.0";
+    const htmlPath = sanitizeManifestPath(String(manifest.html.path));
+
+    // Find and read the HTML file (check with rootPrefix for Windows-style zips)
+    const htmlEntry = entries.find(
+      (e: { filename: string }) =>
+        e.filename === `${rootPrefix}${htmlPath}` ||
+        e.filename === `${rootPrefix}./${htmlPath}` ||
+        e.filename === htmlPath ||
+        e.filename === `./${htmlPath}`,
+    );
+    if (!htmlEntry) {
+      throw new Error(`HTML file not found in zip: ${htmlPath}`);
+    }
+
+    const htmlChunks: Uint8Array[] = [];
+    const htmlWriter = new WritableStream<Uint8Array>({
+      write(chunk: Uint8Array) {
+        htmlChunks.push(chunk);
+      },
+    });
+    await htmlEntry.getData!(htmlWriter);
+    const htmlBytes = new Uint8Array(
+      htmlChunks.reduce((acc: number, c: Uint8Array) => acc + c.length, 0),
+    );
+    let htmlOffset = 0;
+    for (const chunk of htmlChunks) {
+      htmlBytes.set(chunk, htmlOffset);
+      htmlOffset += chunk.length;
+    }
+
+    if (htmlBytes.byteLength > 128 * 1024) {
+      throw new Error("HTML too large (>128KB)");
+    }
+
+    const html = new TextDecoder().decode(htmlBytes);
+    basicHtmlSanity(html);
+
+    // Store template files on disk
+    const baseDir = resolve("./data/templates", manifestId, manifestVersion);
+    const outPath = resolve(baseDir, htmlPath);
+    const rel = relative(baseDir, outPath);
+    if (!rel || rel.startsWith("..")) {
+      throw new Error("html.path escapes template directory");
+    }
+
+    await Deno.mkdir(dirname(outPath), { recursive: true });
+    await Deno.writeTextFile(outPath, html);
+
+    // Save to database as local template (no source URL stored)
+    const saved = upsertTemplateWithId(manifestId, {
+      name: `${manifest.name} ${manifestVersion ? `v${manifestVersion}` : ""}`
+        .trim(),
+      html,
+      isDefault: false,
+      templateType: "local",
+    });
+
+    return saved!;
+  } finally {
+    await zipReader.close();
+  }
+}

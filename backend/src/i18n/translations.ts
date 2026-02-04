@@ -99,6 +99,7 @@ const catalogs: Record<string, InvoiceLabels> = Object.freeze({
   nl: coerceLabels("nl", nlRaw),
   de: coerceLabels("de", deRaw),
   "pt-br": coerceLabels("pt-br", ptBrRaw),
+  pt: coerceLabels("pt", ptBrRaw), // alias for pt-br
 });
 
 function normalizeLocale(locale?: string): string {

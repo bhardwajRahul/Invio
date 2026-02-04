@@ -1,6 +1,7 @@
 import { PageProps } from "fresh";
 import { Layout } from "../components/Layout.tsx";
 import InstallTemplateForm from "../islands/InstallTemplateForm.tsx";
+import UploadTemplateForm from "../islands/UploadTemplateForm.tsx";
 import SettingsEnhancements from "../islands/SettingsEnhancements.tsx";
 import SettingsNav from "../islands/SettingsNav.tsx";
 import ThemeToggle from "../islands/ThemeToggle.tsx";
@@ -46,6 +47,7 @@ type Template = {
   name: string;
   isDefault?: boolean;
   updatable?: boolean;
+  templateType?: "local" | "remote" | "builtin";
 };
 type TaxDefinition = {
   id: string;
@@ -648,20 +650,29 @@ export default function SettingsPage(
                   <select
                     name="templateId"
                     class="select select-bordered w-full"
-                    value={selectedTemplateId}
                   >
                     {templates.length > 0
                       ? (templates.map((template) => (
-                        <option value={template.id} key={template.id}>
+                        <option
+                          value={template.id}
+                          key={template.id}
+                          selected={template.id === selectedTemplateId}
+                        >
                           {template.name}
                         </option>
                       )))
                       : (
                         <>
-                          <option value="professional-modern">
+                          <option
+                            value="professional-modern"
+                            selected={selectedTemplateId === "professional-modern"}
+                          >
                             {t("Professional Modern")}
                           </option>
-                          <option value="minimalist-clean">
+                          <option
+                            value="minimalist-clean"
+                            selected={selectedTemplateId === "minimalist-clean" || !selectedTemplateId}
+                          >
                             {t("Minimalist Clean")}
                           </option>
                         </>
@@ -788,10 +799,13 @@ export default function SettingsPage(
                   <select
                     name="locale"
                     class="select select-bordered w-full"
-                    value={currentLocale}
                   >
                     {localeOptions.map((option) => (
-                      <option value={option.value} key={option.value}>
+                      <option
+                        value={option.value}
+                        key={option.value}
+                        selected={option.value === currentLocale}
+                      >
                         {t(option.labelKey)}
                       </option>
                     ))}
@@ -813,12 +827,17 @@ export default function SettingsPage(
                   <select
                     name="dateFormat"
                     class="select select-bordered w-full"
-                    value={(s.dateFormat as string) || "YYYY-MM-DD"}
                   >
-                    <option value="YYYY-MM-DD">
+                    <option
+                      value="YYYY-MM-DD"
+                      selected={(s.dateFormat as string) === "YYYY-MM-DD" || !s.dateFormat}
+                    >
                       {t("YYYY-MM-DD (2025-01-15)")}
                     </option>
-                    <option value="DD.MM.YYYY">
+                    <option
+                      value="DD.MM.YYYY"
+                      selected={(s.dateFormat as string) === "DD.MM.YYYY"}
+                    >
                       {t("DD.MM.YYYY (15.01.2025)")}
                     </option>
                   </select>
@@ -839,10 +858,19 @@ export default function SettingsPage(
                   <select
                     name="numberFormat"
                     class="select select-bordered w-full"
-                    value={(s.numberFormat as string) || "comma"}
                   >
-                    <option value="comma">{t("Comma (1,000.00)")}</option>
-                    <option value="period">{t("Period (1.000,00)")}</option>
+                    <option
+                      value="comma"
+                      selected={(s.numberFormat as string) === "comma" || !s.numberFormat}
+                    >
+                      {t("Comma (1,000.00)")}
+                    </option>
+                    <option
+                      value="period"
+                      selected={(s.numberFormat as string) === "period"}
+                    >
+                      {t("Period (1.000,00)")}
+                    </option>
                   </select>
                   <div class="label">
                     <span class="label-text-alt">
@@ -867,16 +895,28 @@ export default function SettingsPage(
             <div class="space-y-4">
               <h2 class="text-xl font-semibold">{t("Templates")}</h2>
 
-              <div class="flex items-center justify-between mb-3">
-                <div class="text-sm opacity-70">
-                  {t("Manage your invoice templates")}
-                </div>
-                <InstallTemplateForm />
+              <div class="text-sm opacity-70 mb-3">
+                {t("Manage your invoice templates")}
               </div>
+
+              {/* Install forms */}
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <div class="bg-base-200 rounded-box p-4">
+                  <h3 class="font-semibold mb-2">{t("Remote Template")}</h3>
+                  <InstallTemplateForm />
+                </div>
+                <div class="bg-base-200 rounded-box p-4">
+                  <h3 class="font-semibold mb-2">{t("Local Template")}</h3>
+                  <UploadTemplateForm />
+                </div>
+              </div>
+
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {templates.map((template) => {
                   const builtIn = template.id === "professional-modern" ||
                     template.id === "minimalist-clean";
+                  const isRemote = template.templateType === "remote";
+                  const isLocal = template.templateType === "local";
                   return (
                     <div class="card bg-base-200 shadow-sm" key={template.id}>
                       <div class="card-body p-3">
@@ -884,6 +924,17 @@ export default function SettingsPage(
                           <div>
                             <div class="font-medium">{template.name}</div>
                             <div class="text-xs opacity-60">{template.id}</div>
+                            <div class="mt-1">
+                              {builtIn && (
+                                <span class="badge badge-ghost badge-sm">{t("Built-in")}</span>
+                              )}
+                              {isRemote && (
+                                <span class="badge badge-info badge-sm">{t("Remote")}</span>
+                              )}
+                              {isLocal && (
+                                <span class="badge badge-secondary badge-sm">{t("Local")}</span>
+                              )}
+                            </div>
                           </div>
                           {selectedTemplateId === template.id && (
                             <span class="badge badge-primary">
@@ -908,7 +959,7 @@ export default function SettingsPage(
                               </button>
                             </form>
                           )}
-                          {!builtIn && template.updatable && (
+                          {isRemote && template.updatable && (
                             <form method="post" data-writable>
                               <input
                                 type="hidden"
@@ -1064,14 +1115,20 @@ export default function SettingsPage(
                     <select
                       name="defaultPricesIncludeTax"
                       class="select select-bordered w-full"
-                      value={(String(s.defaultPricesIncludeTax || "false")
-                          .toLowerCase() === "true")
-                        ? "true"
-                        : "false"}
                       data-writable
                     >
-                      <option value="false">{t("No")}</option>
-                      <option value="true">{t("Yes")}</option>
+                      <option
+                        value="false"
+                        selected={String(s.defaultPricesIncludeTax || "false").toLowerCase() !== "true"}
+                      >
+                        {t("No")}
+                      </option>
+                      <option
+                        value="true"
+                        selected={String(s.defaultPricesIncludeTax || "false").toLowerCase() === "true"}
+                      >
+                        {t("Yes")}
+                      </option>
                     </select>
                   </label>
                   <label class="form-control">
@@ -1081,11 +1138,20 @@ export default function SettingsPage(
                     <select
                       name="defaultRoundingMode"
                       class="select select-bordered w-full"
-                      value={(s.defaultRoundingMode as string) || "line"}
                       data-writable
                     >
-                      <option value="line">{t("Round per line")}</option>
-                      <option value="total">{t("Round on totals")}</option>
+                      <option
+                        value="line"
+                        selected={(s.defaultRoundingMode as string) === "line" || !s.defaultRoundingMode}
+                      >
+                        {t("Round per line")}
+                      </option>
+                      <option
+                        value="total"
+                        selected={(s.defaultRoundingMode as string) === "total"}
+                      >
+                        {t("Round on totals")}
+                      </option>
                     </select>
                   </label>
                 </div>
@@ -1199,13 +1265,25 @@ export default function SettingsPage(
                     <select
                       name="xmlProfileId"
                       class="select select-bordered w-full"
-                      value={xmlProfileId}
                     >
-                      <option value="ubl21">{t("UBL 2.1 (PEPPOL BIS)")}</option>
-                      <option value="facturx22">
+                      <option
+                        value="ubl21"
+                        selected={xmlProfileId === "ubl21" || !xmlProfileId}
+                      >
+                        {t("UBL 2.1 (PEPPOL BIS)")}
+                      </option>
+                      <option
+                        value="facturx22"
+                        selected={xmlProfileId === "facturx22"}
+                      >
                         {t("Factur-X / ZUGFeRD 2.2 (BASIC)")}
                       </option>
-                      <option value="fatturapa">{t("FatturaPA 1.9")}</option>
+                      <option
+                        value="fatturapa"
+                        selected={xmlProfileId === "fatturapa"}
+                      >
+                        {t("FatturaPA 1.9")}
+                      </option>
                     </select>
                   </label>
                   <label class="form-control">

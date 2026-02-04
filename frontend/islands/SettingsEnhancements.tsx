@@ -419,11 +419,41 @@ export default function SettingsEnhancements() {
 
     if (logoInput?.value) updateLogo();
 
+    // Handle localization form submission - reload page to apply language changes instantly
+    const localizationForm = document.querySelector('form[data-writable] select[name="locale"]')?.closest('form');
+    const onLocalizationSubmit = async (e: Event) => {
+      e.preventDefault();
+      const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
+      
+      try {
+        const response = await fetch(form.action || window.location.href, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (response.ok) {
+          // Reload the page to apply new language
+          window.location.reload();
+        } else {
+          // If there's an error, submit normally to show server error
+          form.removeEventListener('submit', onLocalizationSubmit);
+          form.submit();
+        }
+      } catch {
+        // On network error, submit normally
+        form.removeEventListener('submit', onLocalizationSubmit);
+        form.submit();
+      }
+    };
+    localizationForm?.addEventListener('submit', onLocalizationSubmit);
+
     return () => {
       input?.removeEventListener("input", onInput);
       logoInput?.removeEventListener("change", updateLogo);
       logoInput?.removeEventListener("input", onLogoTyping);
       logoFileInput?.removeEventListener("change", onFileChange);
+      localizationForm?.removeEventListener('submit', onLocalizationSubmit);
     };
   }, [t]);
   return null;

@@ -15,6 +15,7 @@ import {
   deleteTemplate,
   getTemplateById,
   getTemplates,
+  installLocalTemplateFromZip,
   installTemplateFromManifest,
   loadTemplateFromFile,
   renderTemplate,
@@ -170,6 +171,11 @@ adminRoutes.use(
 
 adminRoutes.use(
   "/tax-definitions/*",
+  requireAdminAuth,
+);
+
+adminRoutes.use(
+  "/settings",
   requireAdminAuth,
 );
 
@@ -406,6 +412,46 @@ adminRoutes.post("/templates/install-from-manifest", async (c) => {
       // Remember the source manifest used for this template id to enable future updates
       setSetting(`templateSource:${t.id}`, url);
     } catch (_e) { /* non-fatal */ }
+    return c.json(t);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
+});
+
+// Install a local template from an uploaded .zip file
+adminRoutes.post("/templates/upload", async (c) => {
+  try {
+    const contentType = c.req.header("content-type") || "";
+
+    let zipData: Uint8Array;
+
+    if (contentType.includes("multipart/form-data")) {
+      // Handle multipart form upload
+      const formData = await c.req.formData();
+      const file = formData.get("file");
+      if (!file || !(file instanceof File)) {
+        return c.json({ error: "No file uploaded" }, 400);
+      }
+      if (!file.name.endsWith(".zip")) {
+        return c.json({ error: "File must be a .zip archive" }, 400);
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        return c.json({ error: "File too large (max 5MB)" }, 400);
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      zipData = new Uint8Array(arrayBuffer);
+    } else if (contentType.includes("application/zip") || contentType.includes("application/octet-stream")) {
+      // Handle raw binary upload
+      const arrayBuffer = await c.req.arrayBuffer();
+      if (arrayBuffer.byteLength > 5 * 1024 * 1024) {
+        return c.json({ error: "File too large (max 5MB)" }, 400);
+      }
+      zipData = new Uint8Array(arrayBuffer);
+    } else {
+      return c.json({ error: "Invalid content type. Expected multipart/form-data or application/zip" }, 400);
+    }
+
+    const t = await installLocalTemplateFromZip(zipData);
     return c.json(t);
   } catch (e) {
     return c.json({ error: String(e) }, 400);

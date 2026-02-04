@@ -98,10 +98,14 @@ CREATE TABLE templates (
   name TEXT NOT NULL,
   html TEXT NOT NULL,
   is_default BOOLEAN DEFAULT FALSE,
+  template_type TEXT DEFAULT 'builtin',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- No built-in default template is seeded here; startup code installs maintained templates.
+
+-- Add template_type column if not exists (for existing databases)
+ALTER TABLE templates ADD COLUMN template_type TEXT DEFAULT 'builtin';
 
 -- Index for performance
 CREATE INDEX idx_invoices_number ON invoices(invoice_number);

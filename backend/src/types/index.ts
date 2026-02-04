@@ -84,11 +84,14 @@ export interface InvoiceAttachment {
   createdAt: Date;
 }
 
+export type TemplateType = "local" | "remote" | "builtin";
+
 export interface Template {
   id: string;
   name: string;
   html: string;
   isDefault: boolean;
+  templateType: TemplateType;
   createdAt: Date;
 }
 

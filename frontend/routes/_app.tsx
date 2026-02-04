@@ -7,16 +7,16 @@ import { AppProps } from "fresh/compat";
 export default function App({ Component, state }: AppProps<unknown, AppState>) {
   const localization = state?.localization ?? DEFAULT_LOCALIZATION;
   return (
-    <html lang={localization.locale}>
+    <html 
+      lang={localization.locale}
+      data-number-format={localization.numberFormat}
+      data-date-format={localization.dateFormat}
+    >
       <Head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Invio</title>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        {/* Early theme init to prevent FOUC */}
-        <script src="/app-init.js"></script>
-        {/* Tailwind CSS with DaisyUI */}
-        <link rel="stylesheet" href="/styles.css" />
         {/* Inter font */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
