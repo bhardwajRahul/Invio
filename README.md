@@ -118,7 +118,7 @@ See [`.env.example`](.env.example) for all configuration options.
 <details>
 <summary>Settings</summary>
   
-<img src="https://cdn.hackclub.com/019c2a44-810e-772a-8660-9faf85421734/Screenshot%202026-02-04%20210659.png" alt="Invio Dashboard" width="100%" />
+<img src="https://cdn.hackclub.com/019c2a49-aed5-7242-994e-900eebc628ed/Screenshot%202026-02-04%20211257.png" alt="Invio Dashboard" width="100%" />
   
 </details>
 
