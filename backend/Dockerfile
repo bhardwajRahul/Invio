@@ -1,9 +1,11 @@
+# Get chrome-headless-shell from chromedp (multi-arch: amd64 + arm64)
+FROM chromedp/headless-shell:latest AS headless
+
 # Runtime with chrome-headless-shell for fast PDF rendering
 FROM debian:12-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Determine architecture and download chrome-headless-shell
 # Install minimal dependencies (no full Chromium/X11 needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -49,21 +51,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get purge -y --auto-remove git golang \
   && rm -rf /var/lib/apt/lists/* /root/go
 
-# Install chrome-headless-shell from Chrome for Testing
-RUN ARCH=$(dpkg --print-architecture) \
-  && if [ "$ARCH" = "amd64" ]; then PLATFORM="linux64"; \
-     elif [ "$ARCH" = "arm64" ]; then PLATFORM="linux-arm64"; \
-     else echo "Unsupported arch: $ARCH" && exit 1; fi \
-  && CHROME_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE) \
-  && echo "Installing chrome-headless-shell ${CHROME_VERSION} for ${PLATFORM}" \
-  && curl -fSL "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/${PLATFORM}/chrome-headless-shell-${PLATFORM}.zip" -o /tmp/chrome-headless-shell.zip \
-  && unzip /tmp/chrome-headless-shell.zip -d /opt/ \
-  && ln -s /opt/chrome-headless-shell-${PLATFORM}/chrome-headless-shell /usr/local/bin/chrome-headless-shell \
-  && chmod +x /opt/chrome-headless-shell-${PLATFORM}/chrome-headless-shell \
-  && rm /tmp/chrome-headless-shell.zip
+# Copy chrome-headless-shell from chromedp image
+COPY --from=headless /headless-shell/ /opt/headless-shell/
+RUN ln -s /opt/headless-shell/headless-shell /usr/local/bin/chrome-headless-shell \
+  && chmod +x /opt/headless-shell/headless-shell
 
 # Install a Deno version that supports lockfile v5
-COPY --from=denoland/deno:bin-2.4.5 /deno /usr/local/bin/deno
+COPY --from=denoland/deno:bin-2.6.8 /deno /usr/local/bin/deno
 
 WORKDIR /app
 COPY . .
