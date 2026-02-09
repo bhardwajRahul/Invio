@@ -1,6 +1,5 @@
 import { createContext } from "preact";
 import { ComponentChildren } from "preact";
-import { useContext } from "preact/hooks";
 import { createTranslator, DEFAULT_LOCALIZATION, LocalizationConfig } from "./mod.ts";
 
 export const LocalizationContext = createContext<LocalizationConfig>(

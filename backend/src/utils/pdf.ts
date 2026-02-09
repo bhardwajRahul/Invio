@@ -6,8 +6,6 @@ import {
   PDFNumber,
   PDFString,
 } from "pdf-lib";
-// Use Puppeteer (headless Chrome) for HTML -> PDF rendering instead of wkhtmltopdf
-import puppeteer from "puppeteer-core";
 import { generateInvoiceXML, XMLProfile } from "./xmlProfiles.ts";
 import { generateZugferdXMP } from "./xmp.ts";
 import { fromFileUrl, join } from "std/path";
@@ -21,7 +19,7 @@ import {
   renderTemplate as renderTpl,
 } from "../controllers/templates.ts";
 import { getDefaultTemplate } from "../controllers/templates.ts";
-import { resolveChromiumLaunchConfig } from "./chromium.ts";
+import { resolveChromiumPath } from "./chromium.ts";
 import { getInvoiceLabels } from "../i18n/translations.ts";
 // pdf-lib is used to embed XML attachments and tweak metadata after rendering
 
@@ -335,13 +333,13 @@ export async function generateInvoicePDF(
     opts?.numberFormat,
     opts?.locale ?? invoiceData.locale ?? inlined?.locale,
   );
-  // Render via Puppeteer (Chromium)
+  // Render via chrome-headless-shell / Chromium CLI
   let pdfBytes: Uint8Array;
   try {
-    pdfBytes = await tryPuppeteerPdf(html);
+    pdfBytes = await renderPdfWithChromeHeadlessShell(html);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Chromium-based PDF rendering failed: ${msg}`);
+    throw new Error(`Chrome-headless-shell PDF rendering failed: ${msg}`);
   }
 
   const pdfaResult = await convertPdfToPdfA3(pdfBytes);
@@ -421,126 +419,76 @@ export function buildInvoiceHTML(
   });
 }
 
-async function tryPuppeteerPdf(html: string): Promise<Uint8Array> {
-  const os = Deno.build.os;
-  const isWindows = os === "windows";
-  const isLinux = os === "linux";
+/**
+ * Render HTML to PDF using chrome-headless-shell (or Chrome/Chromium) via
+ * Deno.Command with --print-to-pdf.  This replaces the old Puppeteer approach
+ * and is significantly lighter and faster.
+ */
+async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Array> {
+  const { executablePath } = await resolveChromiumPath();
+  const isLinux = Deno.build.os === "linux";
+  const isWindows = Deno.build.os === "windows";
 
-  const cleanupUserDataDir = async (dir?: string) => {
-    if (!dir) return;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        await Deno.remove(dir, { recursive: true });
-        break;
-      } catch (err) {
-        const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-        const transient = msg.includes("ebusy") || msg.includes("busy") || msg.includes("access is denied") ||
-          msg.includes("eperm") || msg.includes("locked");
-        if (!transient) break;
-        await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
-      }
-    }
-  };
-
-  const baseArgs = [
-    "--font-render-hinting=medium",
-    "--no-first-run",
-    "--no-default-browser-check",
-    "--disable-extensions",
-    "--disable-background-networking",
-    "--disable-sync",
-    "--metrics-recording-only",
-    "--mute-audio",
-    "--hide-scrollbars",
-  ];
-  // Linux containers commonly need sandbox disabled.
-  // On Windows/macOS these flags are unnecessary and can sometimes cause odd behavior.
-  const forceNoSandbox = (Deno.env.get("INVIO_PUPPETEER_NO_SANDBOX") || "").trim() === "1";
-  if (isLinux || forceNoSandbox) {
-    baseArgs.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
-  }
-  if (isWindows) {
-    baseArgs.push("--disable-gpu", "--disable-software-rasterizer");
-  }
-
-  const looksLikeTargetClosed = (err: unknown): boolean => {
-    const msg = err instanceof Error ? err.message : String(err);
-    return msg.includes("Target closed") || msg.includes("IO.read") || msg.includes("Protocol error (IO.read)");
-  };
-
-  const renderOnce = async (extraArgs: string[] = []): Promise<Uint8Array> => {
-    let userDataDir: string | undefined;
-    const { executablePath, channel } = await resolveChromiumLaunchConfig();
-
-    const dumpIo = (Deno.env.get("INVIO_PUPPETEER_DUMPIO") || "").trim() === "1";
-    const pipePref = (Deno.env.get("INVIO_PUPPETEER_PIPE") || "").trim();
-    const usePipe = pipePref
-      ? pipePref === "1"
-      : isWindows;
-
-    const launchOptions: NonNullable<Parameters<typeof puppeteer.launch>[0]> = {
-      headless: true,
-      args: [...baseArgs, ...extraArgs],
-      // Give Chromium a little more time on slower Windows machines.
-      timeout: 60000,
-      protocolTimeout: 60000,
-      dumpio: dumpIo,
-      pipe: usePipe,
-    };
-
-    try {
-      userDataDir = await Deno.makeTempDir({ prefix: "invio-puppeteer-profile-" });
-      (launchOptions as { userDataDir?: string }).userDataDir = userDataDir;
-    } catch {
-      userDataDir = undefined;
-    }
-
-    if (executablePath) {
-      launchOptions.executablePath = executablePath;
-    } else if (channel) {
-      (launchOptions as { channel?: string }).channel = channel;
-    }
-
-    let browser: any;
-    let page: any;
-    try {
-      browser = await puppeteer.launch(launchOptions);
-      page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
-      const pdf = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        preferCSSPageSize: true,
-        margin: { top: "15mm", bottom: "15mm", left: "15mm", right: "15mm" },
-      });
-      return new Uint8Array(pdf);
-    } finally {
-      if (page) {
-        try {
-          await page.close();
-        } catch {
-          // ignore
-        }
-      }
-      if (browser) {
-        try {
-          await browser.close();
-        } catch {
-          // ignore
-        }
-      }
-      await cleanupUserDataDir(userDataDir);
-    }
-  };
+  // Write the HTML to a temp file so chrome-headless-shell can load it via file:// URL
+  const tmpDir = await Deno.makeTempDir({ prefix: "invio-pdf-" });
+  const htmlPath = join(tmpDir, "invoice.html");
+  const pdfPath = join(tmpDir, "invoice.pdf");
 
   try {
-    return await renderOnce();
-  } catch (err) {
-    if (looksLikeTargetClosed(err)) {
-      // Retry once; Chromium can exit early on some Windows setups (AV hooks, GPU/driver quirks).
-      return await renderOnce(["--disable-features=RendererCodeIntegrity"]);
+    await Deno.writeTextFile(htmlPath, html);
+
+    // Build the file:// URL (forward-slash normalised)
+    const fileUrl = new URL(`file:///${htmlPath.replace(/\\/g, "/")}`);
+
+    const args: string[] = [
+      "--headless",
+      "--disable-gpu",
+      "--no-pdf-header-footer",
+      "--font-render-hinting=medium",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-sync",
+      "--metrics-recording-only",
+      "--mute-audio",
+      "--hide-scrollbars",
+      "--print-to-pdf-no-header",
+      `--print-to-pdf=${pdfPath}`,
+    ];
+
+    // Linux containers commonly need sandbox disabled.
+    const forceNoSandbox = (Deno.env.get("INVIO_CHROME_NO_SANDBOX") || Deno.env.get("INVIO_PUPPETEER_NO_SANDBOX") || "").trim() === "1";
+    if (isLinux || forceNoSandbox) {
+      args.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
     }
-    throw err;
+    if (isWindows) {
+      args.push("--disable-software-rasterizer");
+    }
+
+    args.push(fileUrl.href);
+
+    const cmd = new Deno.Command(executablePath, {
+      args,
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stderr } = await cmd.output();
+    if (code !== 0) {
+      const errMsg = new TextDecoder().decode(stderr);
+      throw new Error(`chrome-headless-shell exited with code ${code}: ${errMsg}`);
+    }
+
+    const pdfBytes = await Deno.readFile(pdfPath);
+    return pdfBytes;
+  } finally {
+    // Clean up temp directory
+    try {
+      await Deno.remove(tmpDir, { recursive: true });
+    } catch {
+      // ignore cleanup errors
+    }
   }
 }
 

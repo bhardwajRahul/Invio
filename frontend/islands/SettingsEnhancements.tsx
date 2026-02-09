@@ -427,14 +427,14 @@ export default function SettingsEnhancements() {
       const formData = new FormData(form);
       
       try {
-        const response = await fetch(form.action || window.location.href, {
+        const response = await fetch(form.action || globalThis.location.href, {
           method: 'POST',
           body: formData,
         });
         
         if (response.ok) {
           // Reload the page to apply new language
-          window.location.reload();
+          globalThis.location.reload();
         } else {
           // If there's an error, submit normally to show server error
           form.removeEventListener('submit', onLocalizationSubmit);

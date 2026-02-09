@@ -220,13 +220,15 @@ export default function Products(props: PageProps<Data>) {
           <select
             class="select select-bordered select-sm"
             value={category}
+            /* @ts-ignore: Event handler */
+            // deno-lint-ignore fresh-server-event-handlers
             onChange={(e) => {
               const val = (e.target as HTMLSelectElement).value;
-              window.location.href = qsForCategory(val);
+              globalThis.location.href = qsForCategory(val);
             }}
           >
             <option value="">{t("All Categories")}</option>
-            {categories.map((c) => <option value={c.code}>{c.name}</option>)}
+            {categories.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
           </select>
         </div>
       </div>

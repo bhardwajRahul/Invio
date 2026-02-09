@@ -215,7 +215,7 @@ export default function NewProductPage(props: PageProps<Data>) {
                 data-writable
               >
                 <option value="">{t("Select unit")}</option>
-                {units.map((u) => <option value={u.code}>{u.name}</option>)}
+                {units.map((u) => <option key={u.code} value={u.code}>{u.name}</option>)}
               </select>
             </label>
 
@@ -229,7 +229,7 @@ export default function NewProductPage(props: PageProps<Data>) {
                 data-writable
               >
                 <option value="">{t("Select category")}</option>
-                {categories.map((c) => <option value={c.code}>{c.name}
+                {categories.map((c) => <option key={c.code} value={c.code}>{c.name}
                 </option>)}
               </select>
             </label>

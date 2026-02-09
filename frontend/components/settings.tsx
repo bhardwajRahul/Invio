@@ -40,7 +40,7 @@ type Data = {
 };
 
 export const handler: Handlers<Data & { demoMode: boolean }> = {
-  async GET(req, ctx) {
+  async GET(req, _ctx) {
     const auth = getAuthHeaderFromCookie(
       req.headers.get("cookie") || undefined,
     );

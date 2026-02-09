@@ -23,7 +23,6 @@ import {
   LuSave,
   LuSun,
 } from "../components/icons.tsx";
-import { formatTextWithLinebreaks } from "../utils/format.ts";
 import {
   backendDelete,
   backendGet,
@@ -546,7 +545,7 @@ export default function SettingsPage(
                   defaultValue={(s.companyAddress as string) || ""}
                 />
                 {s.companyAddress && (
-                  <div class="mt-2 text-sm opacity-70" dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(s.companyAddress as string) }} />
+                  <div class="mt-2 text-sm opacity-70 whitespace-pre-wrap">{s.companyAddress as string}</div>
                 )}
                 <br></br>
               </label>
@@ -1031,7 +1030,7 @@ export default function SettingsPage(
                     defaultValue={(s.bankAccount as string) || ""}
                   />
                   {s.bankAccount && (
-                    <div class="mt-2 text-sm opacity-70" dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(s.bankAccount as string) }} />
+                    <div class="mt-2 text-sm opacity-70 whitespace-pre-wrap">{s.bankAccount as string}</div>
                   )}
                 </label>
               </div>

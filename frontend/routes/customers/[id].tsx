@@ -9,7 +9,6 @@ import {
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
 import { Handlers } from "fresh/compat";
-import { formatTextWithLinebreaks } from "../../utils/format.ts";
 
 type Customer = {
   id: string;
@@ -128,7 +127,7 @@ export default function CustomerDetail(props: PageProps<Data>) {
           {c.address && (
             <div>
               <span class="opacity-70">{t("Address")}:</span>{" "}
-              <span dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(c.address) }} />
+              <span class="whitespace-pre-wrap">{c.address}</span>
             </div>
           )}
           {(c.city || c.postalCode) && (

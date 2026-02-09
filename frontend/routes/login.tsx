@@ -12,7 +12,7 @@ type Data = {
 };
 
 export const handler: Handlers<Data> = {
-  async GET(ctx) {
+  async GET(_ctx) {
     // Try to fetch public settings to detect demoMode
     try {
       const resp = await fetch(`${BACKEND_URL}/api/v1/demo-mode`);

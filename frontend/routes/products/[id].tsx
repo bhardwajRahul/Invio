@@ -11,7 +11,6 @@ import {
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
 import { Handlers } from "fresh/compat";
-import { formatTextWithLinebreaks } from "../../utils/format.ts";
 
 type Product = {
   id: string;
@@ -280,7 +279,7 @@ export default function ProductDetail(props: PageProps<Data>) {
             {p.description && (
               <div>
                 <div class="text-sm opacity-70">{t("Description")}</div>
-                <div class="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatTextWithLinebreaks(p.description) }} />
+                <div class="whitespace-pre-wrap">{p.description}</div>
               </div>
             )}
 
