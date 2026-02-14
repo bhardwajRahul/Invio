@@ -1,6 +1,3 @@
-# Get chrome-headless-shell from chromedp (multi-arch: amd64 + arm64)
-FROM chromedp/headless-shell:latest AS headless
-
 # Runtime with chrome-headless-shell for fast PDF rendering
 FROM debian:12-slim
 
@@ -21,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-noto-color-emoji \
     git \
     golang \
+    jq \
     # Minimal libs needed by chrome-headless-shell
     libnss3 \
     libatk1.0-0 \
@@ -51,10 +49,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get purge -y --auto-remove git golang \
   && rm -rf /var/lib/apt/lists/* /root/go
 
-# Copy chrome-headless-shell from chromedp image
-COPY --from=headless /headless-shell/ /opt/headless-shell/
-RUN ln -s /opt/headless-shell/headless-shell /usr/local/bin/chrome-headless-shell \
-  && chmod +x /opt/headless-shell/headless-shell
+# Download chrome-headless-shell from Chrome for Testing (supports --print-to-pdf)
+# The chromedp/headless-shell image only contains the old CDP-only binary.
+RUN set -eux; \
+    JSON_URL="https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"; \
+    DL_URL=$(curl -fsSL "$JSON_URL" | jq -r '.channels.Stable.downloads["chrome-headless-shell"][] | select(.platform=="linux64") | .url'); \
+    echo "Downloading chrome-headless-shell from: $DL_URL"; \
+    curl -fsSL "$DL_URL" -o /tmp/chs.zip; \
+    unzip -q /tmp/chs.zip -d /opt; \
+    mv /opt/chrome-headless-shell-linux64 /opt/chrome-headless-shell; \
+    ln -sf /opt/chrome-headless-shell/chrome-headless-shell /usr/local/bin/chrome-headless-shell; \
+    chmod +x /opt/chrome-headless-shell/chrome-headless-shell; \
+    rm /tmp/chs.zip; \
+    # Verify it runs
+    /usr/local/bin/chrome-headless-shell --version || true
 
 # Install a Deno version that supports lockfile v5
 COPY --from=denoland/deno:bin-2.6.8 /deno /usr/local/bin/deno
