@@ -436,27 +436,15 @@ async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Arra
   try {
     await Deno.writeTextFile(htmlPath, html);
 
-    // Build the file:// URL (forward-slash normalised)
-    const fileUrl = new URL(`file:///${htmlPath.replace(/\\/g, "/")}`);
+    const fileUrl = new URL(`file://${htmlPath.replace(/\\/g, "/").replace(/^\/*/,"/")}`)
 
-    // chrome-headless-shell is already headless – no --headless flag needed
     const args: string[] = [
+      "--headless",
       "--disable-gpu",
       "--no-pdf-header-footer",
-      "--font-render-hinting=medium",
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-extensions",
-      "--disable-background-networking",
-      "--disable-sync",
-      "--metrics-recording-only",
-      "--mute-audio",
-      "--hide-scrollbars",
-      "--print-to-pdf-no-header",
       `--print-to-pdf=${pdfPath}`,
     ];
 
-    // Linux containers commonly need sandbox disabled.
     if (isLinux) {
       args.push(
         "--no-sandbox",
@@ -468,15 +456,28 @@ async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Arra
 
     args.push(fileUrl.href);
 
+    console.log(`[PDF] Running: ${executablePath} ${args.join(" ")}`);
+
     const cmd = new Deno.Command(executablePath, {
       args,
       stdout: "piped",
       stderr: "piped",
     });
 
-    const { code, stderr } = await cmd.output();
+    // Add a 30-second timeout so a stuck process doesn't hang the request forever
+    const process = cmd.spawn();
+    const timer = setTimeout(() => {
+      try { process.kill(); } catch { /* ignore */ }
+    }, 30_000);
+
+    const { code, stderr } = await process.output();
+    clearTimeout(timer);
+
+    const errMsg = new TextDecoder().decode(stderr);
+    if (errMsg.trim()) {
+      console.log(`[PDF] chrome-headless-shell stderr: ${errMsg.slice(0, 500)}`);
+    }
     if (code !== 0) {
-      const errMsg = new TextDecoder().decode(stderr);
       throw new Error(`chrome-headless-shell exited with code ${code}: ${errMsg}`);
     }
 
