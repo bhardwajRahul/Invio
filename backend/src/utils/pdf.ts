@@ -427,7 +427,6 @@ export function buildInvoiceHTML(
 async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Array> {
   const { executablePath } = await resolveChromiumPath();
   const isLinux = Deno.build.os === "linux";
-  const isWindows = Deno.build.os === "windows";
 
   // Write the HTML to a temp file so chrome-headless-shell can load it via file:// URL
   const tmpDir = await Deno.makeTempDir({ prefix: "invio-pdf-" });
@@ -440,8 +439,8 @@ async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Arra
     // Build the file:// URL (forward-slash normalised)
     const fileUrl = new URL(`file:///${htmlPath.replace(/\\/g, "/")}`);
 
+    // chrome-headless-shell is already headless – no --headless flag needed
     const args: string[] = [
-      "--headless",
       "--disable-gpu",
       "--no-pdf-header-footer",
       "--font-render-hinting=medium",
@@ -458,12 +457,13 @@ async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Arra
     ];
 
     // Linux containers commonly need sandbox disabled.
-    const forceNoSandbox = (Deno.env.get("INVIO_CHROME_NO_SANDBOX") || Deno.env.get("INVIO_PUPPETEER_NO_SANDBOX") || "").trim() === "1";
-    if (isLinux || forceNoSandbox) {
-      args.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
-    }
-    if (isWindows) {
-      args.push("--disable-software-rasterizer");
+    if (isLinux) {
+      args.push(
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        `--user-data-dir=${tmpDir}/chrome-profile`,
+      );
     }
 
     args.push(fileUrl.href);
