@@ -183,13 +183,11 @@ export default function EditProductPage(props: PageProps<Data>) {
               </div>
               <textarea
                 name="description"
-                class="textarea textarea-bordered"
+                class="textarea textarea-bordered w-full mt-2"
                 rows={3}
                 data-writable
                 disabled={demoMode}
-              >
-                {p.description || ""}
-              </textarea>
+              >{p.description || ""}</textarea>
             </label>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

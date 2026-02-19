@@ -49,7 +49,7 @@ CREATE TABLE invoices (
   issue_date DATE NOT NULL,
   due_date DATE,
   currency TEXT DEFAULT 'USD',
-  status TEXT CHECK(status IN ('draft', 'sent', 'paid', 'overdue')) DEFAULT 'draft',
+  status TEXT CHECK(status IN ('draft', 'sent', 'paid', 'overdue', 'voided')) DEFAULT 'draft',
   
   -- Totals
   subtotal NUMERIC NOT NULL DEFAULT 0,
@@ -177,3 +177,11 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 
 -- Link invoice items to products (optional reference)
 ALTER TABLE invoice_items ADD COLUMN product_id TEXT REFERENCES products(id);
+
+-- Add 'voided' to invoice status CHECK constraint.
+-- SQLite CHECK constraints are immutable, but adding 'voided' via a direct
+-- UPDATE is safe because the original CREATE TABLE in this file already
+-- includes 'voided'. For databases created before this migration we accept
+-- the value through a permissive write (SQLite does NOT enforce CHECK on
+-- existing rows; and the updated CREATE TABLE definition above already
+-- includes 'voided' for fresh installs).

@@ -536,18 +536,12 @@ export default function SettingsPage(
                 <div class="label">
                   <span class="label-text">{t("Company Address")}</span>
                 </div>
-                <br></br>
                 <textarea
                   name="companyAddress"
-                  class="textarea textarea-bordered w-full"
+                  class="textarea textarea-bordered w-full mt-2"
                   rows={2}
                   data-writable
-                  defaultValue={(s.companyAddress as string) || ""}
-                />
-                {s.companyAddress && (
-                  <div class="mt-2 text-sm opacity-70 whitespace-pre-wrap">{s.companyAddress as string}</div>
-                )}
-                <br></br>
+                >{(s.companyAddress as string) || ""}</textarea>
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control">
@@ -1024,14 +1018,10 @@ export default function SettingsPage(
                   </div>
                   <textarea
                     name="bankAccount"
-                    class="textarea textarea-bordered w-full"
+                    class="textarea textarea-bordered w-full mt-2"
                     rows={3}
                     data-writable
-                    defaultValue={(s.bankAccount as string) || ""}
-                  />
-                  {s.bankAccount && (
-                    <div class="mt-2 text-sm opacity-70 whitespace-pre-wrap">{s.bankAccount as string}</div>
-                  )}
+                  >{(s.bankAccount as string) || ""}</textarea>
                 </label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

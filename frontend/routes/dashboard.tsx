@@ -11,7 +11,7 @@ type Invoice = {
   issueDate?: string | Date;
   updatedAt?: string | Date;
   currency?: string;
-  status: "draft" | "sent" | "paid" | "overdue";
+  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
   total?: number;
 };
 
@@ -67,6 +67,7 @@ export const handler: Handlers<Data> = {
         sent: invoices.filter((i) => i.status === "sent").length,
         paid: invoices.filter((i) => i.status === "paid").length,
         overdue: invoices.filter((i) => i.status === "overdue").length,
+        voided: invoices.filter((i) => i.status === "voided").length,
       };
 
       const recent = invoices
@@ -283,12 +284,15 @@ export default function Dashboard(props: PageProps<Data>) {
                 ? "badge-error"
                 : inv.status === "sent"
                 ? "badge-info"
+                : inv.status === "voided"
+                ? "badge-warning"
                 : "";
               const statusLabels: Record<string, string> = {
                 draft: t("Draft"),
                 sent: t("Sent"),
                 paid: t("Paid"),
                 overdue: t("Overdue"),
+                voided: t("Voided"),
               };
               return (
                 <a
@@ -306,7 +310,7 @@ export default function Dashboard(props: PageProps<Data>) {
                         </div>
                       </div>
                       <span class={`badge badge-sm ${badge}`}>
-                        {statusLabels[inv.status] || inv.status}
+                        {statusLabels[inv.status || ""] || inv.status || ""}
                       </span>
                     </div>
                     <div class="flex justify-between items-center text-xs pt-2 border-t border-base-300">
@@ -353,12 +357,15 @@ export default function Dashboard(props: PageProps<Data>) {
                     ? "badge-error"
                     : inv.status === "sent"
                     ? "badge-info"
+                    : inv.status === "voided"
+                    ? "badge-warning"
                     : "";
                   const statusLabels: Record<string, string> = {
                     draft: t("Draft"),
                     sent: t("Sent"),
                     paid: t("Paid"),
                     overdue: t("Overdue"),
+                    voided: t("Voided"),
                   };
                   return (
                     <tr class="hover" key={inv.id}>
@@ -367,7 +374,7 @@ export default function Dashboard(props: PageProps<Data>) {
                       <td>{date}</td>
                       <td>
                         <span class={`badge ${badge}`}>
-                          {statusLabels[inv.status] || inv.status}
+                          {statusLabels[inv.status || ""] || inv.status || ""}
                         </span>
                       </td>
                       <td class="text-right">{fmtMoney(inv.total || 0)}</td>

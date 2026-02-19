@@ -185,13 +185,11 @@ export default function EditCustomerPage(props: PageProps<Data>) {
               </div>
               <textarea
                 name="address"
-                class="textarea textarea-bordered"
+                class="textarea textarea-bordered w-full mt-2"
                 rows={3}
                 data-writable
                 disabled={demoMode}
-              >
-                {c.address || ""}
-              </textarea>
+              >{c.address || ""}</textarea>
             </label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label class="form-control">

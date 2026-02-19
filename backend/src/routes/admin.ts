@@ -9,6 +9,7 @@ import {
   publishInvoice,
   unpublishInvoice,
   updateInvoice,
+  voidInvoice,
 } from "../controllers/invoices.ts";
 import {
   createTemplate,
@@ -275,10 +276,14 @@ adminRoutes.put("/invoices/:id", async (c) => {
   }
 });
 
-adminRoutes.delete("/invoices/:id", (c) => {
+adminRoutes.delete("/invoices/:id", async (c) => {
   const id = c.req.param("id");
-  deleteInvoice(id);
-  return c.json({ success: true });
+  try {
+    await deleteInvoice(id);
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
 });
 
 adminRoutes.post("/invoices/:id/publish", async (c) => {
@@ -302,6 +307,16 @@ adminRoutes.post("/invoices/:id/duplicate", async (c) => {
   const copy = await duplicateInvoice(id);
   if (!copy) return c.json({ error: "Invoice not found" }, 404);
   return c.json(copy);
+});
+
+adminRoutes.post("/invoices/:id/void", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const result = await voidInvoice(id);
+    return c.json(result);
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
 });
 
 // Template routes

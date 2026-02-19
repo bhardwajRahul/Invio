@@ -3,6 +3,7 @@ import { Layout } from "../../components/Layout.tsx";
 import ConfirmOnSubmit from "../../islands/ConfirmOnSubmit.tsx";
 import CopyPublicLink from "../../islands/CopyPublicLink.tsx";
 import {
+  LuBan,
   LuCheck,
   LuCheckCircle,
   LuCopy,
@@ -48,7 +49,7 @@ type Invoice = {
   issueDate?: string | Date;
   dueDate?: string | Date;
   paymentTerms?: string;
-  status?: "draft" | "sent" | "paid" | "overdue";
+  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
   shareToken?: string;
   taxRate?: number;
   pricesIncludeTax?: boolean;
@@ -190,6 +191,17 @@ export const handler: Handlers<Data> = {
         return new Response(String(e), { status: 500 });
       }
     }
+    if (intent === "void") {
+      try {
+        await backendPost(`/api/v1/invoices/${id}/void`, auth, {});
+        return new Response(null, {
+          status: 303,
+          headers: { Location: `/invoices/${id}` },
+        });
+      } catch (e) {
+        return new Response(String(e), { status: 500 });
+      }
+    }
     return new Response("Unsupported action", { status: 400 });
   },
 };
@@ -218,7 +230,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
   };
   const isOverdue = (() => {
     if (!inv) return false;
-    if (inv.status === "paid") return false;
+    if (inv.status === "paid" || inv.status === "voided") return false;
     const due = inv.dueDate ? new Date(inv.dueDate as string) : null;
     if (!due) return false;
     const today = new Date();
@@ -281,6 +293,8 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               class={`badge ${
                 inv.status === "paid"
                   ? "badge-success"
+                  : inv.status === "voided"
+                  ? "badge-warning"
                   : inv.status === "overdue"
                   ? "badge-error"
                   : inv.status === "sent"
@@ -288,7 +302,9 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                   : ""
               }`}
             >
-              {isOverdue && inv?.status !== "paid" ? t("Overdue") : t(
+              {inv.status === "voided"
+                ? t("Voided")
+                : isOverdue && inv?.status !== "paid" ? t("Overdue") : t(
                 inv?.status === "draft"
                   ? "Draft"
                   : inv?.status === "sent"
@@ -368,7 +384,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     {t("Download XML")}
                   </a>
                 </li>
-                {inv.status !== "draft" && (
+                {(inv.status === "sent" || inv.status === "overdue") && (
                   <li>
                     <button
                       type="submit"
@@ -380,7 +396,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     </button>
                   </li>
                 )}
-                {inv.status !== "sent" && inv.status !== "paid" && (
+                {inv.status === "draft" && (
                   <li>
                     <button
                       type="submit"
@@ -392,52 +408,66 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     </button>
                   </li>
                 )}
-                {inv.status && inv.status !== "draft" && inv.shareToken && (
+                {(inv.status === "sent" || inv.status === "overdue") && (
                   <li>
-                    <a
-                      href={`/public/invoices/${inv.shareToken}`}
-                      target="_blank"
-                      class="flex items-center gap-2"
+                    <button
+                      type="submit"
+                      form={`inv-${inv.id}-void`}
+                      class="flex items-center gap-2 text-warning"
                     >
-                      <LuExternalLink size={16} />
-                      {t("View public link")}
-                    </a>
+                      <LuBan size={16} />
+                      {t("Void Invoice")}
+                    </button>
                   </li>
                 )}
-                <li>
-                  <button
-                    type="submit"
-                    form={`inv-${inv.id}-delete`}
-                    class="flex items-center gap-2 text-error"
-                  >
-                    <LuTrash2 size={16} />
-                    {t("Delete")}
-                  </button>
-                </li>
+                {(inv.status === "draft" || inv.status === "voided") && (
+                  <li>
+                    <button
+                      type="submit"
+                      form={`inv-${inv.id}-delete`}
+                      class="flex items-center gap-2 text-error"
+                    >
+                      <LuTrash2 size={16} />
+                      {t("Delete")}
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
             {/* Hidden forms for menu actions to keep li > button structure for DaisyUI */}
             <form id={`inv-${inv.id}-duplicate`} method="post" class="hidden">
               <input type="hidden" name="intent" value="duplicate" />
             </form>
-            {inv.status !== "draft" && (
+            {(inv.status === "sent" || inv.status === "overdue") && (
               <form id={`inv-${inv.id}-unpublish`} method="post" class="hidden">
                 <input type="hidden" name="intent" value="unpublish" />
               </form>
             )}
-            {inv.status !== "sent" && inv.status !== "paid" && (
+            {inv.status === "draft" && (
               <form id={`inv-${inv.id}-mark-sent`} method="post" class="hidden">
                 <input type="hidden" name="intent" value="mark-sent" />
               </form>
             )}
-            <form
-              id={`inv-${inv.id}-delete`}
-              method="post"
-              class="hidden"
-              data-confirm={t("Delete this invoice? This cannot be undone.")}
-            >
-              <input type="hidden" name="intent" value="delete" />
-            </form>
+            {(inv.status === "sent" || inv.status === "overdue") && (
+              <form
+                id={`inv-${inv.id}-void`}
+                method="post"
+                class="hidden"
+                data-confirm={t("Void this invoice? The invoice will be preserved but marked as voided.")}
+              >
+                <input type="hidden" name="intent" value="void" />
+              </form>
+            )}
+            {(inv.status === "draft" || inv.status === "voided") && (
+              <form
+                id={`inv-${inv.id}-delete`}
+                method="post"
+                class="hidden"
+                data-confirm={t("Delete this invoice? This cannot be undone.")}
+              >
+                <input type="hidden" name="intent" value="delete" />
+              </form>
+            )}
           </div>
         )}
       </div>

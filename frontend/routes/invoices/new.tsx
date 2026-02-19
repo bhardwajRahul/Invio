@@ -146,7 +146,8 @@ export const handler: Handlers<Data> = {
       | "draft"
       | "sent"
       | "paid"
-      | "overdue";
+      | "overdue"
+      | "voided";
     const issueDate = String(
       form.get("issueDate") || new Date().toISOString().slice(0, 10),
     );

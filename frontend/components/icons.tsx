@@ -35,5 +35,6 @@ export {
   UserPlus as LuUserPlus,
   Package as LuPackage,
   PackagePlus as LuPackagePlus,
+  Ban as LuBan,
 } from "lucide-preact";
 

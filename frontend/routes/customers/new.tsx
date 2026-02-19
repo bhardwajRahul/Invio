@@ -156,10 +156,9 @@ export default function NewCustomerPage(props: PageProps<Data>) {
             <div class="label">
               <span class="label-text">{t("Address")}</span>
             </div>
-            <br></br>
             <textarea
               name="address"
-              class="textarea textarea-bordered w-full"
+              class="textarea textarea-bordered w-full mt-2"
               rows={3}
               data-writable
             />

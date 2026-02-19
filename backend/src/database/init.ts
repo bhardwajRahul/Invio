@@ -439,6 +439,69 @@ function ensureSchemaUpgrades(database: DB) {
       } catch { /* ignore */ }
     }
 
+    // Migrate invoices CHECK constraint to include 'voided' status.
+    // SQLite doesn't support ALTER CONSTRAINT, so we check if 'voided' is
+    // already accepted by trying a dummy insert+rollback. If it fails, we
+    // recreate the table with the wider constraint.
+    try {
+      const checkSql = database.query(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='invoices'",
+      );
+      const createSql = checkSql.length > 0 ? String(checkSql[0][0]) : "";
+      if (createSql && !createSql.includes("voided")) {
+        console.log("Migrating invoices table to support 'voided' status…");
+        database.execute("BEGIN TRANSACTION");
+        try {
+          database.execute(`
+            CREATE TABLE invoices_new (
+              id TEXT PRIMARY KEY,
+              invoice_number TEXT UNIQUE NOT NULL,
+              customer_id TEXT REFERENCES customers(id),
+              issue_date DATE NOT NULL,
+              due_date DATE,
+              currency TEXT DEFAULT 'USD',
+              status TEXT CHECK(status IN ('draft','sent','paid','overdue','voided')) DEFAULT 'draft',
+              subtotal NUMERIC NOT NULL DEFAULT 0,
+              discount_amount NUMERIC DEFAULT 0,
+              discount_percentage NUMERIC DEFAULT 0,
+              tax_rate NUMERIC DEFAULT 0,
+              tax_amount NUMERIC DEFAULT 0,
+              total NUMERIC NOT NULL,
+              payment_terms TEXT,
+              notes TEXT,
+              share_token TEXT UNIQUE NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              prices_include_tax BOOLEAN DEFAULT 0,
+              rounding_mode TEXT DEFAULT 'line',
+              locale TEXT
+            )
+          `);
+          // Copy all existing rows preserving every column that exists
+          const existingCols = (database.query("PRAGMA table_info(invoices)") as unknown[][] ).map((r) => String(r[1]));
+          const newCols = (database.query("PRAGMA table_info(invoices_new)") as unknown[][]).map((r) => String(r[1]));
+          const commonCols = existingCols.filter((c) => newCols.includes(c));
+          const colList = commonCols.join(", ");
+          database.execute(`INSERT INTO invoices_new (${colList}) SELECT ${colList} FROM invoices`);
+          database.execute("DROP TABLE invoices");
+          database.execute("ALTER TABLE invoices_new RENAME TO invoices");
+          // Recreate indexes
+          database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number)");
+          database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id)");
+          database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)");
+          database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_share_token ON invoices(share_token)");
+          database.execute("COMMIT");
+          console.log("✅ Migrated invoices table to support 'voided' status");
+        } catch (migErr) {
+          database.execute("ROLLBACK");
+          throw migErr;
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn("Could not migrate invoices CHECK constraint:", msg);
+    }
+
     // Ensure invoice_items.product_id exists
     const itemCols = database.query(
       "PRAGMA table_info(invoice_items)",

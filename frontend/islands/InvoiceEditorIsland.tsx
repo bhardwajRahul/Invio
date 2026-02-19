@@ -43,7 +43,7 @@ export type InvoiceEditorProps = {
   selectedCustomerId?: string;
   customerName?: string;
   currency?: string;
-  status?: "draft" | "sent" | "paid" | "overdue";
+  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
   invoiceNumber?: string;
   invoiceNumberPrefill?: string;
   taxRate?: number;
@@ -151,7 +151,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
   );
   const [currency, setCurrency] = useState(props.currency ?? "USD");
   const [status, setStatus] = useState<
-    "draft" | "sent" | "paid" | "overdue"
+    "draft" | "sent" | "paid" | "overdue" | "voided"
   >(props.status ?? "draft");
   const [issueDate, setIssueDate] = useState(
     props.issueDate ??
@@ -621,7 +621,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             onInput={(event) =>
               setStatus(
                 (event.currentTarget as HTMLSelectElement)
-                  .value as "draft" | "sent" | "paid" | "overdue",
+                  .value as "draft" | "sent" | "paid" | "overdue" | "voided",
               )}
             data-writable
             disabled={isDemo}
@@ -630,6 +630,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
             <option value="sent">{t("Sent")}</option>
             <option value="paid">{t("Paid")}</option>
             <option value="overdue">{t("Overdue")}</option>
+            <option value="voided">{t("Voided")}</option>
           </select>
         </div>
       </div>
@@ -696,18 +697,16 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
               <div class="label">
                 <span class="label-text">{t("Address")}</span>
               </div>
-              <br></br>
               <textarea
                 name="inlineCustomerAddress"
                 value={inlineCustomer.address}
                 onInput={handleInlineCustomerChange("address")}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full mt-2"
                 rows={3}
                 data-writable
                 disabled={isDemo}
                 placeholder={t("Address placeholder")}
               />
-              <br></br>
             </label>
             <label class="form-control">
               <div class="label">
@@ -1354,7 +1353,7 @@ export default function InvoiceEditorIsland(props: InvoiceEditorProps) {
           <textarea
             name="notes"
             value={notes}
-            class="textarea textarea-bordered"
+            class="textarea textarea-bordered mt-2"
             rows={3}
             onInput={(event) =>
               setNotes((event.currentTarget as HTMLTextAreaElement).value)}

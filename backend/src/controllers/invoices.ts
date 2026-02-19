@@ -659,6 +659,31 @@ export const updateInvoice = async (
   const db = getDatabase();
 
   // Immutability: prevent structural changes once sent/paid
+  // Voided invoices are completely locked — only deletion is allowed
+  if (existing.status === "voided") {
+    throw new Error(
+      "Voided invoices cannot be modified.",
+    );
+  }
+
+  // Validate status transitions
+  if (data.status) {
+    const from = existing.status;
+    const to = data.status;
+    const allowed: Record<string, string[]> = {
+      draft: ["sent"],
+      sent: ["paid"],
+      overdue: ["paid"],
+      paid: [],
+      voided: [],
+    };
+    if (!(allowed[from] || []).includes(to)) {
+      throw new Error(
+        `Cannot change status from '${from}' to '${to}'.`,
+      );
+    }
+  }
+
   const isIssued = existing.status !== "draft";
   if (isIssued) {
     const forbidden = [
@@ -940,7 +965,17 @@ export const updateInvoice = async (
   return await getInvoiceById(id);
 };
 
-export const deleteInvoice = (id: string): boolean => {
+export const deleteInvoice = async (id: string): Promise<boolean> => {
+  const existing = await getInvoiceById(id);
+  if (!existing) throw new Error("Invoice not found");
+
+  // Only draft invoices can be deleted; issued invoices must be voided for audit trail
+  if (existing.status !== "draft" && existing.status !== "voided") {
+    throw new Error(
+      "Only draft or voided invoices can be deleted. Void the invoice first.",
+    );
+  }
+
   const db = getDatabase();
 
   // Delete items first (CASCADE should handle this, but being explicit)
@@ -1077,16 +1112,50 @@ export const unpublishInvoice = async (
   const existing = await getInvoiceById(id);
   if (!existing) throw new Error("Invoice not found");
 
+  // Only sent or overdue invoices can be unpublished
+  if (existing.status !== "sent" && existing.status !== "overdue") {
+    throw new Error(
+      "Only sent or overdue invoices can be unpublished.",
+    );
+  }
+
   const db = getDatabase();
   const newToken = generateShareToken();
   const now = new Date();
-  // Rotate share token and set status back to 'draft' to reflect unpublished state
+  // Rotate share token to invalidate the public link; keep the invoice status intact
   db.query(
-    "UPDATE invoices SET share_token = ?, status = 'draft', updated_at = ? WHERE id = ?",
+    "UPDATE invoices SET share_token = ?, updated_at = ? WHERE id = ?",
     [newToken, now, id],
   );
 
   return { shareToken: newToken };
+};
+
+export const voidInvoice = async (
+  id: string,
+): Promise<{ success: true }> => {
+  const existing = await getInvoiceById(id);
+  if (!existing) throw new Error("Invoice not found");
+  if (existing.status === "voided") {
+    throw new Error("Invoice is already voided");
+  }
+  if (existing.status === "draft") {
+    throw new Error("Draft invoices cannot be voided. Delete them instead.");
+  }
+  if (existing.status === "paid") {
+    throw new Error(
+      "Paid invoices cannot be voided. Issue a credit note instead.",
+    );
+  }
+
+  const db = getDatabase();
+  const now = new Date();
+  db.query(
+    "UPDATE invoices SET status = 'voided', updated_at = ? WHERE id = ?",
+    [now, id],
+  );
+
+  return { success: true };
 };
 
 // Helper functions
@@ -1098,7 +1167,7 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     issueDate: new Date(row[3] as string),
     dueDate: row[4] ? new Date(row[4] as string) : undefined,
     currency: row[5] as string,
-    status: row[6] as "draft" | "sent" | "paid" | "overdue",
+    status: row[6] as "draft" | "sent" | "paid" | "overdue" | "voided",
     subtotal: row[7] as number,
     discountAmount: row[8] as number,
     discountPercentage: row[9] as number,
@@ -1119,7 +1188,7 @@ function applyDerivedOverdue<
   T extends { status: Invoice["status"]; dueDate?: Date },
 >(inv: T): T {
   if (!inv) return inv;
-  if (inv.status === "paid") return inv;
+  if (inv.status === "paid" || inv.status === "voided") return inv;
   if (!inv.dueDate) return inv;
   const today = new Date();
   const dd = new Date(

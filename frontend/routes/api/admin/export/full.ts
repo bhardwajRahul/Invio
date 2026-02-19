@@ -32,7 +32,7 @@ export const handler: Handlers = {
       const body = await resp.text().catch(() => "");
       return new Response(body || `Backend error ${resp.status}`, {
         status: resp.status,
-        headers: {
+        headers: { 
           "content-type": resp.headers.get("content-type") || "text/plain",
         },
       });

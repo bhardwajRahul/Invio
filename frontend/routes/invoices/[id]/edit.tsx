@@ -45,7 +45,7 @@ type Invoice = {
   roundingMode?: string;
   notes?: string;
   paymentTerms?: string;
-  status?: "draft" | "sent" | "paid" | "overdue";
+  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
   taxes?: Array<{ percent: number; taxableAmount: number; taxAmount: number }>;
 };
 type Data = {
@@ -127,7 +127,8 @@ export const handler: Handlers<Data> = {
       | "draft"
       | "sent"
       | "paid"
-      | "overdue";
+      | "overdue"
+      | "voided";
     const taxRate = Number(form.get("taxRate") || 0) || 0;
     const invoiceTaxDefinitionId = String(form.get("taxDefinitionId") || "")
       .trim();

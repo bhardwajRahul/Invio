@@ -364,12 +364,10 @@ export default function SettingsPage(
                 </div>
                 <textarea
                   name="companyAddress"
-                  class="textarea textarea-bordered"
+                  class="textarea textarea-bordered w-full mt-2"
                   rows={2}
                   data-writable
-                >
-                  {(s.companyAddress as string) || ""}
-                </textarea>
+                >{(s.companyAddress as string) || ""}</textarea>
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <label class="form-control">
@@ -666,11 +664,11 @@ export default function SettingsPage(
                   <div class="label">
                     <span class="label-text">Bank Account</span>
                   </div>
-                  <input
+                  <textarea
                     name="bankAccount"
-                    value={(s.bankAccount as string) || ""}
-                    class="input input-bordered w-full"
-                  />
+                    class="textarea textarea-bordered w-full mt-2"
+                    rows={3}
+                  >{(s.bankAccount as string) || ""}</textarea>
                 </label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

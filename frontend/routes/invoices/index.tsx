@@ -12,7 +12,7 @@ type Invoice = {
   customer?: { name?: string };
   issue_date?: string;
   total?: number;
-  status?: "draft" | "sent" | "paid" | "overdue";
+  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
   currency?: string;
 };
 type Data = {
@@ -116,6 +116,8 @@ export default function Invoices(props: PageProps<Data>) {
   const statusBadge = (st?: Invoice["status"]) => {
     const cls = st === "paid"
       ? "badge-success"
+      : st === "voided"
+      ? "badge-warning"
       : st === "overdue"
       ? "badge-error"
       : st === "sent"
@@ -125,6 +127,8 @@ export default function Invoices(props: PageProps<Data>) {
       ? t(
         st === "paid"
           ? "Paid"
+          : st === "voided"
+          ? "Voided"
           : st === "overdue"
           ? "Overdue"
           : st === "sent"
@@ -193,6 +197,7 @@ export default function Invoices(props: PageProps<Data>) {
             { v: "sent", l: t("Sent") },
             { v: "paid", l: t("Paid") },
             { v: "overdue", l: t("Overdue") },
+            { v: "voided", l: t("Voided") },
           ].map(({ v, l }) => (
             <a
               href={qsFor(v)}
