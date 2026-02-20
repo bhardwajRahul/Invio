@@ -258,7 +258,14 @@ adminRoutes.get("/invoices/:id", (c) => {
   if (!invoice) {
     return c.json({ error: "Invoice not found" }, 404);
   }
-  return c.json(invoice);
+  // Add snake_case date strings for UI compatibility (same as list endpoint)
+  const issue_date = invoice.issueDate
+    ? new Date(invoice.issueDate).toISOString().slice(0, 10)
+    : undefined;
+  const due_date = invoice.dueDate
+    ? new Date(invoice.dueDate).toISOString().slice(0, 10)
+    : undefined;
+  return c.json({ ...invoice, issue_date, due_date });
 });
 
 adminRoutes.put("/invoices/:id", async (c) => {

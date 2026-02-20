@@ -667,7 +667,7 @@ export const updateInvoice = async (
   }
 
   // Validate status transitions
-  if (data.status) {
+  if (data.status && data.status !== existing.status) {
     const from = existing.status;
     const to = data.status;
     const allowed: Record<string, string[]> = {
