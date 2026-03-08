@@ -3,6 +3,8 @@
 **/invio.db-journal
 **/invio.db-wal
 **/invio.db-shm
+# Backups (any folder)
+**/invio_backup**.db
 
 # node_modules in any folder
 **/node_modules

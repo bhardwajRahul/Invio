@@ -6,21 +6,31 @@ import {
   LuPackage,
   LuReceiptText,
   LuSettings,
+  LuUserCog,
   LuUsers,
 } from "./icons.tsx";
 import DemoModeDisabler from "../islands/DemoModeDisabler.tsx";
 import { useTranslations } from "../i18n/context.tsx";
+import { useAuthUser, useHasPermission } from "../utils/auth.tsx";
 
 export function Layout(
   props: {
     children: ComponentChildren;
     authed?: boolean;
+    isAdmin?: boolean;
     demoMode?: boolean;
     path?: string;
     wide?: boolean;
   },
 ) {
   const { t } = useTranslations();
+  // Use context-based user if available, fall back to prop
+  const authUser = useAuthUser();
+  const isAdmin = props.isAdmin ?? authUser?.isAdmin ?? false;
+  const canViewInvoices = useHasPermission("invoices", "read");
+  const canViewProducts = useHasPermission("products", "read");
+  const canViewCustomers = useHasPermission("customers", "read");
+  const canViewSettings = useHasPermission("settings", "read");
   return (
     <div class="min-h-screen bg-base-200">
       <div
@@ -61,30 +71,46 @@ export function Layout(
                     {t("Dashboard")}
                   </a>
                 </li>
+                {canViewInvoices && (
                 <li>
                   <a href="/invoices">
                     <LuReceiptText size={16} />
                     {t("Invoices")}
                   </a>
                 </li>
+                )}
+                {canViewProducts && (
                 <li>
                   <a href="/products">
                     <LuPackage size={16} />
                     {t("Products")}
                   </a>
                 </li>
+                )}
+                {canViewCustomers && (
                 <li>
                   <a href="/customers">
                     <LuUsers size={16} />
                     {t("Customers")}
                   </a>
                 </li>
+                )}
+                {canViewSettings && (
                 <li>
                   <a href="/settings">
                     <LuSettings size={16} />
                     {t("Settings")}
                   </a>
                 </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <a href="/users">
+                      <LuUserCog size={16} />
+                      {t("Users")}
+                    </a>
+                  </li>
+                )}
                 <li>
                   <a href="/logout">
                     <LuLogOut size={16} />
@@ -114,7 +140,7 @@ export function Layout(
                 </div>
                 <ul
                   tabIndex={0}
-                  class="menu dropdown-content bg-base-100 rounded-box z-[1] mt-2 w-52 p-2 shadow"
+                  class="menu dropdown-content bg-base-100 rounded-box z-1 mt-2 w-52 p-2 shadow"
                 >
                   <li>
                     <a href="/dashboard">
@@ -122,30 +148,46 @@ export function Layout(
                       {t("Dashboard")}
                     </a>
                   </li>
+                  {canViewInvoices && (
                   <li>
                     <a href="/invoices">
                       <LuReceiptText size={16} />
                       {t("Invoices")}
                     </a>
                   </li>
+                  )}
+                  {canViewProducts && (
                   <li>
                     <a href="/products">
                       <LuPackage size={16} />
                       {t("Products")}
                     </a>
                   </li>
+                  )}
+                  {canViewCustomers && (
                   <li>
                     <a href="/customers">
                       <LuUsers size={16} />
                       {t("Customers")}
                     </a>
                   </li>
+                  )}
+                  {canViewSettings && (
                   <li>
                     <a href="/settings">
                       <LuSettings size={16} />
                       {t("Settings")}
                     </a>
                   </li>
+                  )}
+                  {isAdmin && (
+                    <li>
+                      <a href="/users">
+                        <LuUserCog size={16} />
+                        {t("Users")}
+                      </a>
+                    </li>
+                  )}
                   <li>
                     <a href="/logout">
                       <LuLogOut size={16} />

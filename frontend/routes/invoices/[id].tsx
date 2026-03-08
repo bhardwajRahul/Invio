@@ -27,6 +27,7 @@ import {
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { useHasPermission } from "../../utils/auth.tsx";
 import { Handlers } from "fresh/compat";
 
 type Invoice = {
@@ -228,6 +229,10 @@ export default function InvoiceDetail(props: PageProps<Data>) {
     }
     return `${year}-${month}-${day}`;
   };
+  const canUpdate = useHasPermission("invoices", "update");
+  const canDelete = useHasPermission("invoices", "delete");
+  const canPublish = useHasPermission("invoices", "publish");
+  const canVoid = useHasPermission("invoices", "void");
   const isOverdue = (() => {
     if (!inv) return false;
     if (inv.status === "paid" || inv.status === "voided") return false;
@@ -318,14 +323,14 @@ export default function InvoiceDetail(props: PageProps<Data>) {
         </div>
         {inv && (
           <div class="flex items-center gap-2">
-            {(inv.status === "draft" && !isOverdue) && (
+            {(inv.status === "draft" && !isOverdue) && canUpdate && (
               <a href={`/invoices/${inv.id}/edit`} class="btn btn-sm">
                 <LuPencil size={16} />
                 {t("Edit")}
               </a>
             )}
             {/* Contextual primary action */}
-            {inv.status === "draft" && (
+            {inv.status === "draft" && canPublish && (
               <form method="post">
                 <input type="hidden" name="intent" value="publish" />
                 <button
@@ -338,7 +343,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                 </button>
               </form>
             )}
-            {(inv.status === "sent" || inv.status === "overdue") && (
+            {(inv.status === "sent" || inv.status === "overdue") && canUpdate && (
               <form method="post">
                 <input type="hidden" name="intent" value="mark-paid" />
                 <button
@@ -359,7 +364,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
               </div>
               <ul
                 tabIndex={0}
-                class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-2 w-56 p-2 shadow"
+                class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-2 w-56 p-2 shadow"
               >
                 <li>
                   <button
@@ -384,7 +389,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     {t("Download XML")}
                   </a>
                 </li>
-                {(inv.status === "sent" || inv.status === "overdue") && (
+                {(inv.status === "sent" || inv.status === "overdue") && canPublish && (
                   <li>
                     <button
                       type="submit"
@@ -396,7 +401,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     </button>
                   </li>
                 )}
-                {inv.status === "draft" && (
+                {inv.status === "draft" && canUpdate && (
                   <li>
                     <button
                       type="submit"
@@ -408,7 +413,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     </button>
                   </li>
                 )}
-                {(inv.status === "sent" || inv.status === "overdue") && (
+                {(inv.status === "sent" || inv.status === "overdue") && canVoid && (
                   <li>
                     <button
                       type="submit"
@@ -420,7 +425,7 @@ export default function InvoiceDetail(props: PageProps<Data>) {
                     </button>
                   </li>
                 )}
-                {(inv.status === "draft" || inv.status === "voided") && (
+                {(inv.status === "draft" || inv.status === "voided") && canDelete && (
                   <li>
                     <button
                       type="submit"

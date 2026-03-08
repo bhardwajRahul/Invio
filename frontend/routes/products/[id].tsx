@@ -10,6 +10,7 @@ import {
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { useHasPermission } from "../../utils/auth.tsx";
 import { Handlers } from "fresh/compat";
 
 type Product = {
@@ -151,6 +152,8 @@ export default function ProductDetail(props: PageProps<Data>) {
   const demoMode = settings.demoMode === "true";
   const usedInInvoices = props.data.usedInInvoices ?? false;
   const taxDef = props.data.taxDefinition;
+  const canUpdate = useHasPermission("products", "update");
+  const canDelete = useHasPermission("products", "delete");
 
   const unitLabels: Record<string, string> = {
     piece: t("Piece"),
@@ -182,11 +185,13 @@ export default function ProductDetail(props: PageProps<Data>) {
         </div>
         {p && (
           <div class="flex gap-2 flex-wrap">
-            <a href={`/products/${p.id}/edit`} class="btn btn-sm">
-              <LuPencil size={16} />
-              {t("Edit")}
-            </a>
-            {!p.isActive && (
+            {canUpdate && (
+              <a href={`/products/${p.id}/edit`} class="btn btn-sm">
+                <LuPencil size={16} />
+                {t("Edit")}
+              </a>
+            )}
+            {!p.isActive && canUpdate && (
               <form method="post">
                 <input type="hidden" name="intent" value="reactivate" />
                 <button
@@ -198,7 +203,7 @@ export default function ProductDetail(props: PageProps<Data>) {
                 </button>
               </form>
             )}
-            {p.isActive && (
+            {p.isActive && canDelete && (
               <form
                 method="post"
                 data-confirm={usedInInvoices

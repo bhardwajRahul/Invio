@@ -37,7 +37,7 @@ try {
 }
 
 // Initialize the database
-initDatabase();
+await initDatabase();
 
 await logChromiumAvailability();
 
@@ -51,12 +51,12 @@ try {
       (Deno.env.get("DEMO_RESET_ON_START") || "true").toLowerCase() !== "false";
     if (initial) {
       // Perform a reset at startup to ensure a pristine state
-      resetDatabaseFromDemo();
+      await resetDatabaseFromDemo();
     }
     const ms = Math.max(1, Math.floor(hours * 60 * 60 * 1000));
-    setInterval(() => {
+    setInterval(async () => {
       try {
-        resetDatabaseFromDemo();
+        await resetDatabaseFromDemo();
       } catch (e) {
         console.error("Periodic demo reset failed:", e);
       }

@@ -8,6 +8,7 @@ import {
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { hasPermission } from "../_middleware.ts";
 import { Handlers } from "fresh/compat";
 
 type TaxDefinition = {
@@ -37,6 +38,13 @@ export const handler: Handlers<Data> = {
       return new Response(null, {
         status: 303,
         headers: { Location: "/login" },
+      });
+    }
+    // Check create permission
+    if (!hasPermission((ctx.state as Record<string, unknown>)?.user as import("../_middleware.ts").AuthUser | null, "products", "create")) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/products" },
       });
     }
     try {

@@ -2,7 +2,9 @@ import { PageProps } from "fresh";
 import { Layout } from "../components/Layout.tsx";
 import { backendGet, getAuthHeaderFromCookie } from "../utils/backend.ts";
 import { useTranslations } from "../i18n/context.tsx";
+import { useHasPermission } from "../utils/auth.tsx";
 import { Handlers } from "fresh/compat";
+import { LuShieldOff } from "../components/icons.tsx";
 
 type Invoice = {
   id: string;
@@ -44,9 +46,22 @@ export const handler: Handlers<Data> = {
       });
     }
     try {
+      // Check permissions from state (set by _middleware.ts)
+      const user = (ctx.state as Record<string, unknown>)?.user as { isAdmin?: boolean; permissions?: Array<{ resource: string; action: string }> } | null;
+      const canViewInvoices = !user || user.isAdmin || user.permissions?.some(
+        (p) => p.resource === "invoices" && p.action === "read",
+      );
+      const canViewCustomers = !user || user.isAdmin || user.permissions?.some(
+        (p) => p.resource === "customers" && p.action === "read",
+      );
+
       const [invoices, customers, settings] = await Promise.all([
-        backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>,
-        backendGet("/api/v1/customers", auth) as Promise<unknown[]>,
+        canViewInvoices
+          ? backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>
+          : Promise.resolve([] as Invoice[]),
+        canViewCustomers
+          ? backendGet("/api/v1/customers", auth) as Promise<unknown[]>
+          : Promise.resolve([] as unknown[]),
         backendGet("/api/v1/settings", auth).catch(() => ({})) as Promise<
           Record<string, unknown>
         >,
@@ -116,6 +131,8 @@ export const handler: Handlers<Data> = {
 
 export default function Dashboard(props: PageProps<Data>) {
   const { t, numberFormat } = useTranslations();
+  const canViewInvoices = useHasPermission("invoices", "read");
+  const canViewCustomers = useHasPermission("customers", "read");
   const fmtMoney = (n: number) => {
     const cur = props.data.money?.currency || "USD";
     try {
@@ -138,6 +155,34 @@ export default function Dashboard(props: PageProps<Data>) {
       {props.data.error && (
         <div class="alert alert-error mb-4">
           <span>{props.data.error}</span>
+        </div>
+      )}
+
+      {/* Permission notices */}
+      {!canViewInvoices && (
+        <div class="card bg-base-100 border border-base-300 rounded-box mb-4">
+          <div class="card-body p-6 flex flex-row items-center gap-4">
+            <LuShieldOff size={24} class="opacity-50 shrink-0" />
+            <div>
+              <div class="font-semibold">{t("Invoice data hidden")}</div>
+              <div class="text-sm opacity-70">
+                {t("You do not have permission to view invoices. Contact an administrator to request access.")}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {!canViewCustomers && (
+        <div class="card bg-base-100 border border-base-300 rounded-box mb-4">
+          <div class="card-body p-6 flex flex-row items-center gap-4">
+            <LuShieldOff size={24} class="opacity-50 shrink-0" />
+            <div>
+              <div class="font-semibold">{t("Customer data hidden")}</div>
+              <div class="text-sm opacity-70">
+                {t("You do not have permission to view customers. Contact an administrator to request access.")}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

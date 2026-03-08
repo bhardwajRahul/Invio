@@ -9,6 +9,7 @@ import {
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { hasPermission } from "../_middleware.ts";
 import { Handlers } from "fresh/compat";
 
 type Customer = { id: string; name: string };
@@ -62,6 +63,13 @@ export const handler: Handlers<Data> = {
       return new Response(null, {
         status: 303,
         headers: { Location: "/login" },
+      });
+    }
+    // Check create permission
+    if (!hasPermission(ctx.state.user, "invoices", "create")) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/invoices" },
       });
     }
     try {

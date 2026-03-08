@@ -1,11 +1,13 @@
 import { Head } from "fresh/runtime";
 import { LocalizationProvider } from "../i18n/context.tsx";
 import { DEFAULT_LOCALIZATION } from "../i18n/mod.ts";
+import { AuthUserProvider } from "../utils/auth.tsx";
 import type { AppState } from "./_middleware.ts";
 import { AppProps } from "fresh/compat";
 
 export default function App({ Component, state }: AppProps<unknown, AppState>) {
   const localization = state?.localization ?? DEFAULT_LOCALIZATION;
+  const user = state?.user ?? null;
   return (
     <html 
       lang={localization.locale}
@@ -39,9 +41,11 @@ export default function App({ Component, state }: AppProps<unknown, AppState>) {
         </style>
       </Head>
       <body class="min-h-screen bg-base-200 text-base-content">
-        <LocalizationProvider value={localization}>
-          <Component />
-        </LocalizationProvider>
+        <AuthUserProvider value={user}>
+          <LocalizationProvider value={localization}>
+            <Component />
+          </LocalizationProvider>
+        </AuthUserProvider>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@ import { Layout } from "../../components/Layout.tsx";
 import { LuUserPlus } from "../../components/icons.tsx";
 import { backendPost, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { hasPermission } from "../_middleware.ts";
 import { Handlers } from "fresh/compat";
 
 type Data = { authed: boolean; error?: string };
@@ -17,6 +18,13 @@ export const handler: Handlers<Data> = {
       return new Response(null, {
         status: 303,
         headers: { Location: "/login" },
+      });
+    }
+    // Check create permission
+    if (!hasPermission((ctx.state as Record<string, unknown>)?.user as import("../_middleware.ts").AuthUser | null, "customers", "create")) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/customers" },
       });
     }
     return { data: { authed: true } };

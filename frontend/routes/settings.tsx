@@ -31,6 +31,8 @@ import {
   getAuthHeaderFromCookie,
 } from "../utils/backend.ts";
 import { useTranslations } from "../i18n/context.tsx";
+import { useHasPermission } from "../utils/auth.tsx";
+import { hasPermission } from "./_middleware.ts";
 import { Handlers } from "fresh/compat";
 
 type Settings = Record<string, unknown> & {
@@ -90,6 +92,13 @@ export const handler: Handlers<Data & { demoMode: boolean }> = {
       return new Response(null, {
         status: 303,
         headers: { Location: "/login" },
+      });
+    }
+    // Block access if user lacks settings:read permission
+    if (!hasPermission((ctx.state as Record<string, unknown>)?.user as import("./_middleware.ts").AuthUser | null, "settings", "read")) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/dashboard" },
       });
     }
     try {
@@ -283,6 +292,7 @@ export default function SettingsPage(
   props: PageProps<Data & { demoMode: boolean }>,
 ) {
   const { t } = useTranslations();
+  const canUpdateSettings = useHasPermission("settings", "update");
   const s = props.data.settings ?? {} as Settings;
   const templates = props.data.templates ?? [] as Template[];
   const selectedTemplateId = (s.templateId as string) ||
@@ -504,6 +514,12 @@ export default function SettingsPage(
         </aside>
 
         <section class="space-y-4">
+          {!canUpdateSettings && (
+            <div class="alert alert-warning mb-2">
+              <LuAlertTriangle size={16} />
+              <span>{t("You do not have permission to modify settings.")}</span>
+            </div>
+          )}
           {section === "company" && (
             <form method="post" class="space-y-4" data-writable>
               <h2 class="text-xl font-semibold">{t("Company Information")}</h2>

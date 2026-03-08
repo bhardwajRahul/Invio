@@ -26,8 +26,53 @@ function lucidePreactFix(): Plugin {
   };
 }
 
+/**
+ * @preact/signals@2.5.1 has a bug in dist/signals.module.js (the "browser"
+ * export): it references an undeclared variable `r` where it should reference
+ * `Fragment` from preact.  We patch the import to include Fragment.
+ */
+function preactSignalsFix(): Plugin {
+  return {
+    name: "preact-signals-fix",
+    enforce: "pre",
+    transform(code, id) {
+      if (
+        id.includes("@preact") &&
+        id.includes("signals") &&
+        id.includes("signals.module.js")
+      ) {
+        // The file imports from "preact" but is missing Fragment.
+        // Add Fragment to the existing preact import.
+        if (
+          !code.includes("Fragment") &&
+          code.includes('from "preact"') ||
+          code.includes("from 'preact'")
+        ) {
+          const patched = code.replace(
+            /import\s*\{([^}]*)\}\s*from\s*["']preact["']/,
+            (match, imports) => {
+              if (imports.includes("Fragment")) return match;
+              return `import {${imports}, Fragment } from "preact"`;
+            },
+          );
+          // Also replace the bare `r` reference with `Fragment`
+          // In the minified source: `if (n.type !== r)` where n is vnode
+          const final = patched.replace(
+            /\.type\s*!==\s*r\b/,
+            ".type !== Fragment",
+          );
+          if (final !== code) {
+            return { code: final, map: null };
+          }
+        }
+      }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
+    preactSignalsFix(),
     lucidePreactFix(),
     fresh(),
     tailwindcss(),

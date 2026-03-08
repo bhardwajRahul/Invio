@@ -4,6 +4,8 @@ import { LuPlus } from "../../components/icons.tsx";
 import { formatMoney, getNumberFormat } from "../../utils/format.ts";
 import { backendGet, getAuthHeaderFromCookie } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { useHasPermission } from "../../utils/auth.tsx";
+import { hasPermission } from "../_middleware.ts";
 import { Handlers } from "fresh/compat";
 
 type Invoice = {
@@ -36,6 +38,12 @@ export const handler: Handlers<Data> = {
       return new Response(null, {
         status: 303,
         headers: { Location: "/login" },
+      });
+    }
+    if (!hasPermission(ctx.state.user, "invoices", "read")) {
+      return new Response(null, {
+        status: 303,
+        headers: { Location: "/dashboard" },
       });
     }
     try {
@@ -148,10 +156,12 @@ export default function Invoices(props: PageProps<Data>) {
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
         <h1 class="text-2xl font-semibold">{t("Invoices")}</h1>
+        {useHasPermission("invoices", "create") && (
         <a href="/invoices/new" class="btn btn-sm btn-primary w-full sm:w-auto">
           <LuPlus size={16} />
           {t("New Invoice")}
         </a>
+        )}
       </div>
       {props.data.error && (
         <div class="alert alert-error mb-3">

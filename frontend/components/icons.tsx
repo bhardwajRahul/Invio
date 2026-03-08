@@ -36,5 +36,7 @@ export {
   Package as LuPackage,
   PackagePlus as LuPackagePlus,
   Ban as LuBan,
+  UserCog as LuUserCog,
+  Shield as LuShield,
 } from "lucide-preact";
 

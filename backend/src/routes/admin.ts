@@ -74,7 +74,15 @@ import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
 import { getDatabase } from "../database/init.ts";
 import { isDemoMode } from "../utils/env.ts";
-import { requireAdminAuth } from "../middleware/auth.ts";
+import { requireAdminAuth, requirePermission, requireAdmin, getAuthUser } from "../middleware/auth.ts";
+import {
+  listUsers,
+  getUserById as getUserByIdCtrl,
+  createUser as createUserCtrl,
+  updateUser as updateUserCtrl,
+  deleteUser as deleteUserCtrl,
+} from "../controllers/users.ts";
+import { RESOURCES, RESOURCE_ACTIONS } from "../types/index.ts";
 
 const adminRoutes = new Hono();
 
@@ -176,6 +184,16 @@ adminRoutes.use(
 );
 
 adminRoutes.use(
+  "/product-categories/*",
+  requireAdminAuth,
+);
+
+adminRoutes.use(
+  "/product-units/*",
+  requireAdminAuth,
+);
+
+adminRoutes.use(
   "/settings",
   requireAdminAuth,
 );
@@ -198,10 +216,10 @@ adminRoutes.use(
 );
 
 // Demo helper: trigger an immediate reset (only effective when DEMO_MODE=true)
-adminRoutes.post("/admin/demo/reset", (c) => {
+adminRoutes.post("/admin/demo/reset", async (c) => {
   if (!DEMO_MODE) return c.json({ error: "Demo mode is not enabled" }, 400);
   try {
-    resetDatabaseFromDemo();
+    await resetDatabaseFromDemo();
     return c.json({ ok: true });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -209,7 +227,7 @@ adminRoutes.post("/admin/demo/reset", (c) => {
 });
 
 // Invoice routes
-adminRoutes.get("/invoices/next-number", (c) => {
+adminRoutes.get("/invoices/next-number", requirePermission("invoices", "create"), (c) => {
   try {
     const next = getNextInvoiceNumber();
     return c.json({ next });
@@ -217,7 +235,7 @@ adminRoutes.get("/invoices/next-number", (c) => {
     return c.json({ error: String(e) }, 500);
   }
 });
-adminRoutes.post("/invoices", async (c) => {
+adminRoutes.post("/invoices", requirePermission("invoices", "create"), async (c) => {
   const data = await c.req.json();
   try {
     const invoice = createInvoice(data);
@@ -231,7 +249,7 @@ adminRoutes.post("/invoices", async (c) => {
   }
 });
 
-adminRoutes.get("/invoices", (c) => {
+adminRoutes.get("/invoices", requirePermission("invoices", "read"), (c) => {
   const invoices = getInvoices();
   // Enrich with customer name and snake_case issue_date for UI compatibility
   const list = invoices.map((inv) => {
@@ -252,7 +270,7 @@ adminRoutes.get("/invoices", (c) => {
   return c.json(list);
 });
 
-adminRoutes.get("/invoices/:id", (c) => {
+adminRoutes.get("/invoices/:id", requirePermission("invoices", "read"), (c) => {
   const id = c.req.param("id");
   const invoice = getInvoiceById(id);
   if (!invoice) {
@@ -268,7 +286,7 @@ adminRoutes.get("/invoices/:id", (c) => {
   return c.json({ ...invoice, issue_date, due_date });
 });
 
-adminRoutes.put("/invoices/:id", async (c) => {
+adminRoutes.put("/invoices/:id", requirePermission("invoices", "update"), async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
   try {
@@ -283,7 +301,7 @@ adminRoutes.put("/invoices/:id", async (c) => {
   }
 });
 
-adminRoutes.delete("/invoices/:id", async (c) => {
+adminRoutes.delete("/invoices/:id", requirePermission("invoices", "delete"), async (c) => {
   const id = c.req.param("id");
   try {
     await deleteInvoice(id);
@@ -293,7 +311,7 @@ adminRoutes.delete("/invoices/:id", async (c) => {
   }
 });
 
-adminRoutes.post("/invoices/:id/publish", async (c) => {
+adminRoutes.post("/invoices/:id/publish", requirePermission("invoices", "publish"), async (c) => {
   const id = c.req.param("id");
   try {
     const result = await publishInvoice(id);
@@ -303,20 +321,20 @@ adminRoutes.post("/invoices/:id/publish", async (c) => {
   }
 });
 
-adminRoutes.post("/invoices/:id/unpublish", async (c) => {
+adminRoutes.post("/invoices/:id/unpublish", requirePermission("invoices", "publish"), async (c) => {
   const id = c.req.param("id");
   const result = await unpublishInvoice(id);
   return c.json(result);
 });
 
-adminRoutes.post("/invoices/:id/duplicate", async (c) => {
+adminRoutes.post("/invoices/:id/duplicate", requirePermission("invoices", "create"), async (c) => {
   const id = c.req.param("id");
   const copy = await duplicateInvoice(id);
   if (!copy) return c.json({ error: "Invoice not found" }, 404);
   return c.json(copy);
 });
 
-adminRoutes.post("/invoices/:id/void", async (c) => {
+adminRoutes.post("/invoices/:id/void", requirePermission("invoices", "void"), async (c) => {
   const id = c.req.param("id");
   try {
     const result = await voidInvoice(id);
@@ -327,7 +345,7 @@ adminRoutes.post("/invoices/:id/void", async (c) => {
 });
 
 // Template routes
-adminRoutes.get("/templates", async (c) => {
+adminRoutes.get("/templates", requirePermission("templates", "read"), async (c) => {
   let templates = await getTemplates();
   // Overlay the default from settings if present; also compute 'updatable' flag when a manifest source exists
   try {
@@ -354,7 +372,7 @@ adminRoutes.get("/templates", async (c) => {
 });
 
 // Tax definition routes
-adminRoutes.get("/tax-definitions", (c) => {
+adminRoutes.get("/tax-definitions", requirePermission("tax_definitions", "read"), (c) => {
   try {
     const list = getTaxDefinitions();
     return c.json(list);
@@ -363,7 +381,7 @@ adminRoutes.get("/tax-definitions", (c) => {
   }
 });
 
-adminRoutes.get("/tax-definitions/:id", (c) => {
+adminRoutes.get("/tax-definitions/:id", requirePermission("tax_definitions", "read"), (c) => {
   try {
     const id = c.req.param("id");
     const tax = getTaxDefinitionById(id);
@@ -374,7 +392,7 @@ adminRoutes.get("/tax-definitions/:id", (c) => {
   }
 });
 
-adminRoutes.post("/tax-definitions", async (c) => {
+adminRoutes.post("/tax-definitions", requirePermission("tax_definitions", "create"), async (c) => {
   const data = await c.req.json();
   try {
     const created = createTaxDefinition(data);
@@ -388,7 +406,7 @@ adminRoutes.post("/tax-definitions", async (c) => {
   }
 });
 
-adminRoutes.put("/tax-definitions/:id", async (c) => {
+adminRoutes.put("/tax-definitions/:id", requirePermission("tax_definitions", "update"), async (c) => {
   const data = await c.req.json();
   try {
     const id = c.req.param("id");
@@ -404,7 +422,7 @@ adminRoutes.put("/tax-definitions/:id", async (c) => {
   }
 });
 
-adminRoutes.delete("/tax-definitions/:id", (c) => {
+adminRoutes.delete("/tax-definitions/:id", requirePermission("tax_definitions", "delete"), (c) => {
   try {
     const id = c.req.param("id");
     const result = deleteTaxDefinition(id);
@@ -416,14 +434,14 @@ adminRoutes.delete("/tax-definitions/:id", (c) => {
   }
 });
 
-adminRoutes.post("/templates", async (c) => {
+adminRoutes.post("/templates", requirePermission("templates", "create"), async (c) => {
   const data = await c.req.json();
   const template = await createTemplate(data);
   return c.json(template);
 });
 
 // Install a template from a remote manifest URL (YAML or JSON)
-adminRoutes.post("/templates/install-from-manifest", async (c) => {
+adminRoutes.post("/templates/install-from-manifest", requirePermission("templates", "install"), async (c) => {
   try {
     const { url } = await c.req.json();
     if (!url || typeof url !== "string") {
@@ -441,7 +459,7 @@ adminRoutes.post("/templates/install-from-manifest", async (c) => {
 });
 
 // Install a local template from an uploaded .zip file
-adminRoutes.post("/templates/upload", async (c) => {
+adminRoutes.post("/templates/upload", requirePermission("templates", "install"), async (c) => {
   try {
     const contentType = c.req.header("content-type") || "";
 
@@ -481,7 +499,7 @@ adminRoutes.post("/templates/upload", async (c) => {
 });
 
 // Update a template by id using its stored source manifest URL
-adminRoutes.post("/templates/:id/update", async (c) => {
+adminRoutes.post("/templates/:id/update", requirePermission("templates", "update"), async (c) => {
   const id = c.req.param("id");
   try {
     const src = await getSetting(`templateSource:${id}`);
@@ -499,7 +517,7 @@ adminRoutes.post("/templates/:id/update", async (c) => {
 });
 
 // Delete a template (disallow removing built-in app templates)
-adminRoutes.delete("/templates/:id", async (c) => {
+adminRoutes.delete("/templates/:id", requirePermission("templates", "delete"), async (c) => {
   const id = c.req.param("id");
   // Built-in templates are protected
   const builtin = new Set(["professional-modern", "minimalist-clean"]);
@@ -526,7 +544,7 @@ adminRoutes.delete("/templates/:id", async (c) => {
 });
 
 // Get template by ID
-adminRoutes.get("/templates/:id", (c) => {
+adminRoutes.get("/templates/:id", requirePermission("templates", "read"), (c) => {
   const id = c.req.param("id");
   const template = getTemplateById(id);
   if (!template) {
@@ -536,7 +554,7 @@ adminRoutes.get("/templates/:id", (c) => {
 });
 
 // Preview template with sample data
-adminRoutes.post("/templates/:id/preview", async (c) => {
+adminRoutes.post("/templates/:id/preview", requirePermission("templates", "read"), async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
 
@@ -603,7 +621,7 @@ adminRoutes.post("/templates/:id/preview", async (c) => {
 });
 
 // Load template from file
-adminRoutes.post("/templates/load-from-file", async (c) => {
+adminRoutes.post("/templates/load-from-file", requirePermission("templates", "create"), async (c) => {
   try {
     const { filePath, name, isDefault, highlightColor } = await c.req.json();
 
@@ -650,7 +668,7 @@ adminRoutes.get("/settings", async (c) => {
   return c.json(map);
 });
 
-adminRoutes.put("/settings", async (c) => {
+adminRoutes.put("/settings", requirePermission("settings", "update"), async (c) => {
   const data = await c.req.json();
   // Normalize legacy logoUrl to logo
   if (typeof data.logoUrl === "string" && !data.logo) {
@@ -674,7 +692,7 @@ adminRoutes.put("/settings", async (c) => {
 });
 
 // Partial update (PATCH) to merge provided keys only
-adminRoutes.patch("/settings", async (c) => {
+adminRoutes.patch("/settings", requirePermission("settings", "update"), async (c) => {
   const data = await c.req.json();
   // Normalize legacy logoUrl to logo
   if (typeof data.logoUrl === "string" && !data.logo) {
@@ -722,7 +740,7 @@ adminRoutes.get("/admin/settings", async (c) => {
   return c.json(map);
 });
 
-adminRoutes.put("/admin/settings", async (c) => {
+adminRoutes.put("/admin/settings", requirePermission("settings", "update"), async (c) => {
   const data = await c.req.json();
   if (typeof data.logoUrl === "string" && !data.logo) {
     data.logo = data.logoUrl;
@@ -738,7 +756,7 @@ adminRoutes.put("/admin/settings", async (c) => {
   return c.json(settings);
 });
 
-adminRoutes.patch("/admin/settings", async (c) => {
+adminRoutes.patch("/admin/settings", requirePermission("settings", "update"), async (c) => {
   const data = await c.req.json();
   if (typeof data.logoUrl === "string" && !data.logo) {
     data.logo = data.logoUrl;
@@ -755,12 +773,12 @@ adminRoutes.patch("/admin/settings", async (c) => {
 });
 
 // Customer routes
-adminRoutes.get("/customers", async (c) => {
+adminRoutes.get("/customers", requirePermission("customers", "read"), async (c) => {
   const customers = await getCustomers();
   return c.json(customers);
 });
 
-adminRoutes.get("/customers/:id", async (c) => {
+adminRoutes.get("/customers/:id", requirePermission("customers", "read"), async (c) => {
   const id = c.req.param("id");
   const customer = await getCustomerById(id);
   if (!customer) {
@@ -769,27 +787,25 @@ adminRoutes.get("/customers/:id", async (c) => {
   return c.json(customer);
 });
 
-adminRoutes.post("/customers", async (c) => {
-  const data = await c.req.json();
-  const customer = await createCustomer(data);
+adminRoutes.post("/customers", requirePermission("customers", "create"), async (c) => {
   return c.json(customer);
 });
 
-adminRoutes.put("/customers/:id", async (c) => {
+adminRoutes.put("/customers/:id", requirePermission("customers", "update"), async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
   const customer = await updateCustomer(id, data);
   return c.json(customer);
 });
 
-adminRoutes.delete("/customers/:id", async (c) => {
+adminRoutes.delete("/customers/:id", requirePermission("customers", "delete"), async (c) => {
   const id = c.req.param("id");
   await deleteCustomer(id);
   return c.json({ success: true });
 });
 
 // Product routes
-adminRoutes.get("/products", (c) => {
+adminRoutes.get("/products", requirePermission("products", "read"), (c) => {
   const url = new URL(c.req.url);
   const includeInactive =
     url.searchParams.get("includeInactive")?.toLowerCase() === "true";
@@ -797,7 +813,7 @@ adminRoutes.get("/products", (c) => {
   return c.json(products);
 });
 
-adminRoutes.get("/products/:id", (c) => {
+adminRoutes.get("/products/:id", requirePermission("products", "read"), (c) => {
   const id = c.req.param("id");
   const product = getProductById(id);
   if (!product) {
@@ -806,7 +822,7 @@ adminRoutes.get("/products/:id", (c) => {
   return c.json(product);
 });
 
-adminRoutes.post("/products", async (c) => {
+adminRoutes.post("/products", requirePermission("products", "create"), async (c) => {
   const data = await c.req.json();
   try {
     const product = createProduct(data);
@@ -816,7 +832,7 @@ adminRoutes.post("/products", async (c) => {
   }
 });
 
-adminRoutes.put("/products/:id", async (c) => {
+adminRoutes.put("/products/:id", requirePermission("products", "update"), async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
   try {
@@ -830,7 +846,7 @@ adminRoutes.put("/products/:id", async (c) => {
   }
 });
 
-adminRoutes.delete("/products/:id", (c) => {
+adminRoutes.delete("/products/:id", requirePermission("products", "delete"), (c) => {
   const id = c.req.param("id");
   try {
     deleteProduct(id);
@@ -845,7 +861,7 @@ adminRoutes.delete("/products/:id", (c) => {
 });
 
 // Check if product is used in invoices
-adminRoutes.get("/products/:id/usage", (c) => {
+adminRoutes.get("/products/:id/usage", requirePermission("products", "read"), (c) => {
   const id = c.req.param("id");
   const product = getProductById(id);
   if (!product) {
@@ -856,7 +872,7 @@ adminRoutes.get("/products/:id/usage", (c) => {
 });
 
 // Reactivate a soft-deleted product
-adminRoutes.post("/products/:id/reactivate", (c) => {
+adminRoutes.post("/products/:id/reactivate", requirePermission("products", "update"), (c) => {
   const id = c.req.param("id");
   try {
     const product = reactivateProduct(id);
@@ -870,21 +886,19 @@ adminRoutes.post("/products/:id/reactivate", (c) => {
 });
 
 // Product Categories
-adminRoutes.get("/product-categories", (c) => {
+adminRoutes.get("/product-categories", requirePermission("products", "read"), (c) => {
   const categories = getCategories();
   return c.json(categories);
 });
 
-adminRoutes.get("/product-categories/:id", (c) => {
-  const id = c.req.param("id");
-  const category = getCategoryById(id);
+adminRoutes.get("/product-categories/:id", requirePermission("products", "read"), (c) => {
   if (!category) {
     return c.json({ error: "Category not found" }, 404);
   }
   return c.json(category);
 });
 
-adminRoutes.post("/product-categories", async (c) => {
+adminRoutes.post("/product-categories", requirePermission("products", "create"), async (c) => {
   const data = await c.req.json();
   try {
     const category = createCategory(data);
@@ -894,7 +908,7 @@ adminRoutes.post("/product-categories", async (c) => {
   }
 });
 
-adminRoutes.put("/product-categories/:id", async (c) => {
+adminRoutes.put("/product-categories/:id", requirePermission("products", "update"), async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
   try {
@@ -908,7 +922,7 @@ adminRoutes.put("/product-categories/:id", async (c) => {
   }
 });
 
-adminRoutes.delete("/product-categories/:id", (c) => {
+adminRoutes.delete("/product-categories/:id", requirePermission("products", "delete"), (c) => {
   const id = c.req.param("id");
   try {
     const deleted = deleteCategory(id);
@@ -921,28 +935,26 @@ adminRoutes.delete("/product-categories/:id", (c) => {
   }
 });
 
-adminRoutes.get("/product-categories/:id/usage", (c) => {
+adminRoutes.get("/product-categories/:id/usage", requirePermission("products", "read"), (c) => {
   const id = c.req.param("id");
   const usage = isCategoryUsed(id);
   return c.json(usage);
 });
 
 // Product Units
-adminRoutes.get("/product-units", (c) => {
+adminRoutes.get("/product-units", requirePermission("products", "read"), (c) => {
   const units = getUnits();
   return c.json(units);
 });
 
-adminRoutes.get("/product-units/:id", (c) => {
-  const id = c.req.param("id");
-  const unit = getUnitById(id);
+adminRoutes.get("/product-units/:id", requirePermission("products", "read"), (c) => {
   if (!unit) {
     return c.json({ error: "Unit not found" }, 404);
   }
   return c.json(unit);
 });
 
-adminRoutes.post("/product-units", async (c) => {
+adminRoutes.post("/product-units", requirePermission("products", "create"), async (c) => {
   const data = await c.req.json();
   try {
     const unit = createUnit(data);
@@ -952,7 +964,7 @@ adminRoutes.post("/product-units", async (c) => {
   }
 });
 
-adminRoutes.put("/product-units/:id", async (c) => {
+adminRoutes.put("/product-units/:id", requirePermission("products", "update"), async (c) => {
   const id = c.req.param("id");
   const data = await c.req.json();
   try {
@@ -966,7 +978,7 @@ adminRoutes.put("/product-units/:id", async (c) => {
   }
 });
 
-adminRoutes.delete("/product-units/:id", (c) => {
+adminRoutes.delete("/product-units/:id", requirePermission("products", "delete"), (c) => {
   const id = c.req.param("id");
   try {
     const deleted = deleteUnit(id);
@@ -979,14 +991,14 @@ adminRoutes.delete("/product-units/:id", (c) => {
   }
 });
 
-adminRoutes.get("/product-units/:id/usage", (c) => {
+adminRoutes.get("/product-units/:id/usage", requirePermission("products", "read"), (c) => {
   const id = c.req.param("id");
   const usage = isUnitUsed(id);
   return c.json(usage);
 });
 
 // Authenticated HTML/PDF generation for invoices by ID (no share token required)
-adminRoutes.get("/invoices/:id/html", async (c) => {
+adminRoutes.get("/invoices/:id/html", requirePermission("invoices", "read"), async (c) => {
   const id = c.req.param("id");
   const invoice = getInvoiceById(id);
   if (!invoice) {
@@ -1052,7 +1064,7 @@ adminRoutes.get("/invoices/:id/html", async (c) => {
   });
 });
 
-adminRoutes.get("/invoices/:id/pdf", async (c) => {
+adminRoutes.get("/invoices/:id/pdf", requirePermission("invoices", "export"), async (c) => {
   const id = c.req.param("id");
   const invoice = getInvoiceById(id);
   if (!invoice) {
@@ -1155,7 +1167,7 @@ adminRoutes.get("/invoices/:id/pdf", async (c) => {
 });
 
 // UBL (PEPPOL BIS Billing 3.0) XML for an invoice by ID
-adminRoutes.get("/invoices/:id/ubl.xml", async (c) => {
+adminRoutes.get("/invoices/:id/ubl.xml", requirePermission("invoices", "export"), async (c) => {
   const id = c.req.param("id");
   const invoice = getInvoiceById(id);
   if (!invoice) {
@@ -1206,7 +1218,7 @@ adminRoutes.get("/invoices/:id/ubl.xml", async (c) => {
 });
 
 // Generic XML export selecting an internal profile (?profile=ubl21 or stub-generic)
-adminRoutes.get("/invoices/:id/xml", async (c) => {
+adminRoutes.get("/invoices/:id/xml", requirePermission("invoices", "export"), async (c) => {
   const id = c.req.param("id");
   const invoice = getInvoiceById(id);
   if (!invoice) return c.json({ message: "Invoice not found" }, 404);
@@ -1262,7 +1274,7 @@ adminRoutes.get("/invoices/:id/xml", async (c) => {
 });
 
 // List built-in XML profiles
-adminRoutes.get("/xml-profiles", (c) => {
+adminRoutes.get("/xml-profiles", requirePermission("invoices", "read"), (c) => {
   const profiles = listXMLProfiles().map((p) => ({
     id: p.id,
     name: p.name,
@@ -1274,10 +1286,101 @@ adminRoutes.get("/xml-profiles", (c) => {
   return c.json(profiles);
 });
 
+// =============================================
+// User management routes
+// =============================================
+adminRoutes.use("/users/*", requireAdminAuth);
+
+// GET /users/me — current authenticated user (any authenticated user)
+adminRoutes.get("/users/me", (c) => {
+  const user = getAuthUser(c);
+  if (!user) return c.json({ error: "Not authenticated" }, 401);
+  // Return user info with permissions and available RESOURCE_ACTIONS map
+  return c.json({
+    ...user,
+    availableResources: RESOURCE_ACTIONS,
+  });
+});
+
+// GET /users/permissions-schema — returns the valid resources and actions
+adminRoutes.get("/users/permissions-schema", requireAdmin, (c) => {
+  return c.json({
+    resources: RESOURCES,
+    resourceActions: RESOURCE_ACTIONS,
+  });
+});
+
+// GET /users — list all users (admin only)
+adminRoutes.get("/users", requireAdmin, (c) => {
+  const users = listUsers();
+  return c.json(users);
+});
+
+// POST /users — create a new user (admin only)
+adminRoutes.post("/users", requireAdmin, async (c) => {
+  try {
+    const data = await c.req.json();
+    const user = await createUserCtrl(data);
+    return c.json(user, 201);
+  } catch (e) {
+    const msg = String(e);
+    if (/already exists/i.test(msg)) return c.json({ error: msg }, 409);
+    return c.json({ error: msg }, 400);
+  }
+});
+
+// GET /users/:id — get user details (admin only)
+adminRoutes.get("/users/:id", requireAdmin, (c) => {
+  const id = c.req.param("id");
+  const user = getUserByIdCtrl(id);
+  if (!user) return c.json({ error: "User not found" }, 404);
+  return c.json(user);
+});
+
+// PUT /users/:id — update user (admin only)
+adminRoutes.put("/users/:id", requireAdmin, async (c) => {
+  const id = c.req.param("id");
+  try {
+    const data = await c.req.json();
+    const currentUser = getAuthUser(c);
+
+    // Prevent admin from demoting themselves
+    if (currentUser.id === id && data.isAdmin === false) {
+      return c.json({ error: "Cannot remove your own admin status" }, 400);
+    }
+    // Prevent admin from deactivating themselves
+    if (currentUser.id === id && data.isActive === false) {
+      return c.json({ error: "Cannot deactivate your own account" }, 400);
+    }
+
+    const user = await updateUserCtrl(id, data);
+    return c.json(user);
+  } catch (e) {
+    const msg = String(e);
+    if (/already exists/i.test(msg)) return c.json({ error: msg }, 409);
+    if (/not found/i.test(msg)) return c.json({ error: msg }, 404);
+    return c.json({ error: msg }, 400);
+  }
+});
+
+// DELETE /users/:id — delete user (admin only)
+adminRoutes.delete("/users/:id", requireAdmin, (c) => {
+  const id = c.req.param("id");
+  try {
+    deleteUserCtrl(id);
+    return c.json({ success: true });
+  } catch (e) {
+    const msg = String(e);
+    if (/not found/i.test(msg)) return c.json({ error: msg }, 404);
+    if (/last admin/i.test(msg)) return c.json({ error: msg }, 400);
+    return c.json({ error: msg }, 400);
+  }
+});
+
 export { adminRoutes };
 
 // Export all data (DB file, JSON dump, installed template assets) as a tar.gz
-adminRoutes.get("/export/full", async (c) => {
+adminRoutes.get("/export/full", requireAdmin, async (c) => {
   // Parse options: includeDb (default true), includeJson (default true), includeAssets (default true)
   const url = new URL(c.req.url);
   const includeDb =

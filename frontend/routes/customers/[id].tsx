@@ -8,6 +8,7 @@ import {
   getAuthHeaderFromCookie,
 } from "../../utils/backend.ts";
 import { useTranslations } from "../../i18n/context.tsx";
+import { useHasPermission } from "../../utils/auth.tsx";
 import { Handlers } from "fresh/compat";
 
 type Customer = {
@@ -80,6 +81,8 @@ export const handler: Handlers<Data> = {
 export default function CustomerDetail(props: PageProps<Data>) {
   const { t } = useTranslations();
   const c = props.data.customer;
+  const canUpdate = useHasPermission("customers", "update");
+  const canDelete = useHasPermission("customers", "delete");
   return (
     <Layout authed={props.data.authed} path={new URL(props.url).pathname}>
       <ConfirmOnSubmit />
@@ -89,20 +92,24 @@ export default function CustomerDetail(props: PageProps<Data>) {
         </h1>
         {c && (
           <div class="flex gap-2">
-            <a href={`/customers/${c.id}/edit`} class="btn btn-sm">
-              <LuPencil size={16} />
-              {t("Edit")}
-            </a>
-            <form
-              method="post"
-              data-confirm={t("Delete this customer? This cannot be undone.")}
-            >
-              <input type="hidden" name="intent" value="delete" />
-              <button type="submit" class="btn btn-sm btn-outline btn-error">
-                <LuTrash2 size={16} />
-                {t("Delete")}
-              </button>
-            </form>
+            {canUpdate && (
+              <a href={`/customers/${c.id}/edit`} class="btn btn-sm">
+                <LuPencil size={16} />
+                {t("Edit")}
+              </a>
+            )}
+            {canDelete && (
+              <form
+                method="post"
+                data-confirm={t("Delete this customer? This cannot be undone.")}
+              >
+                <input type="hidden" name="intent" value="delete" />
+                <button type="submit" class="btn btn-sm btn-outline btn-error">
+                  <LuTrash2 size={16} />
+                  {t("Delete")}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>
