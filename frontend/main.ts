@@ -1,7 +1,0 @@
-import { App, staticFiles } from "@fresh/core";
-
-export const app = new App()
-  // Add static file serving middleware
-  .use(staticFiles())
-  // Enable file-system based routing
-  .fsRoutes();
