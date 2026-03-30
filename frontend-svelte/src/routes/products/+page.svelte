@@ -22,9 +22,7 @@
 </script>
 
 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-  <div class="mb-4">
   <h1 class="text-2xl font-semibold">{t("Products")}</h1>
-</div>
   {#if canCreate}
     <a href="/products/new" class="btn btn-sm btn-primary w-full sm:w-auto">
       <PackagePlus size={16} />

@@ -44,6 +44,58 @@
     if (items.length > 1) items.splice(index, 1);
   }
 
+  let draggedId = $state<string | null>(null);
+  let dragHoverId = $state<string | null>(null);
+
+  function handleDragStart(e: DragEvent, id: string) {
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", id);
+    }
+    // Defer setting the state to avoid firing dragend immediately
+    setTimeout(() => { draggedId = id; }, 0);
+  }
+
+  function handleDragOver(e: DragEvent, id: string) {
+    e.preventDefault();
+    if (!draggedId || draggedId === id) return;
+    dragHoverId = id;
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
+  }
+
+  function handleDragLeave(id: string) {
+    if (dragHoverId === id) {
+      dragHoverId = null;
+    }
+  }
+
+  function handleDrop(e: DragEvent, targetId: string) {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) {
+      draggedId = null;
+      dragHoverId = null;
+      return;
+    }
+
+    const fromIndex = items.findIndex((i: any) => i.id === draggedId);
+    const toIndex = items.findIndex((i: any) => i.id === targetId);
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const removed = items.splice(fromIndex, 1)[0];
+      items.splice(toIndex, 0, removed);
+    }
+
+    draggedId = null;
+    dragHoverId = null;
+  }
+
+  function handleDragEnd() {
+    draggedId = null;
+    dragHoverId = null;
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if ((e.ctrlKey || e.metaKey) && e.key === "s") {
       e.preventDefault();
@@ -55,8 +107,8 @@
     }
   }
 
-  let subtotal = $derived(items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0));
-  let tax = $derived(form.taxMode === "invoice" ? subtotal * (Number(form.taxRate) / 100) : items.reduce((sum, item) => sum + ((Number(item.quantity) * Number(item.unitPrice)) * (Number(item.taxPercent) / 100)), 0));
+  let subtotal = $derived(items.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0));
+  let tax = $derived(form.taxMode === "invoice" ? subtotal * ((Number(form.taxRate) || 0) / 100) : items.reduce((sum, item) => sum + (((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) * ((Number(item.taxPercent) || 0) / 100)), 0));
   let total = $derived(form.pricesIncludeTax === "true" ? subtotal : subtotal + tax); // Simplified for visual parity
 
   async function handleSubmit(e: SubmitEvent | Event) {
@@ -188,13 +240,23 @@
       <div class="flex-1 min-w-0 pl-3">{t("Description")}</div>
       <div class="w-16 sm:w-20 shrink-0 text-center">{t("Quantity")}</div>
       <div class="w-24 shrink-0 text-center">{t("Price")}</div>
+      {#if form.taxMode === "line"}
+        <div class="w-20 shrink-0 text-center">{t("Tax %")}</div>
+      {/if}
       <div class="w-40 max-w-xs shrink-0 text-center">{t("Notes")}</div>
       <div class="w-8 shrink-0"></div>
     </div>
 
-    <div class="space-y-3">
+    <div class="space-y-3" role="list">
       {#each items as item, i (item.id)}
-        <div class="flex flex-nowrap items-center gap-2">
+        <div role="listitem"
+             class="flex flex-nowrap items-center gap-2 p-1 rounded-box transition-colors {draggedId === item.id ? 'opacity-50' : ''} {dragHoverId === item.id ? 'bg-base-200' : ''}"
+             draggable="true"
+             ondragstart={(e) => handleDragStart(e, item.id)}
+             ondragover={(e) => handleDragOver(e, item.id)}
+             ondragleave={() => handleDragLeave(item.id)}
+             ondrop={(e) => handleDrop(e, item.id)}
+             ondragend={handleDragEnd}>
           <button type="button" class="btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100" tabindex="-1">
             <GripVertical size={16} />
           </button>
@@ -202,6 +264,9 @@
           <input class="input input-bordered w-full min-w-0" bind:value={item.description} placeholder={t("Description")} required />
           <input type="number" min="0" step="any" class="input input-bordered w-16 sm:w-20 shrink-0 text-center" bind:value={item.quantity} />
           <input type="number" min="0" step="any" class="input input-bordered w-24 shrink-0 text-center" bind:value={item.unitPrice} />
+          {#if form.taxMode === "line"}
+            <input type="number" min="0" step="any" class="input input-bordered w-20 shrink-0 text-center" bind:value={item.taxPercent} placeholder="%" />
+          {/if}
           <input class="input input-bordered w-40 max-w-xs shrink-0" bind:value={item.notes} placeholder={t("Notes")} />
           
           <button type="button" class="btn btn-ghost btn-square btn-sm shrink-0" onclick={() => removeItem(i)} aria-label={t("Remove item")}>&times;</button>

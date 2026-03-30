@@ -11,9 +11,7 @@
 </script>
 
 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-  <div class="mb-4">
-    <h1 class="text-2xl font-semibold">{t("Users")}</h1>
-  </div>
+  <h1 class="text-2xl font-semibold">{t("Users")}</h1>
   {#if canCreate}
     <a href="/users/new" class="btn btn-sm btn-primary w-full sm:w-auto">
       <UserPlus size={16} />

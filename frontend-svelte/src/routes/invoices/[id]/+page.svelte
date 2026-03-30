@@ -153,7 +153,7 @@
             <MoreHorizontal size={16} />
             <span class="hidden sm:inline">{t("More")}</span>
           </div>
-          <ul tabindex="-1" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-2 w-56 p-2 shadow border border-base-200">
+          <ul tabindex="-1" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-2 w-56 p-2 shadow border border-base-200">
             <li>
               <button type="submit" form="inv-duplicate" class="flex items-center gap-2 py-2">
                 <Copy size={16} /> {t("Duplicate")}
@@ -201,127 +201,86 @@
 </div>
 
 {#if invoice}
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="md:col-span-2 space-y-6">
-      <div class="bg-base-100 p-6 rounded-box border border-base-200 shadow-sm">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          <div>
-            <div class="text-sm opacity-70 font-medium mb-2 uppercase tracking-wide">{t("Billed To")}</div>
-            <div class="text-lg font-semibold">{invoice.customer?.name || t("Unknown Customer")}</div>
-            {#if invoice.customer?.email}
-              <div class="opacity-80 mt-1">{invoice.customer.email}</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mt-6 mb-8">
+    <div class="space-y-4">
+      <div><span class="opacity-70 mr-1">{t("Customer")}:</span> {invoice.customer?.name || t("Unknown Customer")}</div>
+      <div class="flex gap-1"><span class="opacity-70 mr-1">{t("Address")}:</span> 
+        <div class="whitespace-pre-line">
+          {#if invoice.customer?.address || invoice.customer?.city}
+            {[invoice.customer?.address, `${invoice.customer?.postalCode || ""} ${invoice.customer?.city || ""}`.trim()].filter(Boolean).join("\n")}
+            {#if invoice.customer?.countryCode}
+              <br/>{invoice.customer.countryCode}
             {/if}
-            {#if invoice.customer?.address || invoice.customer?.city}
-              <div class="mt-3 opacity-80 text-sm leading-relaxed whitespace-pre-line">
-                {[invoice.customer?.address, `${invoice.customer?.postalCode || ""} ${invoice.customer?.city || ""}`].filter(Boolean).join("\n")}
-                {invoice.customer?.countryCode ? `\n${invoice.customer.countryCode}` : ""}
-              </div>
-            {/if}
-          </div>
-
-          <div class="space-y-3 text-sm">
-            <div class="flex justify-between items-center border-b border-base-200 pb-2">
-              <span class="opacity-70">{t("Issue Date")}</span>
-              <span class="font-medium">{fmtDate(invoice.issueDate) || "-"}</span>
-            </div>
-            <div class="flex justify-between items-center border-b border-base-200 pb-2">
-              <span class="opacity-70">{t("Due Date")}</span>
-              <div class="font-medium flex items-center gap-2">
-                {fmtDate(invoice.dueDate) || "-"}
-                {#if isOverdue && invoice.status !== "paid"}
-                  <div class="badge badge-error badge-sm" title={t("This invoice is past its due date")}>!</div>
-                {/if}
-              </div>
-            </div>
-            {#if typeof invoice.taxRate === "number"}
-               <div class="flex justify-between items-center border-b border-base-200 pb-2">
-                <span class="opacity-70">{t("Tax Rate")}</span>
-                <span class="font-medium">{invoice.taxRate}%</span>
-              </div>
-            {/if}
-            <div class="flex justify-between items-center pb-1 pt-1">
-              <span class="opacity-70">{t("Payment Terms")}</span>
-              <span class="font-medium text-right max-w-[60%]">{invoice.paymentTerms || "-"}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-base-100 p-6 rounded-box border border-base-200 shadow-sm">
-        <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4">
-           <div>
-              <div class="text-sm opacity-70 font-medium mb-1 uppercase tracking-wide">{t("Amount Due")}</div>
-              <div class="text-3xl font-bold">{fmtMoney(invoice.total)}</div>
-           </div>
-           
-           <div class="w-full sm:w-64 space-y-2 text-sm mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-base-200">
-             <div class="flex justify-between">
-                <span class="opacity-70">{t("Subtotal")}</span>
-                <span class="font-medium">{fmtMoney(invoice.subtotal)}</span>
-             </div>
-             {#if invoice.discountAmount}
-                <div class="flex justify-between text-success">
-                  <span class="opacity-70">{t("Discount")}</span>
-                  <span class="font-medium">-{fmtMoney(invoice.discountAmount)}</span>
-                </div>
-             {/if}
-             <div class="flex justify-between">
-                <span class="opacity-70">{t("Tax")}</span>
-                <span class="font-medium">{fmtMoney(invoice.taxAmount)}</span>
-             </div>
-             <div class="divider my-1"></div>
-             <div class="flex justify-between text-lg font-bold">
-                <span>{t("Total")}</span>
-                <span>{fmtMoney(invoice.total)}</span>
-             </div>
-           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="space-y-6">
-      {#if invoice.items && invoice.items.length > 0}
-         <div class="bg-base-100 p-6 rounded-box border border-base-200 shadow-sm">
-           <h3 class="font-medium mb-4 flex items-center justify-between">
-             {t("Line Items")}
-             <span class="badge badge-neutral badge-sm">{invoice.items.length}</span>
-           </h3>
-           <div class="space-y-3">
-             {#each invoice.items as item}
-               <div class="text-sm border-l-2 border-primary pl-3 py-1">
-                 <div class="font-medium">{item.description || t("Item")}</div>
-                 <div class="flex gap-2 text-xs opacity-70 mt-1">
-                   <span>{item.quantity} × {fmtMoney(item.unitPrice)}</span>
-                 </div>
-               </div>
-             {/each}
-           </div>
-         </div>
-      {/if}
-
-      <div class="bg-base-100 p-6 rounded-box border border-base-200 shadow-sm">
-        <h3 class="font-medium mb-4">{t("Quick Actions")}</h3>
-        <div class="flex flex-col gap-2">
-          <a class="btn btn-sm btn-outline justify-start" href="/api/v1/invoices/{invoice.id}/html" target="_blank">
-            <FileCode2 size={16} />
-            {t("View HTML format")}
-          </a>
-          <a class="btn btn-sm btn-primary justify-start" href="/api/v1/invoices/{invoice.id}/pdf">
-            <Download size={16} />
-            {t("Download PDF")}
-          </a>
-          {#if invoice.status && invoice.status !== "draft" && invoice.shareToken}
-            <a class="btn btn-sm justify-start" href="/public/invoices/{invoice.shareToken}" target="_blank">
-              <ExternalLink size={16} />
-              {t("Open Public Portal")}
-            </a>
           {/if}
         </div>
-        <div class="mt-4 text-xs opacity-60">
-           {t("Tax mode")}: {invoice.taxes?.length ? t("Per line") : t("Invoice total")} <br/>
-           {t("Prices include tax")}: {invoice.pricesIncludeTax ? t("Yes") : t("No")}
-        </div>
+      </div>
+      <div><span class="opacity-70 mr-1">{t("Issue Date")}:</span> {fmtDate(invoice.issueDate) || "-"}</div>
+      <div class="mt-4"><span class="opacity-70 mr-1">{t("Subtotal")}:</span> {fmtMoney(invoice.subtotal)}</div>
+      
+      <div class="text-xs opacity-60 flex flex-wrap gap-1">
+        {t("Tax rate")}: {invoice.taxRate}% - 
+        {t("Prices include tax")}: {invoice.pricesIncludeTax ? t("Yes") : t("No")} - 
+        {t("Rounding")}: {t("Round per line")} - 
+        {t("Tax mode")}: {invoice.taxes?.length ? t("Per line") : t("Invoice total")}
+      </div>
+      
+      <div class="mt-4"><span class="opacity-70 mr-1">{t("Total")}:</span> <span class="font-bold">{fmtMoney(invoice.total)}</span></div>
+      <div><span class="opacity-70 mr-1">{t("Payment Terms")}:</span> <span class="font-medium">{invoice.paymentTerms || "-"}</span></div>
+      
+      <div class="pt-2 opacity-70">
+        {invoice.items?.length || 0} {t("item(s)")}
+      </div>
+
+      <div class="flex flex-wrap gap-2 pt-4">
+        <a class="btn btn-sm btn-outline" href="/api/v1/invoices/{invoice.id}/html" target="_blank">
+          <FileCode2 size={16} />
+          {t("View HTML")}
+        </a>
+        <a class="btn btn-sm btn-primary" href="/api/v1/invoices/{invoice.id}/pdf" target="_blank">
+          <Download size={16} />
+          {t("Download PDF")}
+        </a>
+        {#if invoice.status && invoice.status !== "draft" && invoice.shareToken}
+          <a class="btn btn-sm btn-outline" href="/public/invoices/{invoice.shareToken}" target="_blank">
+            <ExternalLink size={16} />
+            {t("View public link")}
+          </a>
+        {/if}
       </div>
     </div>
+
+    <div class="space-y-4">
+      <div><span class="opacity-70 mr-1">{t("Email")}:</span> {invoice.customer?.email || ""}</div>
+      <div class="mt-4"><span class="opacity-70 mr-1">{t("Due Date")}:</span> {fmtDate(invoice.dueDate) || "-"}</div>
+      <div><span class="opacity-70 mr-1">{t("Tax")}:</span> {fmtMoney(invoice.taxAmount)}</div>
+      <div><span class="opacity-70 mr-1">{t("Discount")}:</span> {fmtMoney(invoice.discountAmount)}</div>
+    </div>
   </div>
+
+  {#if invoice.items && invoice.items.length > 0}
+    <div class="mt-8">
+      <div class="bg-base-100 rounded-box border border-base-200 overflow-hidden shadow-sm">
+        <table class="table table-sm sm:table-md w-full">
+          <thead class="bg-base-200/50">
+            <tr>
+              <th>{t("Description")}</th>
+              <th class="text-right">{t("Qty")}</th>
+              <th class="text-right">{t("Price")}</th>
+              <th class="text-right">{t("Total")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each invoice.items as item}
+              <tr>
+                <td class="whitespace-pre-wrap">{item.description || t("Item")}</td>
+                <td class="text-right">{item.quantity}</td>
+                <td class="text-right">{fmtMoney(item.unitPrice)}</td>
+                <td class="text-right font-medium">{fmtMoney(item.quantity * item.unitPrice)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {/if}
 {/if}

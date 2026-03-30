@@ -1,3 +1,4 @@
+﻿
 <script lang="ts">
   import InvoiceEditor from "$lib/components/InvoiceEditor.svelte";
   import { getContext } from "svelte";
@@ -11,11 +12,9 @@
 </div>
 
 {#if data.invoice}
-  <InvoiceEditor 
-    customers={data.customers}
-    products={data.products}
-    taxDefinitions={data.taxDefinitions}
-    settings={data.settings}
-    initialData={data.invoice}
+  <InvoiceEditor
+    {data}
+    invoice={data.invoice}
   />
 {/if}
+

@@ -56,13 +56,11 @@ import {
   createCategory,
   deleteCategory,
   getCategories,
-  getCategoryById,
   isCategoryUsed,
   updateCategory,
   createUnit,
   deleteUnit,
   getUnits,
-  getUnitById,
   isUnitUsed,
   updateUnit,
 } from "../controllers/productOptions.ts";
@@ -72,7 +70,6 @@ import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 import { availableInvoiceLocales } from "../i18n/translations.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
-import { getDatabase } from "../database/init.ts";
 import { isDemoMode } from "../utils/env.ts";
 import { requireAdminAuth, requirePermission, requireAdmin, getAuthUser } from "../middleware/auth.ts";
 import {
@@ -788,6 +785,8 @@ adminRoutes.get("/customers/:id", requirePermission("customers", "read"), async 
 });
 
 adminRoutes.post("/customers", requirePermission("customers", "create"), async (c) => {
+  const data = await c.req.json();
+  const customer = createCustomer(data);
   return c.json(customer);
 });
 
