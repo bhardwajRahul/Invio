@@ -6,16 +6,14 @@
 # Backups (any folder)
 **/invio_backup**.db
 
+.env
+
 # node_modules in any folder
 **/node_modules
 
-# fresh build
-**/_fresh
-
-.env
-
-/frontend/static/dev
 /frontend/VERSION
+/frontend/build
+/frontend/.svelte-kit
 
 /Invio.wiki
 .DS_Store
