@@ -262,7 +262,7 @@
           </button>
           
           <input class="input input-bordered w-full min-w-0" bind:value={item.description} placeholder={t("Description")} required />
-          <input type="number" min="0" step="any" class="input input-bordered w-16 sm:w-20 shrink-0 text-center" bind:value={item.quantity} />
+          <input type="number" min="0" step="1" class="input input-bordered w-16 sm:w-20 shrink-0 text-center" bind:value={item.quantity} />
           <input type="number" min="0" step="any" class="input input-bordered w-24 shrink-0 text-center" bind:value={item.unitPrice} />
           {#if form.taxMode === "line"}
             <input type="number" min="0" step="any" class="input input-bordered w-20 shrink-0 text-center" bind:value={item.taxPercent} placeholder="%" />
