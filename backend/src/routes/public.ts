@@ -220,6 +220,7 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Robots-Tag": "noindex",
+      "X-Frame-Options": "SAMEORIGIN",
     },
   });
 });
