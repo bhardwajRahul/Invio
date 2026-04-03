@@ -7,10 +7,10 @@ from datetime import datetime
 main_locale = "en"
 
 root = Path(__file__).resolve().parent.parent.parent
-en = Path(root / "frontend/i18n/locales/en.json")
+en = Path(root / "frontend/src/lib/i18n/locales/en.json")
 files = [
     f
-    for f in Path(root / "frontend/i18n/locales").glob("*.json")
+    for f in Path(root / "frontend/src/lib/i18n/locales").glob("*.json")
     if "en.json" not in str(f)
 ]
 

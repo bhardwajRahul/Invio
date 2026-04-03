@@ -1,5 +1,14 @@
 import { create, decode, verify } from "djwt";
-import { getJwtSecret, getAdminCredentials } from "./env.ts";
+import { getJwtSecret } from "./env.ts";
+
+/** Shape of our JWT payload */
+export interface JWTPayload {
+  userId: string;
+  username: string;
+  isAdmin: boolean;
+  iat?: number;
+  exp?: number;
+}
 
 function validateSecret(secretKey: string) {
   if (!secretKey || secretKey.trim().length === 0) {
@@ -12,18 +21,7 @@ function validateSecret(secretKey: string) {
   }
 }
 
-function validateAdminCredentials() {
-  const { username, password } = getAdminCredentials();
-  if (!username || username.trim().length === 0) {
-    throw new Error("ADMIN_USER must not be empty");
-  }
-  if (!password || password.trim().length === 0) {
-    throw new Error("ADMIN_PASS must not be empty");
-  }
-}
-
 async function getKey(): Promise<CryptoKey> {
-  validateAdminCredentials();
   const secretKey = getJwtSecret();
   validateSecret(secretKey);
   const secretBytes = new TextEncoder().encode(secretKey.trim());
@@ -42,17 +40,37 @@ export async function createJWT(payload: Record<string, unknown>) {
   return await create({ alg: "HS256", typ: "JWT" }, payload, key);
 }
 
+/** @deprecated Use createJWT with full payload instead */
 export async function generateJWT(adminUser: string) {
   const payload = { user: adminUser };
   const key = await getKey();
   return await create({ alg: "HS256", typ: "JWT" }, payload, key);
 }
 
-export async function verifyJWT(token: string) {
+export async function verifyJWT(token: string): Promise<JWTPayload | null> {
   try {
     const key = await getKey();
     const payload = await verify(token, key);
-    return payload;
+
+    // Handle both new multi-user payload and legacy single-admin payload
+    if (payload.userId) {
+      return payload as unknown as JWTPayload;
+    }
+
+    // Legacy token: extract username from old format
+    const username = (payload as Record<string, unknown>).username ||
+      (payload as Record<string, unknown>).user;
+    if (username) {
+      return {
+        userId: "__legacy__",
+        username: String(username),
+        isAdmin: true, // legacy tokens are always admin
+        iat: payload.iat as number | undefined,
+        exp: payload.exp as number | undefined,
+      } as JWTPayload;
+    }
+
+    return null;
   } catch (error) {
     console.error("JWT verification failed:", error);
     return null;

@@ -153,6 +153,85 @@ export interface InvoiceTax {
   taxAmount: number;
 }
 
+// =============================================
+// Multi-user system types
+// =============================================
+
+export const RESOURCES = [
+  "invoices",
+  "customers",
+  "products",
+  "templates",
+  "settings",
+  "tax_definitions",
+  "users",
+] as const;
+
+export type Resource = typeof RESOURCES[number];
+
+export const ACTIONS = [
+  "read",
+  "create",
+  "update",
+  "delete",
+  "publish",
+  "void",
+  "export",
+  "install",
+] as const;
+
+export type Action = typeof ACTIONS[number];
+
+/** Defines which actions are meaningful for each resource */
+export const RESOURCE_ACTIONS: Record<Resource, readonly Action[]> = {
+  invoices: ["read", "create", "update", "delete", "publish", "void", "export"],
+  customers: ["read", "create", "update", "delete"],
+  products: ["read", "create", "update", "delete"],
+  templates: ["read", "create", "update", "delete", "install"],
+  settings: ["read", "update"],
+  tax_definitions: ["read", "create", "update", "delete"],
+  users: ["read", "create", "update", "delete"],
+};
+
+export interface Permission {
+  resource: Resource;
+  action: Action;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email?: string;
+  displayName?: string;
+  isAdmin: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserWithPermissions extends User {
+  permissions: Permission[];
+}
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  email?: string;
+  displayName?: string;
+  isAdmin?: boolean;
+  permissions?: Permission[];
+}
+
+export interface UpdateUserRequest {
+  username?: string;
+  email?: string;
+  displayName?: string;
+  password?: string;
+  isAdmin?: boolean;
+  isActive?: boolean;
+  permissions?: Permission[];
+}
+
 // Request/Response types for API
 export interface CreateInvoiceRequest {
   customerId: string;

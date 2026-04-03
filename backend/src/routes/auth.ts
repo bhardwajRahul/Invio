@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { createJWT } from "../utils/jwt.ts";
-import { getAdminCredentials } from "../utils/env.ts";
+import { authenticateUser } from "../controllers/users.ts";
 import {
   getRateLimitConfig,
   getClientIp,
@@ -46,8 +46,9 @@ authRoutes.post("/auth/login", async (c) => {
     return createRateLimitResponse(rateLimitCheck.retryAfter);
   }
 
-  const { username: adminUser, password: adminPass } = getAdminCredentials();
-  if (username !== adminUser || password !== adminPass) {
+  // Authenticate against the users table
+  const user = await authenticateUser(username, password);
+  if (!user) {
     // Record failed attempt for rate limiting (tracks IP, username, and combination)
     recordFailedAttempt(clientIp, username);
     return c.json({ error: "Invalid credentials" }, 401);
@@ -58,7 +59,13 @@ authRoutes.post("/auth/login", async (c) => {
 
   const sessionTtl = getSessionTtlSeconds();
   const now = Math.floor(Date.now() / 1000);
-  const token = await createJWT({ username: adminUser, iat: now, exp: now + sessionTtl });
+  const token = await createJWT({
+    userId: user.id,
+    username: user.username,
+    isAdmin: user.isAdmin,
+    iat: now,
+    exp: now + sessionTtl,
+  });
   return c.json({ token, expiresIn: sessionTtl });
 });
 

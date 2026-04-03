@@ -1,0 +1,125 @@
+<script lang="ts">
+  import { getContext } from "svelte";
+  import { Save } from "lucide-svelte";
+  import { enhance } from "$app/forms";
+
+  let { data, form } = $props();
+  let t = getContext("i18n") as (key: string) => string;
+  let p = $derived(data.product || {});
+</script>
+
+{#if p.id}
+<form method="post" use:enhance>
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+    <h1 class="text-2xl font-semibold">{t("Edit Product")}</h1>
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <a href={`/products/${p.id}`} class="btn btn-ghost btn-sm flex-1 sm:flex-none">
+        {t("Cancel")}
+      </a>
+      <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none">
+        <Save size={16} />
+        {t("Save Changes")}
+      </button>
+    </div>
+  </div>
+
+  {#if form?.error || data.error}
+    <div class="alert alert-error mb-4">
+      <span>{form?.error || data.error}</span>
+    </div>
+  {/if}
+
+  <div class="space-y-4">
+    <div class="form-control w-full">
+        <label class="label pb-1 cursor-pointer justify-start gap-3">
+          <input type="checkbox" name="isActive" class="toggle toggle-success" value="true" checked={p.isActive !== false} />
+          <span class="label-text">{t("Active (Available in dropdowns)")}</span>
+        </label>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label pb-1" for="name">
+        <span class="label-text">
+          {t("Name")} <span class="text-error">*</span>
+        </span>
+      </label>
+      <input type="text" id="name" name="name" class="input input-sm input-bordered w-full" value={p.name} required />
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label pb-1" for="description">
+        <span class="label-text">{t("Description")}</span>
+      </label>
+      <textarea id="description" name="description" class="textarea textarea-bordered w-full" rows="3" value={p.description}></textarea>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="form-control w-full">
+        <label class="label pb-1" for="unitPrice">
+          <span class="label-text">
+            {t("Unit Price")} <span class="text-error">*</span>
+          </span>
+        </label>
+        <input type="number" id="unitPrice" name="unitPrice" step="0.01" min="0" class="input input-sm input-bordered w-full" value={p.unitPrice} required />
+      </div>
+
+      <div class="form-control w-full">
+        <label class="label pb-1" for="sku">
+          <span class="label-text">{t("SKU")}</span>
+        </label>
+        <input type="text" id="sku" name="sku" class="input input-sm input-bordered w-full" value={p.sku} />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="form-control w-full">
+        <label class="label pb-1" for="unit">
+          <span class="label-text">{t("Unit")}</span>
+        </label>
+        <select id="unit" name="unit" class="select select-sm select-bordered w-full" value={p.unit || ""}>
+          <option value="">{t("Select unit")}</option>
+          {#if data.units}
+            {#each data.units as u}
+              <option value={u.code}>{u.name}</option>
+            {/each}
+          {/if}
+        </select>
+      </div>
+
+      <div class="form-control w-full">
+        <label class="label pb-1" for="category">
+          <span class="label-text">{t("Category")}</span>
+        </label>
+        <select id="category" name="category" class="select select-sm select-bordered w-full" value={p.category || ""}>
+          <option value="">{t("Select category")}</option>
+          {#if data.categories}
+            {#each data.categories as c}
+              <option value={c.code}>{c.name}</option>
+            {/each}
+          {/if}
+        </select>
+      </div>
+    </div>
+
+    {#if data.taxDefinitions && data.taxDefinitions.length > 0}
+      <div class="form-control w-full sm:w-1/2 pr-0 sm:pr-2">
+        <label class="label pb-1" for="taxDefinitionId">
+          <span class="label-text">{t("Tax Definition")}</span>
+        </label>
+        <select id="taxDefinitionId" name="taxDefinitionId" class="select select-sm select-bordered w-full" value={p.taxDefinitionId || ""}>
+          <option value="">{t("No default tax")}</option>
+          {#each data.taxDefinitions as tax}
+            <option value={tax.id}>
+              {tax.name || tax.code || `${tax.percent}%`} ({tax.percent}%)
+            </option>
+          {/each}
+        </select>
+      </div>
+    {/if}
+  </div>
+</form>
+{:else if data.error}
+  <div class="alert alert-error">
+    <span>{data.error}</span>
+  </div>
+{/if}
