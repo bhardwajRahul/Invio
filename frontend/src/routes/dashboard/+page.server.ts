@@ -1,6 +1,7 @@
 import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { backendGet, SESSION_COOKIE } from "$lib/backend";
+import { getVersion } from "$lib/version";
 
 type Invoice = {
   id: string;
@@ -58,8 +59,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       .sort((a, b) => new Date(b.updatedAt || b.issueDate || 0).getTime() - new Date(a.updatedAt || a.issueDate || 0).getTime())
       .slice(0, 5);
 
-    let version = "unknown"; // TODO: grab from file if needed
-    // Assuming SvelteKit cannot do Deno.readTextFile directly safely across systems, we mock it or fetch it
+    const version = getVersion();
 
     return {
       counts: { invoices: invoices.length, customers: customers.length },

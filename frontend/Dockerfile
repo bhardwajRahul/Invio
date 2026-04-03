@@ -4,6 +4,9 @@ FROM oven/bun:1 AS builder
 # Set working directory
 WORKDIR /app
 
+# Copy VERSION file from parent context
+COPY ../VERSION ./VERSION
+
 # Copy package files
 COPY package.json bun.lock ./
 
@@ -12,6 +15,9 @@ RUN bun install --frozen-lockfile
 
 # Copy source files
 COPY . .
+
+# Copy VERSION to static folder for runtime access
+RUN cp VERSION static/VERSION 2>/dev/null || true
 
 # Build the application
 RUN bun run build
@@ -25,6 +31,8 @@ WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/bun.lock ./
+# Copy VERSION file from project root
+COPY --from=builder /app/VERSION ./VERSION
 
 # Install production dependencies only
 RUN bun install --frozen-lockfile --production
