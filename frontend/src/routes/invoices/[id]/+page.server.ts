@@ -37,6 +37,10 @@ export const actions: Actions = {
                 await backendPut(`/api/v1/invoices/${id}`, locals.authHeader, { status: "sent" });
                 throw redirect(303, `/invoices/${id}`);
             }
+            if (intent === "mark-complete") {
+                await backendPut(`/api/v1/invoices/${id}`, locals.authHeader, { status: "complete" });
+                throw redirect(303, `/invoices/${id}`);
+            }
             if (intent === "mark-paid") {
                 await backendPut(`/api/v1/invoices/${id}`, locals.authHeader, { status: "paid" });
                 throw redirect(303, `/invoices/${id}`);

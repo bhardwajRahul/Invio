@@ -25,7 +25,7 @@
 
   let filtered = $derived(invoices.filter((i) => {
     if (filterStatus === "all") return true;
-    if (filterStatus === "open") return i.status === "sent" || i.status === "overdue";
+    if (filterStatus === "open") return i.status === "sent" || i.status === "complete" || i.status === "overdue";
     return i.status === filterStatus;
   }));
 </script>
@@ -51,6 +51,7 @@
     <button class={`btn btn-sm ${filterStatus === "all" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "all"}>{t("All")}</button>
     <button class={`btn btn-sm ${filterStatus === "open" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "open"}>{t("Open")}</button>
     <button class={`btn btn-sm ${filterStatus === "draft" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "draft"}>{t("Draft")}</button>
+    <button class={`btn btn-sm ${filterStatus === "complete" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "complete"}>{t("Complete")}</button>
     <button class={`btn btn-sm ${filterStatus === "paid" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "paid"}>{t("Paid")}</button>
     <button class={`btn btn-sm ${filterStatus === "voided" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "voided"}>{t("Voided")}</button>
   </div>
@@ -102,6 +103,8 @@
                 <div class="badge badge-info badge-sm">{t("Sent")}</div>
               {:else if inv.status === "paid"}
                 <div class="badge badge-success badge-sm">{t("Paid")}</div>
+              {:else if inv.status === "complete"}
+                <div class="badge badge-secondary badge-sm">{t("Complete")}</div>
               {:else if inv.status === "overdue"}
                 <div class="badge badge-error badge-sm">{t("Overdue")}</div>
               {:else if inv.status === "voided"}

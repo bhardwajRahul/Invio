@@ -188,6 +188,8 @@
   "Make public and mark as sent": "Öffentlich machen und als gesendet markieren",
   "Manage your invoice templates": "Verwalten Sie Ihre Rechnungsvorlagen",
   "Manifest URL placeholder": "https://.../manifest.yaml",
+  "Complete": "Abgeschlossen",
+  "Mark as Complete": "Als abgeschlossen markieren",
   "Mark as Paid": "Als bezahlt markieren",
   "Mark as Sent": "Als gesendet markieren",
   "Meter": "Meter",

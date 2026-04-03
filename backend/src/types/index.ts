@@ -34,7 +34,7 @@ export interface Invoice {
   issueDate: Date;
   dueDate?: Date;
   currency: string;
-  status: "draft" | "sent" | "paid" | "overdue" | "voided";
+  status: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
 
   // Totals
   subtotal: number;
@@ -239,7 +239,7 @@ export interface CreateInvoiceRequest {
   issueDate?: string | Date;
   dueDate?: string | Date;
   currency?: string;
-  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
+  status?: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
 
   // Totals (optional, will be calculated if not provided)
   discountAmount?: number;
