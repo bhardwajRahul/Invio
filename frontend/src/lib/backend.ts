@@ -1,6 +1,6 @@
-﻿import { env } from "$env/dynamic/public";
+﻿import { env } from "$env/dynamic/private";
 
-export const BACKEND_URL = env.PUBLIC_BACKEND_URL || "http://localhost:3000";
+export const BACKEND_URL = env.BACKEND_URL || "http://localhost:3000";
 
 export const SESSION_COOKIE = "invio_session";
 export const DEFAULT_SESSION_MAX_AGE = 3600;
