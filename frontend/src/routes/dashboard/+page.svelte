@@ -6,6 +6,7 @@
 
   let t = getContext("i18n") as (key: string) => string;
   let numberFormat = $derived(data.localization?.numberFormat || "comma");
+  let statusCounts = $derived((data.status || {}) as Record<string, number>);
   let user = $derived(data.user);
   let canViewInvoices = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "invoices" && p.action === "read"));
   let canViewCustomers = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "customers" && p.action === "read"));
@@ -77,7 +78,7 @@
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Open Invoices")}</div>
         <div class="text-2xl sm:text-3xl font-extrabold">
-          {(data.status?.sent || 0) + (data.status?.overdue || 0)}
+          {(statusCounts.sent || 0) + (statusCounts.complete || 0) + (statusCounts.overdue || 0)}
         </div>
       </div>
     </div>
@@ -114,30 +115,36 @@
 {/if}
 
 {#if data.status}
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
     <div class="card bg-base-100 border border-base-300 rounded-box">
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Draft")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{data.status.draft}</div>
+        <div class="text-lg sm:text-xl font-semibold">{statusCounts.draft || 0}</div>
       </div>
     </div>
     <div class="card bg-base-100 border border-base-300 rounded-box">
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Sent")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{data.status.sent}</div>
+        <div class="text-lg sm:text-xl font-semibold">{statusCounts.sent || 0}</div>
+      </div>
+    </div>
+    <div class="card bg-base-100 border border-base-300 rounded-box">
+      <div class="card-body p-4">
+        <div class="text-xs sm:text-sm opacity-70">{t("Complete")}</div>
+        <div class="text-lg sm:text-xl font-semibold">{statusCounts.complete || 0}</div>
       </div>
     </div>
     <div class="card bg-base-100 border border-base-300 rounded-box">
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Paid")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{data.status.paid}</div>
+        <div class="text-lg sm:text-xl font-semibold">{statusCounts.paid || 0}</div>
       </div>
     </div>
     <div class="card bg-base-100 border border-base-300 rounded-box">
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Overdue")}</div>
-        <div class={`text-lg sm:text-xl font-semibold ${data.status.overdue > 0 ? "text-error" : ""}`}>
-          {data.status.overdue}
+        <div class={`text-lg sm:text-xl font-semibold ${statusCounts.overdue > 0 ? "text-error" : ""}`}>
+          {statusCounts.overdue || 0}
         </div>
       </div>
     </div>
@@ -173,6 +180,8 @@
                 <div class="badge badge-info badge-sm">{t("Sent")}</div>
               {:else if inv.status === "paid"}
                 <div class="badge badge-success badge-sm">{t("Paid")}</div>
+              {:else if (inv.status as string | undefined) === "complete"}
+                <div class="badge badge-secondary badge-sm">{t("Complete")}</div>
               {:else if inv.status === "overdue"}
                 <div class="badge badge-error badge-sm">{t("Overdue")}</div>
               {:else if inv.status === "voided"}

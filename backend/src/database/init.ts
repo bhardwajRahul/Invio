@@ -249,7 +249,7 @@ function seedProductDefaults(database: DB): void {
 }
 
 /**
- * Recreate the invoices table to add 'voided' to the CHECK constraint.
+ * Recreate the invoices table to add missing invoice statuses to the CHECK constraint.
  *
  * IMPORTANT: Foreign keys must be OFF during `DROP TABLE`  otherwise SQLite
  * performs an implicit `DELETE FROM invoices` which cascades to invoice_items.
@@ -260,9 +260,9 @@ function migrateInvoicesForVoided(database: DB): void {
     "SELECT sql FROM sqlite_master WHERE type='table' AND name='invoices'",
   );
   const createSql = checkSql.length > 0 ? String(checkSql[0][0]) : "";
-  if (!createSql || createSql.includes("voided")) return;
+  if (!createSql || (createSql.includes("voided") && createSql.includes("complete"))) return;
 
-  console.log("Migrating invoices table to support 'voided' status");
+  console.log("Migrating invoices table to support 'voided' and 'complete' statuses");
 
   const itemCountBefore = Number(
     (database.query("SELECT COUNT(*) FROM invoice_items") as unknown[][])[0][0],
@@ -280,7 +280,7 @@ function migrateInvoicesForVoided(database: DB): void {
         issue_date DATE NOT NULL,
         due_date DATE,
         currency TEXT DEFAULT 'USD',
-        status TEXT CHECK(status IN ('draft','sent','paid','overdue','voided')) DEFAULT 'draft',
+        status TEXT CHECK(status IN ('draft','sent','complete','paid','overdue','voided')) DEFAULT 'draft',
         subtotal NUMERIC NOT NULL DEFAULT 0,
         discount_amount NUMERIC DEFAULT 0,
         discount_percentage NUMERIC DEFAULT 0,
@@ -312,7 +312,7 @@ function migrateInvoicesForVoided(database: DB): void {
     database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_share_token ON invoices(share_token)");
 
     database.execute("COMMIT");
-    console.log(" Migrated invoices table to support 'voided' status");
+    console.log(" Migrated invoices table to support 'voided' and 'complete' statuses");
   } catch (migErr) {
     database.execute("ROLLBACK");
     throw migErr;

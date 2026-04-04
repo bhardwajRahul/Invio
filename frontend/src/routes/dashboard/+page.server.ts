@@ -10,7 +10,7 @@ type Invoice = {
   issueDate?: string | Date;
   updatedAt?: string | Date;
   currency?: string;
-  status?: "draft" | "sent" | "paid" | "overdue" | "voided";
+  status?: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
   total?: number;
 };
 
@@ -45,10 +45,11 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
     const dateFormat = String(settings.dateFormat || "YYYY-MM-DD");
     const billed = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
     const paid = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + (i.total || 0), 0);
-    const outstanding = invoices.filter((i) => i.status === "sent" || i.status === "overdue").reduce((s, i) => s + (i.total || 0), 0);
+    const outstanding = invoices.filter((i) => i.status === "sent" || i.status === "complete" || i.status === "overdue").reduce((s, i) => s + (i.total || 0), 0);
     const status = {
       draft: invoices.filter((i) => i.status === "draft").length,
       sent: invoices.filter((i) => i.status === "sent").length,
+      complete: invoices.filter((i) => i.status === "complete").length,
       paid: invoices.filter((i) => i.status === "paid").length,
       overdue: invoices.filter((i) => i.status === "overdue").length,
       voided: invoices.filter((i) => i.status === "voided").length,

@@ -565,6 +565,9 @@ export const getInvoiceByShareToken = (
   let invoice = mapRowToInvoice(result[0] as unknown[]);
   invoice = applyDerivedOverdue(invoice);
 
+  // Draft invoices must never be exposed via public share links.
+  if (invoice.status === "draft") return null;
+
   // Get customer
   const customer = getCustomerById(invoice.customerId);
   if (!customer) return null;
@@ -673,8 +676,9 @@ export const updateInvoice = async (
     const allowed: Record<string, string[]> = {
       draft: ["sent"],
       sent: ["paid"],
+      complete: [],
       overdue: ["paid"],
-      paid: [],
+      paid: ["complete"],
       voided: [],
     };
     if (!(allowed[from] || []).includes(to)) {
@@ -1113,7 +1117,10 @@ export const unpublishInvoice = async (
   if (!existing) throw new Error("Invoice not found");
 
   // Only sent or overdue invoices can be unpublished
-  if (existing.status !== "sent" && existing.status !== "overdue") {
+  if (
+    existing.status !== "sent" &&
+    existing.status !== "overdue"
+  ) {
     throw new Error(
       "Only sent or overdue invoices can be unpublished.",
     );
@@ -1122,9 +1129,9 @@ export const unpublishInvoice = async (
   const db = getDatabase();
   const newToken = generateShareToken();
   const now = new Date();
-  // Rotate share token to invalidate the public link; keep the invoice status intact
+  // Rotate share token to invalidate old public links and revert invoice to draft
   db.query(
-    "UPDATE invoices SET share_token = ?, updated_at = ? WHERE id = ?",
+    "UPDATE invoices SET share_token = ?, status = 'draft', updated_at = ? WHERE id = ?",
     [newToken, now, id],
   );
 
@@ -1147,6 +1154,11 @@ export const voidInvoice = async (
       "Paid invoices cannot be voided. Issue a credit note instead.",
     );
   }
+  if (existing.status === "complete") {
+    throw new Error(
+      "Complete invoices cannot be voided. Issue a credit note instead.",
+    );
+  }
 
   const db = getDatabase();
   const now = new Date();
@@ -1167,7 +1179,7 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     issueDate: new Date(row[3] as string),
     dueDate: row[4] ? new Date(row[4] as string) : undefined,
     currency: row[5] as string,
-    status: row[6] as "draft" | "sent" | "paid" | "overdue" | "voided",
+    status: row[6] as "draft" | "sent" | "complete" | "paid" | "overdue" | "voided",
     subtotal: row[7] as number,
     discountAmount: row[8] as number,
     discountPercentage: row[9] as number,
@@ -1188,7 +1200,7 @@ function applyDerivedOverdue<
   T extends { status: Invoice["status"]; dueDate?: Date },
 >(inv: T): T {
   if (!inv) return inv;
-  if (inv.status === "paid" || inv.status === "voided") return inv;
+  if (inv.status === "paid" || inv.status === "voided" || inv.status === "complete") return inv;
   if (!inv.dueDate) return inv;
   const today = new Date();
   const dd = new Date(

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { getContext, onMount, untrack } from "svelte";
-  import { Save, Plus, GripVertical } from "lucide-svelte";
+  import { Plus, GripVertical } from "lucide-svelte";
   import { goto } from "$app/navigation";
 
-  let { data, invoice = null } = $props();
+  let { data, invoice = null, formId = "invoice-editor-form" } = $props();
   let initInvoice = untrack(() => invoice);
   let t = getContext("i18n") as (key: string) => string;
   let loc = getContext("localization") as any;
@@ -154,17 +154,10 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<form onsubmit={handleSubmit} class="space-y-6">
+<form id={formId} onsubmit={handleSubmit} class="space-y-6">
   {#if error}
     <div class="alert alert-error">{error}</div>
   {/if}
-
-  <div class="flex items-center justify-end gap-3">
-    <button type="submit" class="btn btn-primary" disabled={saving}>
-      <Save size={16} />
-      <span>{t("Save")}</span>
-    </button>
-  </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <label class="form-control">
@@ -201,6 +194,7 @@
         <option value="draft">{t("Draft")}</option>
         <option value="sent">{t("Sent")}</option>
         <option value="paid">{t("Paid")}</option>
+        <option value="complete">{t("Complete")}</option>
         <option value="overdue">{t("Overdue")}</option>
         <option value="voided">{t("Voided")}</option>
       </select>

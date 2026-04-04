@@ -106,8 +106,8 @@
         {t("Invoice #")} {invoice?.invoiceNumber || invoice?.id}
       </h1>
       {#if invoice?.status}
-        <span class="badge {invoice.status === 'paid' ? 'badge-success' : invoice.status === 'voided' ? 'badge-warning' : isOverdue && invoice?.status !== 'paid' ? 'badge-error' : invoice.status === 'sent' ? 'badge-info' : ''}">
-          {invoice.status === "voided" ? t("Voided") : isOverdue && invoice?.status !== "paid" ? t("Overdue") : t(invoice?.status === "draft" ? "Draft" : invoice?.status === "sent" ? "Sent" : invoice?.status === "paid" ? "Paid" : "Overdue")}
+        <span class="badge {invoice.status === 'paid' ? 'badge-success' : invoice.status === 'complete' ? 'badge-secondary' : invoice.status === 'voided' ? 'badge-warning' : isOverdue && invoice?.status !== 'paid' && invoice?.status !== 'complete' ? 'badge-error' : invoice.status === 'sent' ? 'badge-info' : ''}">
+          {invoice.status === "voided" ? t("Voided") : invoice.status === "complete" ? t("Complete") : isOverdue && invoice?.status !== "paid" && invoice?.status !== "complete" ? t("Overdue") : t(invoice?.status === "draft" ? "Draft" : invoice?.status === "sent" ? "Sent" : invoice?.status === "paid" ? "Paid" : "Overdue")}
         </span>
       {/if}
     </div>
@@ -116,6 +116,7 @@
     <form id="inv-duplicate" method="post" class="hidden" use:enhance><input type="hidden" name="intent" value="duplicate" /></form>
     <form id="inv-unpublish" method="post" class="hidden" use:enhance><input type="hidden" name="intent" value="unpublish" /></form>
     <form id="inv-mark-sent" method="post" class="hidden" use:enhance><input type="hidden" name="intent" value="mark-sent" /></form>
+    <form id="inv-mark-complete" method="post" class="hidden" use:enhance><input type="hidden" name="intent" value="mark-complete" /></form>
     <form id="inv-void" method="post" class="hidden" use:enhance={confirmAction(t("Void this invoice?"))}><input type="hidden" name="intent" value="void" /></form>
     <form id="inv-delete" method="post" class="hidden" use:enhance={confirmAction(t("Delete this invoice? This cannot be undone."))}><input type="hidden" name="intent" value="delete" /></form>
 
@@ -134,6 +135,16 @@
             <button type="submit" class="btn btn-sm btn-success" title={t("Make public and mark as sent")}>
               <Upload size={16} />
               <span class="hidden sm:inline">{t("Publish")}</span>
+            </button>
+          </form>
+        {/if}
+
+        {#if invoice.status === "paid" && canUpdate}
+          <form method="post" use:enhance>
+            <input type="hidden" name="intent" value="mark-complete" />
+            <button type="submit" class="btn btn-sm btn-secondary" title={t("Mark as Complete")}>
+              <CheckCircle size={16} />
+              <span class="hidden sm:inline">{t("Mark as Complete")}</span>
             </button>
           </form>
         {/if}
@@ -169,6 +180,13 @@
               <li>
                 <button type="submit" form="inv-unpublish" class="flex items-center gap-2 py-2">
                   <ShieldOff size={16} /> {t("Unpublish")}
+                </button>
+              </li>
+            {/if}
+            {#if invoice.status === "paid" && canUpdate}
+              <li>
+                <button type="submit" form="inv-mark-complete" class="flex items-center gap-2 py-2">
+                  <CheckCircle size={16} /> {t("Mark as Complete")}
                 </button>
               </li>
             {/if}
