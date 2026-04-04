@@ -181,6 +181,7 @@
   "Login": "Inloggen",
   "Login response missing token": "Login-antwoord bevat geen token",
   "Logo": "Logo",
+  "Logo URL or Path": "Logo-URL of pad",
   "Logo placeholder": "https://voorbeeld.com/logo.png of data:image/png;base64,...",
   "Logo preview alt": "Logovoorbeeld",
   "Logout": "Afmelden",

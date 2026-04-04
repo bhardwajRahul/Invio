@@ -118,6 +118,27 @@ type WithLogo = BusinessSettings & {
   brandLayout?: string;
 };
 
+function normalizeLogoUrlForRender(
+  logo?: string,
+  forceAbsolute = false,
+): string | undefined {
+  if (!logo) return undefined;
+  const value = logo.trim();
+  if (!value) return undefined;
+  if (value.startsWith("data:")) return value;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith("/")) {
+    if (!forceAbsolute) return value;
+    const base = Deno.env.get("BASE_URL") || "http://localhost:3000";
+    try {
+      return new URL(value, base).toString();
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
 function formatMoney(
   value: number,
   currency: string,
@@ -190,6 +211,7 @@ function buildContext(
   dateFormat?: string,
   numberFormat?: "comma" | "period",
   localeOverride?: string,
+  forceAbsoluteLogoUrl = false,
 ): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
   const requestedLocale = localeOverride ?? invoice.locale ?? settings?.locale;
   const { locale: resolvedLocale, labels } = getInvoiceLabels(requestedLocale);
@@ -308,8 +330,11 @@ function buildContext(
 
     // Non-mustache extras consumed by templates
     // Prefer inlined data URL if available; otherwise pass through the provided logo value
-    logoUrl: (settings as WithLogo | undefined)?.logoUrl ||
+    logoUrl: normalizeLogoUrlForRender(
+      (settings as WithLogo | undefined)?.logoUrl ||
       (settings as WithLogo | undefined)?.logo,
+      forceAbsoluteLogoUrl,
+    ),
     // Permanently use logo-left layout
     brandLogoLeft: true,
   } as TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean };
@@ -332,6 +357,7 @@ export async function generateInvoicePDF(
     opts?.dateFormat,
     opts?.numberFormat,
     opts?.locale ?? invoiceData.locale ?? inlined?.locale,
+    true,
   );
   // Render via chrome-headless-shell / Chromium CLI
   let pdfBytes: Uint8Array;
@@ -383,6 +409,7 @@ export function buildInvoiceHTML(
   dateFormat?: string,
   numberFormat?: "comma" | "period",
   localeOverride?: string,
+  forceAbsoluteLogoUrl = false,
 ): string {
   const ctx = buildContext(
     invoice,
@@ -391,6 +418,7 @@ export function buildInvoiceHTML(
     dateFormat,
     numberFormat,
     localeOverride,
+    forceAbsoluteLogoUrl,
   );
   const hl = normalizeHex(highlight) || "#2563eb";
   const hlLight = lighten(hl, 0.86);

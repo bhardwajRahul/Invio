@@ -17,5 +17,5 @@
 
 /Invio.wiki
 .DS_Store
-
+/backend/data/*
 /chrome-headless-shell

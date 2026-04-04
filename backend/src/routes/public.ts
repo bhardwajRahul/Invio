@@ -6,6 +6,10 @@ import { getSettings } from "../controllers/settings.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import (will be removed after deprecation window)
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
+import {
+  contentTypeFromLogoPath,
+  resolveLogoFsPathFromPublicPath,
+} from "../utils/logoStorage.ts";
 
 const publicRoutes = new Hono();
 
@@ -18,6 +22,24 @@ function isSafeTemplateIdentifier(value: string): boolean {
 const DEMO_MODE = (Deno.env.get("DEMO_MODE") || "").toLowerCase() === "true";
 publicRoutes.get("/demo-mode", (c) => {
   return c.json({ demoMode: DEMO_MODE });
+});
+
+publicRoutes.get("/public/assets/logos/:file", async (c) => {
+  const file = c.req.param("file") || "";
+  const fsPath = resolveLogoFsPathFromPublicPath(`/public/assets/logos/${file}`);
+  if (!fsPath) return c.notFound();
+
+  try {
+    const bytes = await Deno.readFile(fsPath);
+    return new Response(bytes, {
+      headers: {
+        "content-type": contentTypeFromLogoPath(fsPath),
+        "cache-control": "public, max-age=31536000, immutable",
+      },
+    });
+  } catch {
+    return c.notFound();
+  }
 });
 
 // Serve stored template files (fonts, html) for installed templates

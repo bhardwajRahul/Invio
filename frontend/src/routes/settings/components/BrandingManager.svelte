@@ -12,6 +12,8 @@
   function isValidLogo(v: string) {
     if (!v) return true;
     if (v.startsWith("data:image/")) return true;
+    if (v.startsWith("/api/v1/public/assets/logos/")) return true;
+    if (v.startsWith("/public/assets/logos/")) return true;
     try {
       const u = new URL(v);
       return u.protocol === "http:" || u.protocol === "https:";
@@ -24,7 +26,7 @@
     logoError = !isValidLogo(settings.logo);
   }
 
-  function onFileChange(e: Event) {
+  async function onFileChange(e: Event) {
     const target = e.target as HTMLInputElement;
     const file = target.files?.[0];
     if (!file) return;
@@ -34,15 +36,28 @@
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        settings.logo = result;
-        handleLogoInput();
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const res = await fetch("/api/v1/settings/logo-upload", {
+        method: "POST",
+        body: form,
+      });
+
+      if (!res.ok) {
+        throw new Error(t("Upload failed"));
       }
-    };
-    reader.readAsDataURL(file);
+
+      const payload = await res.json();
+      if (!payload?.logo || typeof payload.logo !== "string") {
+        throw new Error(t("Upload failed"));
+      }
+
+      settings.logo = payload.logo;
+      handleLogoInput();
+    } catch (err: any) {
+      alert(err?.message || t("Upload failed"));
+    }
   }
 
   // Simplified color extraction
@@ -122,7 +137,7 @@
 
   <div class="form-control">
     <div class="label">
-      <span class="label-text">{t("Logo URL or Base64")}</span>
+      <span class="label-text">{t("Logo URL or Path")}</span>
       <span class="label-text-alt opacity-70">Optional</span>
     </div>
     
@@ -133,7 +148,7 @@
         bind:value={settings.logo}
         oninput={handleLogoInput}
         disabled={!canUpdateSettings}
-        placeholder="https://... or data:image/..."
+        placeholder="https://... or /api/v1/public/assets/logos/..."
       />
       <label class="btn btn-secondary cursor-pointer {!canUpdateSettings ? 'btn-disabled' : ''}">
         <Image size={18} class="mr-2" />

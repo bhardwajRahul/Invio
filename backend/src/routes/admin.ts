@@ -71,6 +71,7 @@ import { availableInvoiceLocales } from "../i18n/translations.ts";
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
 import { isDemoMode } from "../utils/env.ts";
+import { saveDataUrlLogo, saveUploadedLogoFile } from "../utils/logoStorage.ts";
 import { requireAdminAuth, requirePermission, requireAdmin, getAuthUser } from "../middleware/auth.ts";
 import {
   listUsers,
@@ -672,6 +673,9 @@ adminRoutes.put("/settings", requirePermission("settings", "update"), async (c) 
     data.logo = data.logoUrl;
     delete data.logoUrl;
   }
+  if (typeof data.logo === "string" && data.logo.startsWith("data:image/")) {
+    data.logo = await saveDataUrlLogo(data.logo);
+  }
   // Normalize tax-related settings
   normalizeTaxSettingsPayload(data);
   normalizeLocaleSettingPayload(data);
@@ -696,6 +700,9 @@ adminRoutes.patch("/settings", requirePermission("settings", "update"), async (c
     data.logo = data.logoUrl;
     delete data.logoUrl;
   }
+  if (typeof data.logo === "string" && data.logo.startsWith("data:image/")) {
+    data.logo = await saveDataUrlLogo(data.logo);
+  }
   // Normalize countryCode alias to companyCountryCode
   if (typeof data.countryCode === "string" && !data.companyCountryCode) {
     data.companyCountryCode = data.countryCode;
@@ -714,6 +721,20 @@ adminRoutes.patch("/settings", requirePermission("settings", "update"), async (c
     if ("logoUrl" in data) deleteSetting("logoUrl");
   } catch (_e) { /* ignore legacy cleanup errors */ }
   return c.json(settings);
+});
+
+adminRoutes.post("/settings/logo-upload", requirePermission("settings", "update"), async (c) => {
+  try {
+    const form = await c.req.formData();
+    const entry = form.get("file");
+    if (!(entry instanceof File)) {
+      return c.json({ error: "Missing file" }, 400);
+    }
+    const logo = await saveUploadedLogoFile(entry);
+    return c.json({ logo });
+  } catch (e) {
+    return c.json({ error: String(e) }, 400);
+  }
 });
 
 // Optional admin-prefixed aliases for clarity/documentation parity

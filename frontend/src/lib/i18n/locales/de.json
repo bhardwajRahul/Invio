@@ -181,6 +181,7 @@
   "Login": "Anmelden",
   "Login response missing token": "Login-Antwort enthält keinen Token",
   "Logo": "Logo",
+  "Logo URL or Path": "Logo-URL oder Pfad",
   "Logo placeholder": "https://beispiel.de/logo.png oder data:image/png;base64,...",
   "Logo preview alt": "Logo-Vorschau",
   "Logout": "Abmelden",
