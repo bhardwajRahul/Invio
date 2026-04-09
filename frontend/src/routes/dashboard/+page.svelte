@@ -78,7 +78,7 @@
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Open Invoices")}</div>
         <div class="text-2xl sm:text-3xl font-extrabold">
-          {(statusCounts.sent || 0) + (statusCounts.complete || 0) + (statusCounts.overdue || 0)}
+          {(statusCounts.sent || 0) + (statusCounts.overdue || 0)}
         </div>
       </div>
     </div>
@@ -115,7 +115,7 @@
 {/if}
 
 {#if data.status}
-  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+  <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
     <div class="card bg-base-100 border border-base-300 rounded-box">
       <div class="card-body p-4">
         <div class="text-xs sm:text-sm opacity-70">{t("Draft")}</div>
@@ -146,6 +146,12 @@
         <div class={`text-lg sm:text-xl font-semibold ${statusCounts.overdue > 0 ? "text-error" : ""}`}>
           {statusCounts.overdue || 0}
         </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 border border-base-300 rounded-box">
+      <div class="card-body p-4">
+        <div class="text-xs sm:text-sm opacity-70">{t("Voided")}</div>
+        <div class="text-lg sm:text-xl font-semibold">{statusCounts.voided || 0}</div>
       </div>
     </div>
   </div>
