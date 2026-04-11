@@ -1,5 +1,5 @@
 import { redirect, fail } from "@sveltejs/kit";
-import { backendGet, backendPost } from "$lib/backend";
+import { backendGet, backendPut } from "$lib/backend";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -56,7 +56,7 @@ export const actions: Actions = {
     }
 
     try {
-      await backendPost(`/api/v1/products/${params.id}`, locals.authHeader, {
+      await backendPut(`/api/v1/products/${params.id}`, locals.authHeader, {
         name,
         description: description || undefined,
         unitPrice,
@@ -68,7 +68,9 @@ export const actions: Actions = {
       });
     } catch (e: any) {
       if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
-      return fail(500, { error: e.message || String(e) });
+      const msg = e?.message || String(e);
+      const status = /not found|404/i.test(msg) ? 404 : 500;
+      return fail(status, { error: msg });
     }
     throw redirect(303, `/products/${params.id}`);
   },
