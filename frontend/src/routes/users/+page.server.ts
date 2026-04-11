@@ -16,8 +16,16 @@ export const load = async ({ locals }) => {
 
   try {
     const users = await backendGet("/api/v1/users", locals.authHeader);
+    const normalizedUsers = Array.isArray(users)
+      ? users.map((u: any) => ({
+          ...u,
+          displayName: u?.displayName ?? u?.display_name ?? u?.name ?? "",
+          username: u?.username ?? u?.userName ?? u?.user_name ?? "",
+          email: u?.email ?? "",
+        }))
+      : [];
     return {
-      users: users || []
+      users: normalizedUsers
     };
   } catch (err: any) {
     console.error("Failed to load users:", err);

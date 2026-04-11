@@ -9,8 +9,27 @@
   let canCreate = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "users" && p.action === "create"));
   let usersList = $derived(data.users || []);
 
-  function getUserLabel(u: { displayName?: string; name?: string; username?: string }) {
-    return u.displayName || u.name || u.username || t("Unnamed");
+  function getUserLabel(u: {
+    displayName?: string;
+    display_name?: string;
+    name?: string;
+    username?: string;
+    userName?: string;
+    user_name?: string;
+    email?: string;
+  }) {
+    const label = [
+      u.displayName,
+      u.display_name,
+      u.name,
+      u.username,
+      u.userName,
+      u.user_name,
+    ].find((v) => typeof v === "string" && v.trim().length > 0);
+
+    if (label) return label;
+    if (u.email && u.email.includes("@")) return u.email.split("@")[0];
+    return t("Unnamed");
   }
 </script>
 
