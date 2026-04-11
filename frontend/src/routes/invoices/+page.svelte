@@ -22,11 +22,61 @@
 
   let invoices = $derived(data.invoices || []);
   let filterStatus = $state("all");
+  let sortKey = $state<"invoiceNumber" | "customer" | "total" | "status" | "issueDate" | "updatedAt">("invoiceNumber");
+  let sortDirection = $state<"asc" | "desc">("desc");
+
+  function toDateMs(v: unknown) {
+    return new Date((v as string) || 0).getTime();
+  }
+
+  function compareText(a: unknown, b: unknown) {
+    return String(a || "").localeCompare(String(b || ""), undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+
+  function handleSort(key: "invoiceNumber" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
+    if (sortKey === key) {
+      sortDirection = sortDirection === "asc" ? "desc" : "asc";
+      return;
+    }
+    sortKey = key;
+    sortDirection = key === "invoiceNumber" ? "desc" : "asc";
+  }
+
+  function sortMarker(key: "invoiceNumber" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
+    if (sortKey !== key) return "";
+    return sortDirection === "asc" ? " ▲" : " ▼";
+  }
 
   let filtered = $derived(invoices.filter((i) => {
     if (filterStatus === "all") return true;
     if (filterStatus === "open") return i.status === "sent" || i.status === "complete" || i.status === "overdue";
     return i.status === filterStatus;
+  }));
+
+  let sortedFiltered = $derived([...filtered].sort((a, b) => {
+    let result = 0;
+    if (sortKey === "invoiceNumber") {
+      result = compareText(a.invoiceNumber, b.invoiceNumber);
+    } else if (sortKey === "customer") {
+      result = compareText(a.customer?.name, b.customer?.name);
+    } else if (sortKey === "total") {
+      result = Number(a.total || 0) - Number(b.total || 0);
+    } else if (sortKey === "status") {
+      result = compareText(a.status, b.status);
+    } else if (sortKey === "issueDate") {
+      result = toDateMs(a.issueDate) - toDateMs(b.issueDate);
+    } else if (sortKey === "updatedAt") {
+      result = toDateMs(a.updatedAt) - toDateMs(b.updatedAt);
+    }
+
+    if (result === 0) {
+      result = compareText(a.invoiceNumber, b.invoiceNumber);
+    }
+
+    return sortDirection === "asc" ? result : -result;
   }));
 </script>
 
@@ -69,18 +119,42 @@
     <table class="table table-sm sm:table-md w-full whitespace-nowrap">
       <thead class="bg-base-200">
         <tr>
-          <th>{t("Invoice No")}</th>
+          <th>
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("invoiceNumber")}>
+              {t("Invoice No")}{sortMarker("invoiceNumber")}
+            </button>
+          </th>
           {#if canViewCustomers}
-            <th>{t("Customer")}</th>
+            <th>
+              <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("customer")}>
+                {t("Customer")}{sortMarker("customer")}
+              </button>
+            </th>
           {/if}
-          <th>{t("Total")}</th>
-          <th>{t("Status")}</th>
-          <th class="hidden sm:table-cell">{t("Issue Date")}</th>
-          <th class="hidden md:table-cell text-right">{t("Updated")}</th>
+          <th>
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("total")}>
+              {t("Total")}{sortMarker("total")}
+            </button>
+          </th>
+          <th>
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("status")}>
+              {t("Status")}{sortMarker("status")}
+            </button>
+          </th>
+          <th class="hidden sm:table-cell">
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("issueDate")}>
+              {t("Issue Date")}{sortMarker("issueDate")}
+            </button>
+          </th>
+          <th class="hidden md:table-cell text-right">
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("updatedAt")}>
+              {t("Updated")}{sortMarker("updatedAt")}
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
-        {#each filtered as inv}
+        {#each sortedFiltered as inv}
           <tr class="hover">
             <td class="font-medium hover:underline">
               <a href={`/invoices/${inv.id}`}>{inv.invoiceNumber}</a>
@@ -123,7 +197,7 @@
             </td>
           </tr>
         {/each}
-        {#if filtered.length === 0}
+        {#if sortedFiltered.length === 0}
           <tr>
             <td colspan="6" class="text-center py-8 opacity-50">{t("No invoices match this filter")}</td>
           </tr>
