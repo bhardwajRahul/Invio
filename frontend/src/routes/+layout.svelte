@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { LayoutDashboard, LogOut, Package, ReceiptText, Settings, UserCog, Users } from "lucide-svelte";
+  import { LayoutDashboard, LogOut, MoreHorizontal, Package, ReceiptText, Settings, UserCog, Users } from "lucide-svelte";
   import DemoModeDisabler from "$lib/components/DemoModeDisabler.svelte";
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte";
   import "./layout.css";
@@ -33,9 +33,26 @@
   let canViewProducts = $derived(hasPermission("products", "read"));
   let canViewCustomers = $derived(hasPermission("customers", "read"));
   let canViewSettings = $derived(hasPermission("settings", "read"));
+  let canViewUsers = $derived(hasPermission("users", "read"));
   let authed = $derived(!!authUser);
   let wide = $derived(page.data.wide ?? false);
   let isPublic = $derived(page.url.pathname.startsWith("/public"));
+  let moreMenuDetails = $state<HTMLDetailsElement | null>(null);
+
+  function closeMoreMenuOnOutsideClick(event: MouseEvent) {
+    if (!moreMenuDetails?.open) return;
+    const target = event.target as Node | null;
+    if (target && !moreMenuDetails.contains(target)) {
+      moreMenuDetails.open = false;
+    }
+  }
+
+  $effect(() => {
+    document.addEventListener("click", closeMoreMenuOnOutsideClick, true);
+    return () => {
+      document.removeEventListener("click", closeMoreMenuOnOutsideClick, true);
+    };
+  });
 </script>
 
 {#if isPublic}
@@ -88,14 +105,6 @@
                 </a>
               </li>
             {/if}
-            {#if canViewProducts}
-              <li>
-                <a href="/products">
-                  <Package size={16} />
-                  {t("Products")}
-                </a>
-              </li>
-            {/if}
             {#if canViewCustomers}
               <li>
                 <a href="/customers">
@@ -104,27 +113,45 @@
                 </a>
               </li>
             {/if}
-            {#if canViewSettings}
-              <li>
-                <a href="/settings">
-                  <Settings size={16} />
-                  {t("Settings")}
-                </a>
-              </li>
-            {/if}
-            {#if isAdmin}
-              <li>
-                <a href="/users">
-                  <UserCog size={16} />
-                  {t("Users")}
-                </a>
-              </li>
-            {/if}
             <li>
-              <a href="/logout">
-                <LogOut size={16} />
-                {t("Logout")}
-              </a>
+              <details bind:this={moreMenuDetails}>
+                <summary>
+                  <MoreHorizontal size={16} />
+                  {t("More")}
+                </summary>
+                <ul class="p-2 bg-base-100 rounded-box z-[20] w-52">
+                  {#if canViewProducts}
+                    <li>
+                      <a href="/products">
+                        <Package size={16} />
+                        {t("Products")}
+                      </a>
+                    </li>
+                  {/if}
+                  {#if canViewSettings}
+                    <li>
+                      <a href="/settings">
+                        <Settings size={16} />
+                        {t("Settings")}
+                      </a>
+                    </li>
+                  {/if}
+                  {#if canViewUsers}
+                    <li>
+                      <a href="/users">
+                        <UserCog size={16} />
+                        {t("Users")}
+                      </a>
+                    </li>
+                  {/if}
+                  <li>
+                    <a href="/logout">
+                      <LogOut size={16} />
+                      {t("Logout")}
+                    </a>
+                  </li>
+                </ul>
+              </details>
             </li>
           </ul>
 
@@ -174,7 +201,7 @@
                   </a>
                 </li>
               {/if}
-              {#if isAdmin}
+              {#if canViewUsers}
                 <li>
                   <a href="/users">
                     <UserCog size={16} />

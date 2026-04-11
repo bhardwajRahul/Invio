@@ -5,6 +5,7 @@
 
   let { data, invoice = null, formId = "invoice-editor-form" } = $props();
   let initInvoice = untrack(() => invoice);
+  let initSettings = untrack(() => data?.settings || {});
   let t = getContext("i18n") as (key: string) => string;
   let loc = getContext("localization") as any;
 
@@ -22,8 +23,8 @@
     taxRate: initInvoice?.taxRate || 0,
     pricesIncludeTax: initInvoice?.pricesIncludeTax ? "true" : "false",
     roundingMode: initInvoice?.roundingMode || "line",
-    paymentTerms: initInvoice?.paymentTerms || "",
-    notes: initInvoice?.notes || ""
+    paymentTerms: initInvoice?.paymentTerms ?? initSettings.paymentTerms ?? "",
+    notes: initInvoice?.notes ?? initSettings.defaultNotes ?? ""
   });
 
   let items = $state(

@@ -8,6 +8,10 @@
   let user = $derived(data.user);
   let canCreate = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "users" && p.action === "create"));
   let usersList = $derived(data.users || []);
+
+  function getUserLabel(u: { displayName?: string; name?: string; username?: string }) {
+    return u.displayName || u.name || u.username || t("Unnamed");
+  }
 </script>
 
 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
@@ -32,7 +36,7 @@
     <a href={`/users/${u.id}`} class="card bg-base-100 border border-base-300 hover:shadow-md transition-shadow">
       <div class="card-body p-4">
         <div class="flex gap-2 items-center mb-1">
-          <span class="font-semibold">{u.name || t("Unnamed")}</span>
+          <span class="font-semibold">{getUserLabel(u)}</span>
           {#if u.isAdmin}
             <span class="badge badge-primary badge-sm">{t("Admin")}</span>
           {/if}
@@ -57,7 +61,7 @@
       {#each usersList as u}
         <tr class="hover">
           <td>
-            <a class="link" href={`/users/${u.id}`}>{u.name || t("Unnamed")}</a>
+            <a class="link" href={`/users/${u.id}`}>{getUserLabel(u)}</a>
           </td>
           <td class="opacity-70">{u.email}</td>
           <td>

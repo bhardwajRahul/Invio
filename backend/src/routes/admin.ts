@@ -1323,21 +1323,34 @@ adminRoutes.get("/users/me", (c) => {
 });
 
 // GET /users/permissions-schema — returns the valid resources and actions
-adminRoutes.get("/users/permissions-schema", requireAdmin, (c) => {
+adminRoutes.get("/users/permissions-schema", (c) => {
+  const user = getAuthUser(c);
+  const canViewSchema =
+    !!user &&
+    (user.isAdmin ||
+      user.permissions.some(
+        (p) =>
+          p.resource === "users" &&
+          (p.action === "read" || p.action === "create" || p.action === "update"),
+      ));
+  if (!canViewSchema) {
+    return c.json({ error: "Missing permission: users:read|create|update" }, 403);
+  }
+
   return c.json({
     resources: RESOURCES,
     resourceActions: RESOURCE_ACTIONS,
   });
 });
 
-// GET /users — list all users (admin only)
-adminRoutes.get("/users", requireAdmin, (c) => {
+// GET /users — list all users
+adminRoutes.get("/users", requirePermission("users", "read"), (c) => {
   const users = listUsers();
   return c.json(users);
 });
 
-// POST /users — create a new user (admin only)
-adminRoutes.post("/users", requireAdmin, async (c) => {
+// POST /users — create a new user
+adminRoutes.post("/users", requirePermission("users", "create"), async (c) => {
   try {
     const data = await c.req.json();
     const user = await createUserCtrl(data);
@@ -1349,16 +1362,16 @@ adminRoutes.post("/users", requireAdmin, async (c) => {
   }
 });
 
-// GET /users/:id — get user details (admin only)
-adminRoutes.get("/users/:id", requireAdmin, (c) => {
+// GET /users/:id — get user details
+adminRoutes.get("/users/:id", requirePermission("users", "read"), (c) => {
   const id = c.req.param("id");
   const user = getUserByIdCtrl(id);
   if (!user) return c.json({ error: "User not found" }, 404);
   return c.json(user);
 });
 
-// PUT /users/:id — update user (admin only)
-adminRoutes.put("/users/:id", requireAdmin, async (c) => {
+// PUT /users/:id — update user
+adminRoutes.put("/users/:id", requirePermission("users", "update"), async (c) => {
   const id = c.req.param("id");
   try {
     const data = await c.req.json();
@@ -1383,8 +1396,8 @@ adminRoutes.put("/users/:id", requireAdmin, async (c) => {
   }
 });
 
-// DELETE /users/:id — delete user (admin only)
-adminRoutes.delete("/users/:id", requireAdmin, (c) => {
+// DELETE /users/:id — delete user
+adminRoutes.delete("/users/:id", requirePermission("users", "delete"), (c) => {
   const id = c.req.param("id");
   try {
     deleteUserCtrl(id);
