@@ -10,6 +10,10 @@
   let canCreate = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "products" && p.action === "create"));
   let products = $derived(data.products || []);
 
+  function getProductPrice(p: { unitPrice?: number; unit_price?: number; price?: number }) {
+    return Number(p.unitPrice ?? p.unit_price ?? p.price ?? 0);
+  }
+
   function fmtMoney(cur: string | undefined, n: number) {
     if (!cur) cur = "USD";
     try {
@@ -44,7 +48,7 @@
       <div class="card-body p-4">
         <div class="flex justify-between items-start mb-2">
           <div class="font-semibold line-clamp-2 pr-2">{p.name || p.id}</div>
-          <div class="font-medium whitespace-nowrap">{fmtMoney(p.currency, p.price)}</div>
+          <div class="font-medium whitespace-nowrap">{fmtMoney(p.currency, getProductPrice(p))}</div>
         </div>
         {#if p.description}
           <div class="text-sm opacity-70 line-clamp-2">{p.description}</div>
@@ -81,7 +85,7 @@
             <a class="link" href={`/products/${p.id}`}>{p.name || p.id}</a>
           </td>
           <td class="opacity-70 max-w-[20rem] truncate">{p.description || ""}</td>
-          <td class="text-right pr-4 font-medium">{fmtMoney(p.currency, p.price)}</td>
+          <td class="text-right pr-4 font-medium">{fmtMoney(p.currency, getProductPrice(p))}</td>
         </tr>
       {/each}
       {#if products.length === 0}
