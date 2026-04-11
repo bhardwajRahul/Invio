@@ -8,17 +8,21 @@ export const load: PageServerLoad = async ({ locals }) => {
     }
     
     // Load prerequisites for new invoice
-    const [customersRes, productsRes, taxDefinitionsRes, settingsRes] = await Promise.allSettled([
+    const [customersRes, productsRes, taxDefinitionsRes, settingsRes, nextInvoiceNumberRes] = await Promise.allSettled([
         backendGet("/api/v1/customers", locals.authHeader),
         backendGet("/api/v1/products", locals.authHeader),
         backendGet("/api/v1/tax-definitions", locals.authHeader),
-        backendGet("/api/v1/settings", locals.authHeader)
+        backendGet("/api/v1/settings", locals.authHeader),
+        backendGet("/api/v1/invoices/next-number", locals.authHeader)
     ]);
 
     return {
         customers: customersRes.status === "fulfilled" ? customersRes.value : [],
         products: productsRes.status === "fulfilled" ? productsRes.value : [],
         taxDefinitions: taxDefinitionsRes.status === "fulfilled" ? taxDefinitionsRes.value : [],
-        settings: settingsRes.status === "fulfilled" ? settingsRes.value : {}
+        settings: settingsRes.status === "fulfilled" ? settingsRes.value : {},
+        nextInvoiceNumber: nextInvoiceNumberRes.status === "fulfilled"
+            ? (nextInvoiceNumberRes.value?.next || "")
+            : ""
     };
 };

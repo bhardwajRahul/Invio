@@ -6,6 +6,7 @@
   let { data, invoice = null, formId = "invoice-editor-form" } = $props();
   let initInvoice = untrack(() => invoice);
   let initSettings = untrack(() => data?.settings || {});
+  let initNextInvoiceNumber = untrack(() => data?.nextInvoiceNumber || "");
   let t = getContext("i18n") as (key: string) => string;
   let loc = getContext("localization") as any;
 
@@ -14,7 +15,7 @@
 
   let form = $state({
     customerId: initInvoice?.customerId || "",
-    invoiceNumber: initInvoice?.invoiceNumber || "",
+    invoiceNumber: initInvoice?.invoiceNumber ?? initNextInvoiceNumber,
     currency: initInvoice?.currency || "EUR",
     status: initInvoice?.status || "draft",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),

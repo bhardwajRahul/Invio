@@ -248,7 +248,11 @@
                <span class="label-text">{t("Enable Automatic Invoice Numbering")}</span>
              </label>
              <label class="form-control"><div class="label"><span class="label-text">{t("Invoice Number Pattern")}</span></div>
-               <input type="text" class="input input-bordered w-full" bind:value={settings.invoiceNumberPattern} disabled={!canUpdateSettings} placeholder={"INV-{YYYY}-{NNNN}"} />
+               <input type="text" class="input input-bordered w-full" bind:value={settings.invoiceNumberPattern} disabled={!canUpdateSettings} placeholder={"INV-{YYYY}-{SEQ}"} />
+               <div class="mt-2 text-xs opacity-70 space-y-1">
+                 <p>{t("Available placeholders")}:</p>
+                 <p><code>{"{SEQ}"}</code> (sequential, recommended), <code>{"{YYYY}"}</code>, <code>{"{YY}"}</code>, <code>{"{MM}"}</code>, <code>{"{DD}"}</code>, <code>{"{DATE}"}</code>, <code>{"{RAND4}"}</code></p>
+               </div>
              </label>
           </div>
 
