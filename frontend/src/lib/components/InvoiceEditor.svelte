@@ -30,8 +30,8 @@
 
   let items = $state(
     initInvoice?.items?.length
-      ? initInvoice.items.map((i: any) => ({...i, id: crypto.randomUUID()}))
-      : [{ id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, taxPercent: 0, notes: "" }]
+      ? initInvoice.items.map((i: any) => ({ ...i, id: crypto.randomUUID(), productId: i.productId || "" }))
+      : [{ id: crypto.randomUUID(), productId: "", description: "", quantity: 1, unitPrice: 0, taxPercent: 0, notes: "" }]
   );
 
   let customers = $derived(data.customers || []);
@@ -39,7 +39,25 @@
   let taxDefinitions = $derived(data.taxDefinitions || []);
 
   function addItem() {
-    items.push({ id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, taxPercent: 0, notes: "" });
+    items.push({ id: crypto.randomUUID(), productId: "", description: "", quantity: 1, unitPrice: 0, taxPercent: 0, notes: "" });
+  }
+
+  function applyProductSelection(item: any, productId: string) {
+    item.productId = productId;
+    if (!productId) return;
+
+    const product = products.find((p: any) => p.id === productId);
+    if (!product) return;
+
+    item.description = product.name || item.description;
+    item.unitPrice = Number(product.unitPrice ?? product.unit_price ?? item.unitPrice ?? 0);
+
+    if (form.taxMode === "line" && product.taxDefinitionId) {
+      const taxDef = taxDefinitions.find((t: any) => t.id === product.taxDefinitionId);
+      if (taxDef) {
+        item.taxPercent = Number(taxDef.percent || 0);
+      }
+    }
   }
 
   function removeItem(index: number) {
@@ -223,7 +241,6 @@
     <div class="flex items-center justify-between mb-2">
       <div class="block text-sm font-semibold">
         {t("Items")} <span class="text-error">*</span>
-        <span class="ml-2 text-xs opacity-50 font-normal">({t("Ctrl/Cmd+Enter to add")})</span>
       </div>
       <button type="button" class="btn btn-sm" onclick={addItem}>
         <Plus size={16} />
@@ -233,6 +250,9 @@
 
     <div class="hidden lg:flex flex-row flex-nowrap items-center gap-2 mb-1 text-xs opacity-60 font-medium">
       <div class="w-6 shrink-0"></div>
+      {#if products.length > 0}
+        <div class="w-44 max-w-xs shrink-0 text-center">{t("Product")}</div>
+      {/if}
       <div class="flex-1 min-w-0 pl-3">{t("Description")}</div>
       <div class="w-16 sm:w-20 shrink-0 text-center">{t("Quantity")}</div>
       <div class="w-24 shrink-0 text-center">{t("Price")}</div>
@@ -256,6 +276,19 @@
           <button type="button" class="btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100" tabindex="-1">
             <GripVertical size={16} />
           </button>
+
+          {#if products.length > 0}
+            <select
+              class="select select-bordered w-44 max-w-xs shrink-0"
+              bind:value={item.productId}
+              onchange={(e) => applyProductSelection(item, (e.currentTarget as HTMLSelectElement).value)}
+            >
+              <option value="">{t("Select product")}</option>
+              {#each products as p}
+                <option value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>
+              {/each}
+            </select>
+          {/if}
           
           <input class="input input-bordered w-full min-w-0" bind:value={item.description} placeholder={t("Description")} required />
           <input type="number" min="0" step="1" class="input input-bordered w-16 sm:w-20 shrink-0 text-center" bind:value={item.quantity} />
