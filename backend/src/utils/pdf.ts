@@ -15,6 +15,10 @@ import {
   TemplateContext,
 } from "../types/index.ts";
 import {
+  contentTypeFromLogoPath,
+  resolveLogoFsPathFromPublicPath,
+} from "./logoStorage.ts";
+import {
   getTemplateById,
   renderTemplate as renderTpl,
 } from "../controllers/templates.ts";
@@ -175,6 +179,17 @@ async function inlineLogoIfPossible(
   };
 
   try {
+    if (url.startsWith("/") && resolveLogoFsPathFromPublicPath(url)) {
+      const fsPath = resolveLogoFsPathFromPublicPath(url);
+      if (fsPath) {
+        const file = await Deno.readFile(fsPath);
+        return {
+          ...settings,
+          logoUrl: toDataUrl(file, contentTypeFromLogoPath(fsPath)),
+        } as unknown as BusinessSettings;
+      }
+    }
+
     const remote = tryParseSafeRemoteUrl(url);
     if (remote) {
       const res = await fetch(remote);
@@ -346,16 +361,17 @@ export async function generateInvoicePDF(
   customHighlightColor?: string,
   opts?: { embedXmlProfileId?: string; embedXml?: boolean; xmlOptions?: Record<string, unknown>; dateFormat?: string; numberFormat?: "comma" | "period"; locale?: string },
 ): Promise<Uint8Array> {
-  // Inline remote logo when possible for robust HTML rendering
-  const inlined = await inlineLogoIfPossible(businessSettings);
+  // Keep logos as normal URLs/files for WeasyPrint.
+  // Data URLs significantly slow down rendering for larger images.
+  const renderSettings = businessSettings;
   const html = buildInvoiceHTML(
     invoiceData,
-    inlined,
+    renderSettings,
     templateId,
     customHighlightColor,
     opts?.dateFormat,
     opts?.numberFormat,
-    opts?.locale ?? invoiceData.locale ?? inlined?.locale,
+    opts?.locale ?? invoiceData.locale ?? renderSettings?.locale,
     true,
   );
   const attachments: Array<{ fileName: string; bytes: Uint8Array }> = [];
@@ -365,7 +381,7 @@ export async function generateInvoicePDF(
       const { xml, profile } = generateInvoiceXML(
         profileId,
         invoiceData,
-        inlined || ({} as BusinessSettings),
+        renderSettings || ({} as BusinessSettings),
       );
       attachments.push({
         fileName: `invoice-${invoiceData.invoiceNumber || invoiceData.id}.${profile.fileExtension}`,
@@ -465,7 +481,7 @@ async function runWeasyPrint(
   attachmentPaths: string[],
   includePdfVariant: boolean,
 ): Promise<void> {
-  const args: string[] = [inputHtmlPath, outputPdfPath, "--media-type", "print"];
+  const args: string[] = [inputHtmlPath, outputPdfPath, "--media-type", "screen"];
   if (includePdfVariant) {
     args.push("--pdf-variant", "pdf/a-3b");
   }
@@ -484,6 +500,19 @@ async function runWeasyPrint(
   }
 }
 
+function resolveCssVariablesForWeasy(html: string): string {
+  const variableMap = new Map<string, string>();
+  const rootVarRegex = /--([a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g;
+  let m: RegExpExecArray | null;
+  while ((m = rootVarRegex.exec(html)) !== null) {
+    variableMap.set(m[1], m[2].trim());
+  }
+
+  return html.replace(/var\(\s*--([a-zA-Z0-9_-]+)\s*(?:,[^)]+)?\)/g, (full, name) => {
+    return variableMap.get(name) || full;
+  });
+}
+
 async function renderPdfWithWeasyPrint(
   html: string,
   attachments: Array<{ fileName: string; bytes: Uint8Array }>,
@@ -500,7 +529,8 @@ async function renderPdfWithWeasyPrint(
   const pdfPath = join(tmpDir, "invoice.pdf");
 
   try {
-    await Deno.writeTextFile(htmlPath, html);
+    const preparedHtml = resolveCssVariablesForWeasy(html);
+    await Deno.writeTextFile(htmlPath, preparedHtml);
 
     const attachmentPaths: string[] = [];
     for (const attachment of attachments) {
