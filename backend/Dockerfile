@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fontconfig \
     tar \
     unzip \
-  python3 \
-  python3-weasyprint \
+    python3 \
+    weasyprint \
     fonts-dejavu \
     fonts-liberation \
     fonts-noto \
@@ -31,6 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 \
     libgbm1 \
     libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libharfbuzz-subset0 \
     libcairo2 \
     libasound2 \
     libxshmfence1 \
