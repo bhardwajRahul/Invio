@@ -19,7 +19,6 @@ import {
   renderTemplate as renderTpl,
 } from "../controllers/templates.ts";
 import { getDefaultTemplate } from "../controllers/templates.ts";
-import { resolveChromiumPath } from "./chromium.ts";
 import { getInvoiceLabels } from "../i18n/translations.ts";
 // pdf-lib is used to embed XML attachments and tweak metadata after rendering
 
@@ -359,46 +358,30 @@ export async function generateInvoicePDF(
     opts?.locale ?? invoiceData.locale ?? inlined?.locale,
     true,
   );
-  // Render via chrome-headless-shell / Chromium CLI
-  let pdfBytes: Uint8Array;
-  try {
-    pdfBytes = await renderPdfWithChromeHeadlessShell(html);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Chrome-headless-shell PDF rendering failed: ${msg}`);
-  }
-
-  const pdfaResult = await convertPdfToPdfA3(pdfBytes);
-  if (pdfaResult) {
-    pdfBytes = pdfaResult;
-  } else {
-    console.warn(
-      "Ghostscript PDF/A-3 conversion unavailable or failed; continuing with source PDF.",
-    );
-  }
-
-  // Optionally embed XML profile as an attachment if requested and we have a PDF (browser or fallback)
-  if (pdfBytes && opts?.embedXml) {
+  const attachments: Array<{ fileName: string; bytes: Uint8Array }> = [];
+  if (opts?.embedXml) {
     try {
       const profileId = opts.embedXmlProfileId || "ubl21";
-      const { xml, profile } = generateInvoiceXML(profileId, invoiceData, inlined || ({} as BusinessSettings));
-      const fileName = `invoice-${invoiceData.invoiceNumber || invoiceData.id}.${profile.fileExtension}`;
-      const xmlBytes = new TextEncoder().encode(xml);
-      pdfBytes = await embedXmlAttachment(
-        pdfBytes,
-        xmlBytes,
-        fileName,
-        profile.mediaType || "application/xml",
-        `${profile.name} export embedded by Invio`,
-        opts?.locale || invoiceData.locale || inlined?.locale || "en-US",
-        profile,
+      const { xml, profile } = generateInvoiceXML(
+        profileId,
+        invoiceData,
+        inlined || ({} as BusinessSettings),
       );
+      attachments.push({
+        fileName: `invoice-${invoiceData.invoiceNumber || invoiceData.id}.${profile.fileExtension}`,
+        bytes: new TextEncoder().encode(xml),
+      });
     } catch (error) {
-      console.warn("Failed to embed XML attachment:", error);
-      // Continue without attachment to avoid breaking download
+      console.warn("Failed to prepare XML attachment:", error);
     }
   }
-  return pdfBytes as Uint8Array;
+
+  try {
+    return await renderPdfWithWeasyPrint(html, attachments);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`WeasyPrint PDF rendering failed: ${msg}`);
+  }
 }
 
 export function buildInvoiceHTML(
@@ -447,179 +430,95 @@ export function buildInvoiceHTML(
   });
 }
 
-/**
- * Render HTML to PDF using chrome-headless-shell (or Chrome/Chromium) via
- * Deno.Command with --print-to-pdf.  This replaces the old Puppeteer approach
- * and is significantly lighter and faster.
- */
-async function renderPdfWithChromeHeadlessShell(html: string): Promise<Uint8Array> {
-  const { executablePath } = await resolveChromiumPath();
-  const isLinux = Deno.build.os === "linux";
+async function resolveWeasyPrintExecutable(): Promise<string | null> {
+  const candidates: string[] = [];
+  try {
+    const configured = Deno.env.get("WEASYPRINT_BIN");
+    if (configured && configured.trim().length > 0) {
+      candidates.push(configured.trim());
+    }
+  } catch {
+    // ignore env access errors
+  }
+  candidates.push("weasyprint");
 
-  // Write the HTML to a temp file so chrome-headless-shell can load it via file:// URL
-  const tmpDir = await Deno.makeTempDir({ prefix: "invio-pdf-" });
+  for (const candidate of candidates) {
+    try {
+      const probe = new Deno.Command(candidate, {
+        args: ["--version"],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const { success } = await probe.output();
+      if (success) return candidate;
+    } catch {
+      // continue probing
+    }
+  }
+  return null;
+}
+
+async function runWeasyPrint(
+  executable: string,
+  inputHtmlPath: string,
+  outputPdfPath: string,
+  attachmentPaths: string[],
+  includePdfVariant: boolean,
+): Promise<void> {
+  const args: string[] = [inputHtmlPath, outputPdfPath, "--media-type", "print"];
+  if (includePdfVariant) {
+    args.push("--pdf-variant", "pdf/a-3u");
+  }
+  for (const p of attachmentPaths) {
+    args.push("--attachment", p);
+  }
+
+  const cmd = new Deno.Command(executable, {
+    args,
+    stdout: "piped",
+    stderr: "piped",
+  });
+  const { code, stderr } = await cmd.output();
+  if (code !== 0) {
+    throw new Error(new TextDecoder().decode(stderr) || `weasyprint exited with code ${code}`);
+  }
+}
+
+async function renderPdfWithWeasyPrint(
+  html: string,
+  attachments: Array<{ fileName: string; bytes: Uint8Array }>,
+): Promise<Uint8Array> {
+  const executable = await resolveWeasyPrintExecutable();
+  if (!executable) {
+    throw new Error(
+      "WeasyPrint binary not found. Install `weasyprint` and set WEASYPRINT_BIN if needed.",
+    );
+  }
+
+  const tmpDir = await Deno.makeTempDir({ prefix: "invio-weasy-" });
   const htmlPath = join(tmpDir, "invoice.html");
   const pdfPath = join(tmpDir, "invoice.pdf");
 
   try {
     await Deno.writeTextFile(htmlPath, html);
 
-    const fileUrl = new URL(`file://${htmlPath.replace(/\\/g, "/").replace(/^\/*/,"/")}`)
-
-    const args: string[] = [
-      "--headless",
-      "--disable-gpu",
-      "--no-pdf-header-footer",
-      `--print-to-pdf=${pdfPath}`,
-    ];
-
-    if (isLinux) {
-      args.push(
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        `--user-data-dir=${tmpDir}/chrome-profile`,
-      );
+    const attachmentPaths: string[] = [];
+    for (const attachment of attachments) {
+      const safeName = attachment.fileName.replaceAll("/", "_");
+      const path = join(tmpDir, safeName);
+      await Deno.writeFile(path, attachment.bytes);
+      attachmentPaths.push(path);
     }
 
-    args.push(fileUrl.href);
+    await runWeasyPrint(executable, htmlPath, pdfPath, attachmentPaths, true);
 
-    console.log(`[PDF] Running: ${executablePath} ${args.join(" ")}`);
-
-    const cmd = new Deno.Command(executablePath, {
-      args,
-      stdout: "piped",
-      stderr: "piped",
-    });
-
-    // Add a 30-second timeout so a stuck process doesn't hang the request forever
-    const process = cmd.spawn();
-    const timer = setTimeout(() => {
-      try { process.kill(); } catch { /* ignore */ }
-    }, 30_000);
-
-    const { code, stderr } = await process.output();
-    clearTimeout(timer);
-
-    const errMsg = new TextDecoder().decode(stderr);
-    if (errMsg.trim()) {
-      console.log(`[PDF] chrome-headless-shell stderr: ${errMsg.slice(0, 500)}`);
-    }
-    if (code !== 0) {
-      throw new Error(`chrome-headless-shell exited with code ${code}: ${errMsg}`);
-    }
-
-    const pdfBytes = await Deno.readFile(pdfPath);
-    return pdfBytes;
+    return await Deno.readFile(pdfPath);
   } finally {
-    // Clean up temp directory
     try {
       await Deno.remove(tmpDir, { recursive: true });
     } catch {
       // ignore cleanup errors
     }
-  }
-}
-
-async function resolveGhostscriptExecutable(): Promise<string | null> {
-  const candidates: string[] = [];
-  try {
-    const configured = Deno.env.get("GHOSTSCRIPT_BIN");
-    if (configured && configured.trim().length > 0) {
-      candidates.push(configured);
-    }
-  } catch { /* ignore env access errors */ }
-  candidates.push("gs", "gswin64c", "gswin32c");
-
-  for (const candidate of candidates) {
-    try {
-      const probe = new Deno.Command(candidate, {
-        args: ["-version"],
-        stdout: "piped",
-        stderr: "piped",
-      });
-      const { success } = await probe.output();
-      if (success) return candidate;
-    } catch (_err) {
-      // ignore and continue searching
-    }
-  }
-  return null;
-}
-
-async function convertPdfToPdfA3(pdfBytes: Uint8Array): Promise<Uint8Array | null> {
-  const ghostscript = await resolveGhostscriptExecutable();
-  if (!ghostscript) return null;
-
-  const inputPath = await Deno.makeTempFile({ prefix: "invio-pdfa-src-", suffix: ".pdf" });
-  const outputPath = await Deno.makeTempFile({ prefix: "invio-pdfa-out-", suffix: ".pdf" });
-  const defPath = await Deno.makeTempFile({ prefix: "invio-pdfa-def-", suffix: ".ps" });
-
-  try {
-    await Deno.writeFile(inputPath, pdfBytes);
-
-    // Resolve asset paths relative to this file.
-    // IMPORTANT: on Windows, `new URL(...).pathname` yields `/C:/...` which isn't a valid FS path.
-    const assetsDir = fromFileUrl(new URL("../assets/", import.meta.url));
-    const iccPathFs = join(assetsDir, "AdobeCompat-v2.icc");
-    const defTemplatePath = join(assetsDir, "PDFA_def.ps");
-    // Ghostscript/PostScript file paths are safest with forward slashes.
-    const iccPath = iccPathFs.replaceAll("\\", "/");
-
-    // Read and prepare PDFA_def.ps
-    let defContent = await Deno.readTextFile(defTemplatePath);
-    // Escape path for PostScript: (path)
-    // We need to handle backslashes if on Windows, but we are on Mac/Linux usually in this env.
-    // PostScript strings use parentheses.
-    defContent = defContent.replace("{{ICC_PROFILE_PATH}}", iccPath);
-    await Deno.writeTextFile(defPath, defContent);
-
-    const args = [
-      "-dNOPAUSE",
-      "-dBATCH",
-      "-dSAFER",
-      "-sDEVICE=pdfwrite",
-      "-dPDFA=3",
-      "-dPDFACompatibilityPolicy=1",
-      "-sColorConversionStrategy=UseDeviceIndependentColor",
-      "-sProcessColorModel=DeviceRGB",
-      "-dCompressPages=false",
-      "-dWriteObjStms=false",
-      "-dWriteXRefStm=false",
-      `--permit-file-read=${iccPathFs}`,
-      `-sOutputFile=${outputPath}`,
-      defPath, // The definition file must come before the input file
-      inputPath,
-    ];
-
-    const cmd = new Deno.Command(ghostscript, {
-      args,
-      stdout: "piped",
-      stderr: "piped",
-    });
-    const { success, stderr } = await cmd.output();
-    if (!success) {
-      console.error(
-        "Ghostscript PDF/A-3 conversion failed:",
-        new TextDecoder().decode(stderr),
-      );
-      return null;
-    }
-    const converted = await Deno.readFile(outputPath);
-    return converted;
-  } catch (err) {
-    console.error("Ghostscript PDF/A-3 conversion error:", err);
-    return null;
-  } finally {
-    try {
-      await Deno.remove(inputPath);
-    } catch { /* ignore */ }
-    try {
-      await Deno.remove(outputPath);
-    } catch { /* ignore */ }
-    try {
-      await Deno.remove(defPath);
-    } catch { /* ignore */ }
   }
 }
 

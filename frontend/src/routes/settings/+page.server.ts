@@ -16,6 +16,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   let taxDefinitions = [];
   let productCategories = [];
   let productUnits = [];
+  let xmlProfiles = [];
   let error = null;
 
   try {
@@ -28,12 +29,13 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
 
   try {
-      const [s, t, tax, pc, pu] = await Promise.all([
+        const [s, t, tax, pc, pu, xp] = await Promise.all([
           backendGet("/api/v1/settings", auth).catch(() => ({})),
           backendGet("/api/v1/templates", auth).catch(() => []),
           backendGet("/api/v1/tax-definitions", auth).catch(() => []),
           backendGet("/api/v1/product-categories", auth).catch(() => []),
-          backendGet("/api/v1/product-units", auth).catch(() => [])
+          backendGet("/api/v1/product-units", auth).catch(() => []),
+          backendGet("/api/v1/xml-profiles", auth).catch(() => [])
       ]);
       
       settings = s || {};
@@ -41,6 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       taxDefinitions = tax || [];
       productCategories = pc || [];
       productUnits = pu || [];
+      xmlProfiles = xp || [];
 
   } catch(err: any) {
       error = err.message;
@@ -52,6 +55,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     taxDefinitions,
     productCategories,
     productUnits,
+    xmlProfiles,
     demoMode,
     error,
     hasTemplates: templates.length > 0

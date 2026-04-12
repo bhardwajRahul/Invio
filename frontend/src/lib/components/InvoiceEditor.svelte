@@ -240,7 +240,7 @@
   <div>
     <div class="flex items-center justify-between mb-2">
       <div class="block text-sm font-semibold">
-        {t("Items")} <span class="text-error">*</span>
+        {t("IStems")} <span class="text-error">*</span>
       </div>
       <button type="button" class="btn btn-sm" onclick={addItem}>
         <Plus size={16} />

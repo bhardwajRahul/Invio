@@ -17,6 +17,7 @@
   let saving = $state(false);
   let error = $state("");
   let success = $state("");
+  let xmlProfiles = $derived((data.xmlProfiles || []) as Array<{ id: string; name: string }>);
 
   let section = $derived(page.url.searchParams.get("section") || "company");
   let canUpdateSettings = $derived(true); // TODO: user permissions
@@ -260,7 +261,17 @@
           <div class="space-y-4">
              <h2 class="text-xl font-semibold">{t("XML Export")}</h2>
              <label class="form-control"><div class="label"><span class="label-text">{t("XML Profile ID")}</span></div>
-               <input type="text" class="input input-bordered w-full" bind:value={settings.xmlProfileId} disabled={!canUpdateSettings} />
+               <select class="select select-bordered w-full" bind:value={settings.xmlProfileId} disabled={!canUpdateSettings}>
+                 {#if xmlProfiles.length > 0}
+                   {#each xmlProfiles as profile}
+                     <option value={profile.id}>{profile.name} ({profile.id})</option>
+                   {/each}
+                 {:else}
+                   <option value="ubl21">UBL 2.1 (PEPPOL BIS Billing 3.0) (ubl21)</option>
+                   <option value="facturx22">Factur-X / ZUGFeRD 2.2 (EN 16931) (facturx22)</option>
+                   <option value="fatturapa">FatturaPA (Italian eInvoice) (fatturapa)</option>
+                 {/if}
+               </select>
              </label>
              <label class="label cursor-pointer justify-start gap-4">
                <input type="checkbox" class="checkbox" bind:checked={settings.embedXmlInPdf} disabled={!canUpdateSettings} />

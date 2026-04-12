@@ -5,7 +5,7 @@ import { initDatabase, resetDatabaseFromDemo } from "./database/init.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { authRoutes } from "./routes/auth.ts";
-import { logChromiumAvailability } from "./utils/chromium.ts";
+import { logWeasyPrintAvailability } from "./utils/weasyprint.ts";
 import { ensureEnv, getAdminCredentials, getJwtSecret } from "./utils/env.ts";
 
 const SECURE_HEADERS_DISABLED = (Deno.env.get("SECURE_HEADERS_DISABLED") || "").toLowerCase() === "true";
@@ -39,7 +39,7 @@ try {
 // Initialize the database
 await initDatabase();
 
-await logChromiumAvailability();
+await logWeasyPrintAvailability();
 
 // In demo mode, schedule a periodic reset of the database from DEMO_DB_PATH.
 // Writes are allowed between resets.
