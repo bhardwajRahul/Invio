@@ -131,6 +131,13 @@ function normalizeLogoUrlForRender(
   if (value.startsWith("data:")) return value;
   if (/^https?:\/\//i.test(value)) return value;
   if (value.startsWith("/")) {
+    if (forceAbsolute) {
+      const fsPath = resolveLogoFsPathFromPublicPath(value);
+      if (fsPath) {
+        const normalized = fsPath.replaceAll("\\", "/").replace(/^\/*/, "/");
+        return `file://${normalized}`;
+      }
+    }
     if (!forceAbsolute) return value;
     const base = Deno.env.get("BASE_URL") || "http://localhost:3000";
     try {
