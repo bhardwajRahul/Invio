@@ -467,7 +467,7 @@ async function runWeasyPrint(
 ): Promise<void> {
   const args: string[] = [inputHtmlPath, outputPdfPath, "--media-type", "print"];
   if (includePdfVariant) {
-    args.push("--pdf-variant", "pdf/a-3u");
+    args.push("--pdf-variant", "pdf/a-3b");
   }
   for (const p of attachmentPaths) {
     args.push("--attachment", p);
