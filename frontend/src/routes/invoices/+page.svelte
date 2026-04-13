@@ -52,7 +52,6 @@
 
   let filtered = $derived(invoices.filter((i) => {
     if (filterStatus === "all") return true;
-    if (filterStatus === "open") return i.status === "sent" || i.status === "complete" || i.status === "overdue";
     return i.status === filterStatus;
   }));
 
@@ -99,7 +98,7 @@
 <div class="bg-base-100 border border-base-300 rounded-box p-4 mb-4 overflow-x-auto">
   <div class="flex gap-2">
     <button class={`btn btn-sm ${filterStatus === "all" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "all"}>{t("All")}</button>
-    <button class={`btn btn-sm ${filterStatus === "open" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "open"}>{t("Open")}</button>
+    <button class={`btn btn-sm ${filterStatus === "sent" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "sent"}>{t("Sent")}</button>
     <button class={`btn btn-sm ${filterStatus === "draft" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "draft"}>{t("Draft")}</button>
     <button class={`btn btn-sm ${filterStatus === "complete" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "complete"}>{t("Complete")}</button>
     <button class={`btn btn-sm ${filterStatus === "paid" ? "btn-neutral" : "btn-ghost"}`} onclick={() => filterStatus = "paid"}>{t("Paid")}</button>
