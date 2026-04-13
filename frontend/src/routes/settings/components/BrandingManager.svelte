@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from "svelte";
   import { Image } from "lucide-svelte";
-  
+
   let { settings, templates, canUpdateSettings } = $props();
   let t = getContext("i18n") as (key: string) => string;
 
@@ -75,15 +75,17 @@
 
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 200) continue; // skip transparent
-      const r = data[i], g = data[i+1], b = data[i+2];
+      const r = data[i],
+        g = data[i + 1],
+        b = data[i + 2];
       const brightness = (r + g + b) / 3;
       if (brightness > 240 || brightness < 15) continue; // skip B/W
-      
-      const hex = "#" + [r,g,b].map(x => x.toString(16).padStart(2, "0")).join("");
+
+      const hex = "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
       colors.add(hex);
       if (colors.size >= 8) break; // simplistic top 8 approximation
     }
-    
+
     colorSuggestions = Array.from(colors);
   }
 
@@ -111,21 +113,23 @@
   </label>
 
   <label class="form-control">
-    <div class="label"><span class="label-text">{t("Highlight Color")}</span></div>
+    <div class="label">
+      <span class="label-text">{t("Highlight Color")}</span>
+    </div>
     <div class="flex gap-2">
-      <input type="color" class="h-12 w-12 rounded cursor-pointer" bind:value={settings.highlight} disabled={!canUpdateSettings} />
+      <input type="color" class="h-12 w-12 cursor-pointer rounded" bind:value={settings.highlight} disabled={!canUpdateSettings} />
       <input type="text" class="input input-bordered flex-1" bind:value={settings.highlight} disabled={!canUpdateSettings} />
     </div>
   </label>
 
   {#if colorSuggestions.length > 0}
-    <div class="mt-2 text-sm text-base-content/70">
+    <div class="text-base-content/70 mt-2 text-sm">
       <p class="mb-2">{t("Suggested colors from logo:")}</p>
       <div class="flex flex-wrap gap-2">
         {#each colorSuggestions as color}
-          <button 
+          <button
             type="button"
-            class="w-8 h-8 rounded-full border border-base-300 shadow-sm cursor-pointer hover:scale-110 transition-transform"
+            class="border-base-300 h-8 w-8 cursor-pointer rounded-full border shadow-sm transition-transform hover:scale-110"
             style="background-color: {color}"
             onclick={() => selectColor(color)}
             title={color}
@@ -140,8 +144,8 @@
       <span class="label-text">{t("Logo URL or Path")}</span>
       <span class="label-text-alt opacity-70">Optional</span>
     </div>
-    
-    <div class="flex flex-col sm:flex-row gap-2">
+
+    <div class="flex flex-col gap-2 sm:flex-row">
       <input
         type="text"
         class="input input-bordered flex-1 {logoError ? 'input-error' : ''}"
@@ -153,17 +157,10 @@
       <label class="btn btn-secondary cursor-pointer {!canUpdateSettings ? 'btn-disabled' : ''}">
         <Image size={18} class="mr-2" />
         {t("Upload")}
-        <input 
-          type="file" 
-          accept="image/*" 
-          class="hidden" 
-          bind:this={logoFileInput}
-          onchange={onFileChange}
-          disabled={!canUpdateSettings}
-        />
+        <input type="file" accept="image/*" class="hidden" bind:this={logoFileInput} onchange={onFileChange} disabled={!canUpdateSettings} />
       </label>
     </div>
-    
+
     {#if logoError}
       <div class="label">
         <span class="label-text-alt text-error">{t("Invalid URL or data format")}</span>
@@ -171,15 +168,9 @@
     {/if}
 
     {#if settings.logo && !logoError}
-      <div class="mt-4 p-4 border border-base-200 rounded-box bg-base-50 inline-block">
-        <p class="text-xs text-base-content/50 mb-2">{t("Preview")}</p>
-        <img 
-          src={settings.logo} 
-          alt="Logo preview" 
-          class="max-h-32 object-contain"
-          onload={onImageLoad}
-          onerror={() => logoError = true}
-        />
+      <div class="border-base-200 rounded-box bg-base-50 mt-4 inline-block border p-4">
+        <p class="text-base-content/50 mb-2 text-xs">{t("Preview")}</p>
+        <img src={settings.logo} alt="Logo preview" class="max-h-32 object-contain" onload={onImageLoad} onerror={() => (logoError = true)} />
       </div>
     {/if}
   </div>

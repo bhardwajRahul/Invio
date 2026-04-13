@@ -8,14 +8,17 @@
   let numberFormat = $derived(data.localization?.numberFormat || "comma");
   let statusCounts = $derived((data.status || {}) as Record<string, number>);
   let user = $derived(data.user);
-  let canViewInvoices = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "invoices" && p.action === "read"));
-  let canViewCustomers = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "customers" && p.action === "read"));
+  let canViewInvoices = $derived(user?.isAdmin || user?.permissions?.some((p) => p.resource === "invoices" && p.action === "read"));
+  let canViewCustomers = $derived(user?.isAdmin || user?.permissions?.some((p) => p.resource === "customers" && p.action === "read"));
 
   function fmtMoney(n: number) {
     const cur = data.money?.currency || "USD";
     try {
       const locale = numberFormat === "period" ? "de-DE" : "en-US";
-      return new Intl.NumberFormat(locale, { style: "currency", currency: cur }).format(n || 0);
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: cur,
+      }).format(n || 0);
     } catch {
       return `${cur} ${Number(n || 0).toFixed(2)}`;
     }
@@ -33,9 +36,9 @@
 {/if}
 
 {#if !canViewInvoices}
-  <div class="card bg-base-100 border border-base-300 rounded-box mb-4">
-    <div class="card-body p-6 flex flex-row items-center gap-4">
-      <ShieldOff size={24} class="opacity-50 shrink-0" />
+  <div class="card bg-base-100 border-base-300 rounded-box mb-4 border">
+    <div class="card-body flex flex-row items-center gap-4 p-6">
+      <ShieldOff size={24} class="shrink-0 opacity-50" />
       <div>
         <div class="font-semibold">{t("Invoice data hidden")}</div>
         <div class="text-sm opacity-70">
@@ -47,9 +50,9 @@
 {/if}
 
 {#if !canViewCustomers}
-  <div class="card bg-base-100 border border-base-300 rounded-box mb-4">
-    <div class="card-body p-6 flex flex-row items-center gap-4">
-      <ShieldOff size={24} class="opacity-50 shrink-0" />
+  <div class="card bg-base-100 border-base-300 rounded-box mb-4 border">
+    <div class="card-body flex flex-row items-center gap-4 p-6">
+      <ShieldOff size={24} class="shrink-0 opacity-50" />
       <div>
         <div class="font-semibold">{t("Customer data hidden")}</div>
         <div class="text-sm opacity-70">
@@ -61,106 +64,126 @@
 {/if}
 
 {#if data.counts}
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+  <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Invoices")}</div>
-        <div class="text-2xl sm:text-3xl font-extrabold">{data.counts.invoices}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Invoices")}</div>
+        <div class="text-2xl font-extrabold sm:text-3xl">
+          {data.counts.invoices}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Customers")}</div>
-        <div class="text-2xl sm:text-3xl font-extrabold">{data.counts.customers}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Customers")}</div>
+        <div class="text-2xl font-extrabold sm:text-3xl">
+          {data.counts.customers}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Open Invoices")}</div>
-        <div class="text-2xl sm:text-3xl font-extrabold">
+        <div class="text-xs opacity-70 sm:text-sm">{t("Open Invoices")}</div>
+        <div class="text-2xl font-extrabold sm:text-3xl">
           {(statusCounts.sent || 0) + (statusCounts.overdue || 0)}
         </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Version")}</div>
-        <div class="text-2xl sm:text-3xl font-extrabold">{data.version}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Version")}</div>
+        <div class="text-2xl font-extrabold sm:text-3xl">{data.version}</div>
       </div>
     </div>
   </div>
 {/if}
 
 {#if data.money}
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+  <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Total Billed")}</div>
-        <div class="text-xl sm:text-2xl font-bold">{fmtMoney(data.money.billed)}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Total Billed")}</div>
+        <div class="text-xl font-bold sm:text-2xl">
+          {fmtMoney(data.money.billed)}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Outstanding")}</div>
-        <div class="text-xl sm:text-2xl font-bold">{fmtMoney(data.money.outstanding)}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Outstanding")}</div>
+        <div class="text-xl font-bold sm:text-2xl">
+          {fmtMoney(data.money.outstanding)}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Paid")}</div>
-        <div class="text-xl sm:text-2xl font-bold">{fmtMoney(data.money.paid)}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Paid")}</div>
+        <div class="text-xl font-bold sm:text-2xl">
+          {fmtMoney(data.money.paid)}
+        </div>
       </div>
     </div>
   </div>
 {/if}
 
 {#if data.status}
-  <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+  <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-6">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Draft")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{statusCounts.draft || 0}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Draft")}</div>
+        <div class="text-lg font-semibold sm:text-xl">
+          {statusCounts.draft || 0}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Sent")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{statusCounts.sent || 0}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Sent")}</div>
+        <div class="text-lg font-semibold sm:text-xl">
+          {statusCounts.sent || 0}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Complete")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{statusCounts.complete || 0}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Complete")}</div>
+        <div class="text-lg font-semibold sm:text-xl">
+          {statusCounts.complete || 0}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Paid")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{statusCounts.paid || 0}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Paid")}</div>
+        <div class="text-lg font-semibold sm:text-xl">
+          {statusCounts.paid || 0}
+        </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Overdue")}</div>
-        <div class={`text-lg sm:text-xl font-semibold ${statusCounts.overdue > 0 ? "text-error" : ""}`}>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Overdue")}</div>
+        <div class={`text-lg font-semibold sm:text-xl ${statusCounts.overdue > 0 ? "text-error" : ""}`}>
           {statusCounts.overdue || 0}
         </div>
       </div>
     </div>
-    <div class="card bg-base-100 border border-base-300 rounded-box">
+    <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
-        <div class="text-xs sm:text-sm opacity-70">{t("Voided")}</div>
-        <div class="text-lg sm:text-xl font-semibold">{statusCounts.voided || 0}</div>
+        <div class="text-xs opacity-70 sm:text-sm">{t("Voided")}</div>
+        <div class="text-lg font-semibold sm:text-xl">
+          {statusCounts.voided || 0}
+        </div>
       </div>
     </div>
   </div>
 {/if}
 
 {#if data.recent && data.recent.length > 0}
-  <h2 class="text-xl font-semibold mb-3">{t("Recent Invoices")}</h2>
-  <div class="overflow-x-auto bg-base-100 border border-base-300 rounded-box">
-    <table class="table table-sm sm:table-md w-full">
+  <h2 class="mb-3 text-xl font-semibold">{t("Recent Invoices")}</h2>
+  <div class="bg-base-100 border-base-300 rounded-box overflow-x-auto border">
+    <table class="table-sm sm:table-md table w-full">
       <thead>
         <tr class="bg-base-200">
           <th>{t("Invoice No")}</th>
@@ -175,7 +198,9 @@
           <tr class="hover">
             <td class="font-medium hover:underline">
               <a href={`/invoices/${inv.id}`}>{inv.invoiceNumber}</a>
-              <div class="sm:hidden text-xs opacity-70">{t(inv.status?.charAt(0).toUpperCase() + (inv.status || "").slice(1))}</div>
+              <div class="text-xs opacity-70 sm:hidden">
+                {t(inv.status?.charAt(0).toUpperCase() + (inv.status || "").slice(1))}
+              </div>
             </td>
             <td>{inv.customer?.name || ""}</td>
             <td>{fmtMoney(inv.total || 0)}</td>
@@ -187,14 +212,16 @@
               {:else if inv.status === "paid"}
                 <div class="badge badge-success badge-sm">{t("Paid")}</div>
               {:else if (inv.status as string | undefined) === "complete"}
-                <div class="badge badge-secondary badge-sm">{t("Complete")}</div>
+                <div class="badge badge-secondary badge-sm">
+                  {t("Complete")}
+                </div>
               {:else if inv.status === "overdue"}
                 <div class="badge badge-error badge-sm">{t("Overdue")}</div>
               {:else if inv.status === "voided"}
                 <div class="badge badge-neutral badge-sm">{t("Voided")}</div>
               {/if}
             </td>
-            <td class="text-right tabular-nums text-sm">
+            <td class="text-right text-sm tabular-nums">
               {#if inv.issueDate}
                 {new Date(inv.issueDate).toLocaleDateString(numberFormat === "period" ? "de-DE" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
               {/if}

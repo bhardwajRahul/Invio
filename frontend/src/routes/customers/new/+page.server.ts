@@ -7,9 +7,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "customers" && p.action === "create"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "customers" && p.action === "create",
+    );
   if (!hasPerm) {
     throw redirect(303, "/customers");
   }
@@ -52,7 +54,8 @@ export const actions: Actions = {
         countryCode: countryCode || undefined,
       });
     } catch (e: any) {
-      if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
+      if (e && typeof e === "object" && "status" in e && "location" in e)
+        throw e;
       return fail(500, { error: e.message || String(e) });
     }
 

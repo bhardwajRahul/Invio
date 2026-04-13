@@ -3,8 +3,8 @@
  * Reads the version from the VERSION file at the project root
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 let cachedVersion: string | null = null;
 
@@ -20,14 +20,14 @@ export function getVersion(): string {
   try {
     // Try multiple paths to find VERSION file
     const paths = [
-      join(process.cwd(), 'VERSION'),                // Production: /app/VERSION
-      join(process.cwd(), '..', 'VERSION'),          // Development from frontend/
-      join(process.cwd(), 'static', 'VERSION'),      // In static assets
+      join(process.cwd(), "VERSION"), // Production: /app/VERSION
+      join(process.cwd(), "..", "VERSION"), // Development from frontend/
+      join(process.cwd(), "static", "VERSION"), // In static assets
     ];
 
     for (const path of paths) {
       try {
-        const version = readFileSync(path, 'utf-8').trim();
+        const version = readFileSync(path, "utf-8").trim();
         if (version) {
           cachedVersion = version;
           return version;
@@ -37,9 +37,9 @@ export function getVersion(): string {
       }
     }
   } catch (err) {
-    console.warn('Failed to read VERSION file:', err);
+    console.warn("Failed to read VERSION file:", err);
   }
 
-  cachedVersion = 'unknown';
+  cachedVersion = "unknown";
   return cachedVersion;
 }

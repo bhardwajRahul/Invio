@@ -6,6 +6,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
   return {
     user: locals.user,
-    localization: serializableLocalization
+    localization: serializableLocalization,
   };
 };

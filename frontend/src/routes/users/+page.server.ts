@@ -6,9 +6,11 @@ export const load = async ({ locals }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "users" && p.action === "read"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "users" && p.action === "read",
+    );
 
   if (!hasPerm) {
     throw redirect(303, "/dashboard");
@@ -25,13 +27,13 @@ export const load = async ({ locals }) => {
         }))
       : [];
     return {
-      users: normalizedUsers
+      users: normalizedUsers,
     };
   } catch (err: any) {
     console.error("Failed to load users:", err);
     return {
       error: err.message,
-      users: []
+      users: [],
     };
   }
 };

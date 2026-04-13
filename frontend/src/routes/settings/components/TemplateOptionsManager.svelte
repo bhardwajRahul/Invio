@@ -36,11 +36,11 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      // Note: the backend route is /api/v1/templates/upload or /api/templates/upload. 
+      // Note: the backend route is /api/v1/templates/upload or /api/templates/upload.
       // The proxy to backend might just use standard endpoint
       const res = await fetch("/api/v1/templates/upload", {
         method: "POST",
-        body: formData
+        body: formData,
       });
 
       if (!res.ok) throw new Error(t("Upload failed"));
@@ -69,7 +69,7 @@
       const res = await fetch("/api/v1/templates/install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: u })
+        body: JSON.stringify({ url: u }),
       });
       if (!res.ok) throw new Error(t("Install failed"));
       installUrl = "";
@@ -94,7 +94,9 @@
 
   async function handleUpdate(id: string) {
     try {
-      const res = await fetch(`/api/v1/templates/${id}/update`, { method: "POST" });
+      const res = await fetch(`/api/v1/templates/${id}/update`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error(t("Failed to update"));
       invalidateAll();
     } catch (err: any) {
@@ -111,15 +113,15 @@
         <span>{t("No custom templates installed.")}</span>
       </div>
     {:else}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         {#each templates as tmpl}
-          <div class="card bg-base-200 border border-base-300">
+          <div class="card bg-base-200 border-base-300 border">
             <div class="card-body p-4">
               <h4 class="card-title text-base">{tmpl.name}</h4>
               <p class="text-sm opacity-70">
                 Type: <span class="badge badge-sm">{tmpl.templateType || "Unknown"}</span>
               </p>
-              <div class="card-actions justify-end mt-4">
+              <div class="card-actions mt-4 justify-end">
                 {#if tmpl.updatable && tmpl.templateType === "remote"}
                   <button class="btn btn-sm btn-outline" disabled={demoMode} onclick={() => handleUpdate(tmpl.id)} title={t("Update")}><RefreshCw size={16} /></button>
                 {/if}
@@ -134,11 +136,22 @@
 
   <div class="divider"></div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <form onsubmit={handleUpload} class="bg-base-200 p-4 rounded-box">
-      <h4 class="font-medium mb-2 flex items-center gap-2"><Upload size={18} /> {t("Upload Template")}</h4>
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <form onsubmit={handleUpload} class="bg-base-200 rounded-box p-4">
+      <h4 class="mb-2 flex items-center gap-2 font-medium">
+        <Upload size={18} />
+        {t("Upload Template")}
+      </h4>
       <div class="form-control">
-        <label class="label"><span class="label-text">{t("Select .zip archive")}</span><input bind:this={fileInput} type="file" accept=".zip" class="file-input file-input-bordered w-full mt-2" disabled={demoMode} /></label>
+        <label class="label"
+          ><span class="label-text">{t("Select .zip archive")}</span><input
+            bind:this={fileInput}
+            type="file"
+            accept=".zip"
+            class="file-input file-input-bordered mt-2 w-full"
+            disabled={demoMode}
+          /></label
+        >
         {#if uploadErr}<span class="label-text-alt text-error mt-1">{uploadErr}</span>{/if}
       </div>
       <button type="submit" class="btn btn-primary mt-4 w-full" disabled={uploadBusy || demoMode}>
@@ -146,10 +159,15 @@
       </button>
     </form>
 
-    <form onsubmit={handleInstall} class="bg-base-200 p-4 rounded-box">
-      <h4 class="font-medium mb-2 flex items-center gap-2"><Link size={18} /> {t("Install from URL")}</h4>
+    <form onsubmit={handleInstall} class="bg-base-200 rounded-box p-4">
+      <h4 class="mb-2 flex items-center gap-2 font-medium">
+        <Link size={18} />
+        {t("Install from URL")}
+      </h4>
       <div class="form-control">
-        <label class="label"><span class="label-text">{t("Manifest URL")}</span><input type="url" class="input input-bordered w-full mt-2" bind:value={installUrl} placeholder="https://..." disabled={demoMode} /></label>
+        <label class="label"
+          ><span class="label-text">{t("Manifest URL")}</span><input type="url" class="input input-bordered mt-2 w-full" bind:value={installUrl} placeholder="https://..." disabled={demoMode} /></label
+        >
         {#if installErr}<span class="label-text-alt text-error mt-1">{installErr}</span>{/if}
       </div>
       <button type="submit" class="btn btn-primary mt-4 w-full" disabled={installBusy || demoMode}>
@@ -158,5 +176,3 @@
     </form>
   </div>
 </div>
-
-

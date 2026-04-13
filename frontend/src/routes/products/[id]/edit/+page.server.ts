@@ -7,9 +7,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "products" && p.action === "update"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "products" && p.action === "update",
+    );
   if (!hasPerm) {
     throw redirect(303, `/products/${params.id}`);
   }
@@ -64,10 +66,11 @@ export const actions: Actions = {
         unit: unit || undefined,
         category: category || undefined,
         taxDefinitionId: taxDefinitionId || undefined,
-        isActive
+        isActive,
       });
     } catch (e: any) {
-      if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
+      if (e && typeof e === "object" && "status" in e && "location" in e)
+        throw e;
       const msg = e?.message || String(e);
       const status = /not found|404/i.test(msg) ? 404 : 500;
       return fail(status, { error: msg });

@@ -21,21 +21,29 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "users" && p.action === "read"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "users" && p.action === "read",
+    );
   if (!hasPerm) {
     throw redirect(303, "/dashboard");
   }
 
   try {
     const [user, schema] = await Promise.all([
-      backendGet(`/api/v1/users/${params.id}`, locals.authHeader) as Promise<User>,
-      backendGet("/api/v1/users/permissions-schema", locals.authHeader) as Promise<{
+      backendGet(
+        `/api/v1/users/${params.id}`,
+        locals.authHeader,
+      ) as Promise<User>,
+      backendGet(
+        "/api/v1/users/permissions-schema",
+        locals.authHeader,
+      ) as Promise<{
         resourceActions: ResourceActions;
       }>,
     ]);
-    
+
     const saved = url.searchParams.get("saved") === "1";
     return { userToEdit: user, resourceActions: schema.resourceActions, saved };
   } catch (err: any) {
@@ -98,7 +106,8 @@ export const actions: Actions = {
     try {
       await backendPut(`/api/v1/users/${params.id}`, locals.authHeader, body);
     } catch (e: any) {
-      if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
+      if (e && typeof e === "object" && "status" in e && "location" in e)
+        throw e;
       return fail(500, { error: e.message || String(e) });
     }
 
@@ -113,7 +122,8 @@ export const actions: Actions = {
     try {
       await backendDelete(`/api/v1/users/${params.id}`, locals.authHeader);
     } catch (e: any) {
-      if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
+      if (e && typeof e === "object" && "status" in e && "location" in e)
+        throw e;
       return fail(400, { error: e.message || "Cannot delete this user." });
     }
 

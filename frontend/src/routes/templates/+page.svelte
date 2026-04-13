@@ -6,11 +6,11 @@
   let t = getContext("i18n") as (key: string) => string;
 
   let user = $derived(data.user);
-  let canCreate = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "templates" && p.action === "create"));
+  let canCreate = $derived(user?.isAdmin || user?.permissions?.some((p) => p.resource === "templates" && p.action === "create"));
   let templates = $derived(data.templates || []);
 </script>
 
-<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+<div class="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
   <div class="flex flex-col">
     <h1 class="text-2xl font-semibold">{t("Templates")}</h1>
     <span class="text-sm opacity-60">
@@ -34,12 +34,12 @@
 {/if}
 
 <!-- Mobile List -->
-<div class="block md:hidden space-y-3">
+<div class="block space-y-3 md:hidden">
   {#each templates as tpl}
-    <a href={`/templates/${tpl.id}`} class="card bg-base-100 border border-base-300 hover:shadow-md transition-shadow">
+    <a href={`/templates/${tpl.id}`} class="card bg-base-100 border-base-300 border transition-shadow hover:shadow-md">
       <div class="card-body p-4">
         <div class="font-semibold">{tpl.name || tpl.id}</div>
-        <div class="text-sm opacity-70 mt-1">
+        <div class="mt-1 text-sm opacity-70">
           {tpl.description || t("No description")}
         </div>
       </div>
@@ -48,8 +48,8 @@
 </div>
 
 <!-- Desktop Table -->
-<div class="hidden md:block overflow-x-auto rounded-box bg-base-100 border border-base-300">
-  <table class="table table-zebra w-full text-sm">
+<div class="rounded-box bg-base-100 border-base-300 hidden overflow-x-auto border md:block">
+  <table class="table-zebra table w-full text-sm">
     <thead class="bg-base-200 text-base-content">
       <tr class="font-medium">
         <th>{t("Name")}</th>
@@ -67,7 +67,7 @@
       {/each}
       {#if templates.length === 0}
         <tr>
-          <td colspan="2" class="text-center py-10 text-sm opacity-70">
+          <td colspan="2" class="py-10 text-center text-sm opacity-70">
             {t("No templates found.")}
           </td>
         </tr>

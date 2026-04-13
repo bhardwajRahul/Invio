@@ -5,22 +5,27 @@
   let { form } = $props();
 
   let t = getContext("i18n") as (key: string, params?: Record<string, string>) => string;
-  
+
   let isLoading = $state(false);
 </script>
 
-<div class="hero min-h-[80vh] bg-base-200">
-  <div class="hero-content flex-col w-full max-w-md">
-    <div class="card shrink-0 w-full shadow-xl bg-base-100 border border-base-300">
+<div class="hero bg-base-200 min-h-[80vh]">
+  <div class="hero-content w-full max-w-md flex-col">
+    <div class="card bg-base-100 border-base-300 w-full shrink-0 border shadow-xl">
       <div class="card-body">
-        <h2 class="text-2xl font-semibold text-center mb-2">{t("Welcome to Invio")}</h2>
-        <form method="POST" use:enhance={() => {
-          isLoading = true;
-          return async ({ update }) => {
-            await update();
-            isLoading = false;
-          };
-        }}>
+        <h2 class="mb-2 text-center text-2xl font-semibold">
+          {t("Welcome to Invio")}
+        </h2>
+        <form
+          method="POST"
+          use:enhance={() => {
+            isLoading = true;
+            return async ({ update }) => {
+              await update();
+              isLoading = false;
+            };
+          }}
+        >
           {#if form?.error}
             <div class="alert alert-error mb-3">
               <span>{t(form.error, (form as any)?.errorParams)}</span>

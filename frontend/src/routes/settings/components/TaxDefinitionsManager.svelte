@@ -12,7 +12,7 @@
     code: "",
     name: "",
     percent: "",
-    countryCode: ""
+    countryCode: "",
   });
   let isSubmitting = $state(false);
 
@@ -28,7 +28,7 @@
       code: tax.code,
       name: tax.name,
       percent: String(tax.percent),
-      countryCode: tax.countryCode || ""
+      countryCode: tax.countryCode || "",
     };
     showForm = true;
   }
@@ -50,13 +50,13 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          percent: parseFloat(formData.percent)
-        })
+          percent: parseFloat(formData.percent),
+        }),
       });
       if (!res.ok) throw new Error("Failed to save tax definition");
       handleCancel();
       invalidateAll();
-    } catch(err) {
+    } catch (err) {
       alert(err);
     } finally {
       isSubmitting = false;
@@ -66,7 +66,9 @@
   async function handleDelete(tax: any) {
     if (!confirm(t("Delete tax definition confirm", { code: tax.code }))) return;
     try {
-      const res = await fetch(`/api/v1/tax-definitions/${tax.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/tax-definitions/${tax.id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Failed to delete tax definition");
       invalidateAll();
     } catch (err) {
@@ -85,25 +87,33 @@
   </div>
 
   {#if showForm}
-    <form onsubmit={handleSubmit} class="card bg-base-200 p-4 space-y-3">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <form onsubmit={handleSubmit} class="card bg-base-200 space-y-3 p-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="form-control">
-          <div class="label"><span class="label-text">{t("Tax code")} *</span></div>
+          <div class="label">
+            <span class="label-text">{t("Tax code")} *</span>
+          </div>
           <input type="text" class="input input-bordered w-full" bind:value={formData.code} placeholder={t("Tax code placeholder")} required disabled={demoMode} />
         </label>
         <label class="form-control">
-          <div class="label"><span class="label-text">{t("Display name")} *</span></div>
+          <div class="label">
+            <span class="label-text">{t("Display name")} *</span>
+          </div>
           <input type="text" class="input input-bordered w-full" bind:value={formData.name} placeholder={t("Display name placeholder")} required disabled={demoMode} />
         </label>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="form-control">
-          <div class="label"><span class="label-text">{t("Tax Rate (%)")} *</span></div>
+          <div class="label">
+            <span class="label-text">{t("Tax Rate (%)")} *</span>
+          </div>
           <input type="number" class="input input-bordered w-full" bind:value={formData.percent} step="0.01" min="0" required disabled={demoMode} />
         </label>
         <label class="form-control">
-          <div class="label"><span class="label-text">{t("Country code")}</span></div>
+          <div class="label">
+            <span class="label-text">{t("Country code")}</span>
+          </div>
           <input type="text" class="input input-bordered w-full" bind:value={formData.countryCode} placeholder={t("Country code placeholder")} maxlength="2" disabled={demoMode} />
         </label>
       </div>
@@ -121,17 +131,17 @@
 
   <div class="space-y-2">
     {#if taxDefinitions.length === 0}
-      <div class="text-center py-6 text-base-content/60">
+      <div class="text-base-content/60 py-6 text-center">
         {t("No tax definitions yet.")}
       </div>
     {:else}
       {#each taxDefinitions as tax}
-        <div class="flex items-center justify-between p-3 border border-base-300 rounded-box bg-base-100">
+        <div class="border-base-300 rounded-box bg-base-100 flex items-center justify-between border p-3">
           <div class="flex-1">
             <div class="font-medium">
               {tax.code} &mdash; {tax.name}
             </div>
-            <div class="text-sm text-base-content/60">
+            <div class="text-base-content/60 text-sm">
               {tax.percent}%
               {#if tax.countryCode}
                 &bull; {tax.countryCode}
@@ -151,4 +161,3 @@
     {/if}
   </div>
 </div>
-

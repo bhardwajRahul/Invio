@@ -75,8 +75,9 @@ export function resolveLocalization(
 ): LocalizationConfig {
   const { locale: normalized, messages, t } = createTranslator(locale);
   const nf = numberFormat === "period" ? "period" : "comma";
-  const df = typeof dateFormat === "string" && dateFormat.trim()
-    ? dateFormat
-    : "YYYY-MM-DD";
+  const df =
+    typeof dateFormat === "string" && dateFormat.trim()
+      ? dateFormat
+      : "YYYY-MM-DD";
   return { locale: normalized, messages, t, numberFormat: nf, dateFormat: df };
 }

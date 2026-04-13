@@ -6,9 +6,11 @@ export const load = async ({ locals }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "customers" && p.action === "read"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "customers" && p.action === "read",
+    );
 
   if (!hasPerm) {
     throw redirect(303, "/dashboard");
@@ -17,13 +19,13 @@ export const load = async ({ locals }) => {
   try {
     const customers = await backendGet("/api/v1/customers", locals.authHeader);
     return {
-      customers: customers || []
+      customers: customers || [],
     };
   } catch (err: any) {
     console.error("Failed to load customers:", err);
     return {
       error: err.message,
-      customers: []
+      customers: [],
     };
   }
 };

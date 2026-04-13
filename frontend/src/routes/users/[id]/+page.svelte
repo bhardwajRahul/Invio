@@ -37,9 +37,11 @@
 
 {#if userToEdit}
   <form method="post" action="?/save" use:enhance>
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-      <h1 class="text-2xl font-semibold">{t("Edit User")}: {userToEdit.username}</h1>
-      <div class="flex items-center gap-2 w-full sm:w-auto">
+    <div class="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+      <h1 class="text-2xl font-semibold">
+        {t("Edit User")}: {userToEdit.username}
+      </h1>
+      <div class="flex w-full items-center gap-2 sm:w-auto">
         <a href="/users" class="btn btn-ghost btn-sm flex-1 sm:flex-none">
           {t("Cancel")}
         </a>
@@ -52,7 +54,7 @@
       </div>
     </div>
 
-    <div class="space-y-4 max-w-2xl">
+    <div class="max-w-2xl space-y-4">
       <!-- Username -->
       <div class="form-control w-full">
         <label class="label pb-1" for="username">
@@ -60,16 +62,7 @@
             {t("Username")} <span class="text-error">*</span>
           </span>
         </label>
-        <input 
-          type="text" 
-          id="username" 
-          name="username" 
-          class="input input-sm input-bordered w-full" 
-          value={userToEdit.username}
-          required 
-          autocomplete="off"
-          disabled={!canUpdate}
-        />
+        <input type="text" id="username" name="username" class="input input-sm input-bordered w-full" value={userToEdit.username} required autocomplete="off" disabled={!canUpdate} />
       </div>
 
       <!-- Password (optional on edit) -->
@@ -77,11 +70,11 @@
         <label class="label pb-1" for="password">
           <span class="label-text">{t("New Password")}</span>
         </label>
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          class="input input-sm input-bordered w-full" 
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="input input-sm input-bordered w-full"
           minlength="8"
           placeholder={t("Leave blank to keep current password")}
           autocomplete="new-password"
@@ -94,14 +87,7 @@
         <label class="label pb-1" for="email">
           <span class="label-text">{t("Email")}</span>
         </label>
-        <input 
-          type="email" 
-          id="email" 
-          name="email" 
-          class="input input-sm input-bordered w-full" 
-          value={userToEdit.email || ""}
-          disabled={!canUpdate}
-        />
+        <input type="email" id="email" name="email" class="input input-sm input-bordered w-full" value={userToEdit.email || ""} disabled={!canUpdate} />
       </div>
 
       <!-- Display Name -->
@@ -109,26 +95,13 @@
         <label class="label pb-1" for="displayName">
           <span class="label-text">{t("Display Name")}</span>
         </label>
-        <input 
-          type="text" 
-          id="displayName" 
-          name="displayName" 
-          class="input input-sm input-bordered w-full" 
-          value={userToEdit.displayName || ""}
-          disabled={!canUpdate}
-        />
+        <input type="text" id="displayName" name="displayName" class="input input-sm input-bordered w-full" value={userToEdit.displayName || ""} disabled={!canUpdate} />
       </div>
 
       <!-- Admin toggle -->
       <div class="form-control">
         <label class="label cursor-pointer justify-start gap-3">
-          <input
-            type="checkbox"
-            name="isAdmin"
-            class="toggle toggle-primary"
-            checked={userToEdit.isAdmin}
-            disabled={!canUpdate}
-          />
+          <input type="checkbox" name="isAdmin" class="toggle toggle-primary" checked={userToEdit.isAdmin} disabled={!canUpdate} />
           <span class="label-text">{t("Administrator")}</span>
         </label>
       </div>
@@ -136,13 +109,7 @@
       <!-- Active toggle -->
       <div class="form-control">
         <label class="label cursor-pointer justify-start gap-3">
-          <input
-            type="checkbox"
-            name="isActive"
-            class="toggle toggle-success"
-            checked={userToEdit.isActive}
-            disabled={!canUpdate}
-          />
+          <input type="checkbox" name="isActive" class="toggle toggle-success" checked={userToEdit.isActive} disabled={!canUpdate} />
           <span class="label-text">{t("Active")}</span>
         </label>
         <div class="label pt-1">
@@ -157,14 +124,10 @@
         <div class="label">
           <span class="label-text font-medium">{t("Permissions")}</span>
         </div>
-        <p class="text-sm opacity-60 mb-2">
+        <p class="mb-2 text-sm opacity-60">
           {t("Select which resources and actions this user can access. Admins bypass these checks.")}
         </p>
-        <PermissionsGrid
-          resourceActions={data.resourceActions || {}}
-          currentPermissions={userToEdit.permissions || []}
-          disabled={!canUpdate}
-        />
+        <PermissionsGrid resourceActions={data.resourceActions || {}} currentPermissions={userToEdit.permissions || []} disabled={!canUpdate} />
       </div>
     </div>
   </form>

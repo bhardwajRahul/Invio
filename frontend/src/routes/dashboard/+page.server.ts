@@ -23,29 +23,39 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
   const auth = token ? `Bearer ${token}` : "";
 
   const user = locals.user;
-  const canViewInvoices = user.isAdmin || user.permissions?.some(
-    (p) => p.resource === "invoices" && p.action === "read",
-  );
-  const canViewCustomers = user.isAdmin || user.permissions?.some(
-    (p) => p.resource === "customers" && p.action === "read",
-  );
+  const canViewInvoices =
+    user.isAdmin ||
+    user.permissions?.some(
+      (p) => p.resource === "invoices" && p.action === "read",
+    );
+  const canViewCustomers =
+    user.isAdmin ||
+    user.permissions?.some(
+      (p) => p.resource === "customers" && p.action === "read",
+    );
 
   try {
     const [invoices, customers, settings] = await Promise.all([
       canViewInvoices
-        ? backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>
+        ? (backendGet("/api/v1/invoices", auth) as Promise<Invoice[]>)
         : Promise.resolve([] as Invoice[]),
       canViewCustomers
-        ? backendGet("/api/v1/customers", auth) as Promise<unknown[]>
+        ? (backendGet("/api/v1/customers", auth) as Promise<unknown[]>)
         : Promise.resolve([] as unknown[]),
-      backendGet("/api/v1/settings", auth).catch(() => ({})) as Promise<Record<string, unknown>>
+      backendGet("/api/v1/settings", auth).catch(() => ({})) as Promise<
+        Record<string, unknown>
+      >,
     ]);
 
     const currency = (invoices[0]?.currency as string) || "USD";
     const dateFormat = String(settings.dateFormat || "YYYY-MM-DD");
     const billed = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
-    const paid = invoices.filter((i) => i.status === "paid" || i.status === "complete").reduce((s, i) => s + (i.total || 0), 0);
-    const outstanding = invoices.filter((i) => i.status === "sent" || i.status === "overdue").reduce((s, i) => s + (i.total || 0), 0);
+    const paid = invoices
+      .filter((i) => i.status === "paid" || i.status === "complete")
+      .reduce((s, i) => s + (i.total || 0), 0);
+    const outstanding = invoices
+      .filter((i) => i.status === "sent" || i.status === "overdue")
+      .reduce((s, i) => s + (i.total || 0), 0);
     const status = {
       draft: invoices.filter((i) => i.status === "draft").length,
       sent: invoices.filter((i) => i.status === "sent").length,
@@ -57,7 +67,11 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 
     const recent = invoices
       .slice()
-      .sort((a, b) => new Date(b.updatedAt || b.issueDate || 0).getTime() - new Date(a.updatedAt || a.issueDate || 0).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt || b.issueDate || 0).getTime() -
+          new Date(a.updatedAt || a.issueDate || 0).getTime(),
+      )
       .slice(0, 5);
 
     const version = getVersion();
@@ -68,7 +82,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       status,
       recent,
       version,
-      dateFormat
+      dateFormat,
     };
   } catch (err) {
     return { error: String(err) };

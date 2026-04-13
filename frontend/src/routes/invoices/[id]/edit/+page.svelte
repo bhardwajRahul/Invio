@@ -1,5 +1,4 @@
-﻿
-<script lang="ts">
+﻿<script lang="ts">
   import InvoiceEditor from "$lib/components/InvoiceEditor.svelte";
   import { Save } from "lucide-svelte";
   import { getContext } from "svelte";
@@ -10,7 +9,9 @@
 </script>
 
 <div class="mb-6 flex items-center justify-between gap-3">
-  <h1 class="text-2xl font-bold">{t("Edit Invoice")} #{data.invoice?.invoiceNumber || data.invoice?.id}</h1>
+  <h1 class="text-2xl font-bold">
+    {t("Edit Invoice")} #{data.invoice?.invoiceNumber || data.invoice?.id}
+  </h1>
   <button type="submit" form={formId} class="btn btn-primary">
     <Save size={16} />
     <span>{t("Save")}</span>
@@ -18,10 +19,5 @@
 </div>
 
 {#if data.invoice}
-  <InvoiceEditor
-    {data}
-    {formId}
-    invoice={data.invoice}
-  />
+  <InvoiceEditor {data} {formId} invoice={data.invoice} />
 {/if}
-

@@ -13,7 +13,7 @@
   let user = $derived(data.user);
   let canUpdate = $derived(hasPermission(user, "products", "update"));
   let canDelete = $derived(hasPermission(user, "products", "delete"));
-  
+
   function fmtMoney(cur: string | undefined, n: number) {
     if (!cur) cur = "USD";
     try {
@@ -37,22 +37,22 @@
 {/if}
 
 {#if p}
-  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+  <div class="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
     <div>
       <h1 class="text-2xl font-semibold">{t("Product")} {p.name || p.id}</h1>
       {#if p.isActive === false}
         <span class="badge badge-ghost mt-1">{t("Inactive")}</span>
       {/if}
     </div>
-    
-    <div class="flex gap-2 flex-wrap">
+
+    <div class="flex flex-wrap gap-2">
       {#if canUpdate}
         <a href={`/products/${p.id}/edit`} class="btn btn-sm">
           <Pencil size={16} />
           {t("Edit")}
         </a>
       {/if}
-      
+
       {#if p.isActive === false && canUpdate}
         <form method="post" action="?/reactivate" use:enhance>
           <button type="submit" class="btn btn-sm btn-success">
@@ -60,7 +60,7 @@
           </button>
         </form>
       {/if}
-      
+
       {#if canDelete}
         <form method="post" action="?/delete" use:enhance={confirmDelete()}>
           <button type="submit" class="btn btn-sm btn-error">
@@ -72,36 +72,40 @@
     </div>
   </div>
 
-  <div class="bg-base-100 p-6 rounded-box border border-base-200">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div class="bg-base-100 rounded-box border-base-200 border p-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <div class="text-sm opacity-70 mb-1">{t("Name")}</div>
+        <div class="mb-1 text-sm opacity-70">{t("Name")}</div>
         <div class="font-medium">{p.name || "-"}</div>
       </div>
       <div>
-        <div class="text-sm opacity-70 mb-1">{t("Unit Price")}</div>
-        <div class="font-medium">{fmtMoney(data.settings?.currency, p.unitPrice)}</div>
+        <div class="mb-1 text-sm opacity-70">{t("Unit Price")}</div>
+        <div class="font-medium">
+          {fmtMoney(data.settings?.currency, p.unitPrice)}
+        </div>
       </div>
       <div>
-        <div class="text-sm opacity-70 mb-1">{t("Description")}</div>
+        <div class="mb-1 text-sm opacity-70">{t("Description")}</div>
         <div class="font-medium">{p.description || "-"}</div>
       </div>
       <div>
-        <div class="text-sm opacity-70 mb-1">{t("SKU")}</div>
+        <div class="mb-1 text-sm opacity-70">{t("SKU")}</div>
         <div class="font-medium">{p.sku || "-"}</div>
       </div>
       <div>
-        <div class="text-sm opacity-70 mb-1">{t("Unit")}</div>
+        <div class="mb-1 text-sm opacity-70">{t("Unit")}</div>
         <div class="font-medium">{p.unit || "-"}</div>
       </div>
       <div>
-        <div class="text-sm opacity-70 mb-1">{t("Category")}</div>
+        <div class="mb-1 text-sm opacity-70">{t("Category")}</div>
         <div class="font-medium">{p.category || "-"}</div>
       </div>
       {#if taxDef}
         <div>
-          <div class="text-sm opacity-70 mb-1">{t("Tax Definition")}</div>
-          <div class="font-medium">{taxDef.name || taxDef.code || `${taxDef.percent}%`} ({taxDef.percent}%)</div>
+          <div class="mb-1 text-sm opacity-70">{t("Tax Definition")}</div>
+          <div class="font-medium">
+            {taxDef.name || taxDef.code || `${taxDef.percent}%`} ({taxDef.percent}%)
+          </div>
         </div>
       {/if}
     </div>

@@ -6,9 +6,11 @@ export const load = async ({ locals }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "products" && p.action === "read"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "products" && p.action === "read",
+    );
 
   if (!hasPerm) {
     throw redirect(303, "/dashboard");
@@ -17,13 +19,13 @@ export const load = async ({ locals }) => {
   try {
     const products = await backendGet("/api/v1/products", locals.authHeader);
     return {
-      products: products || []
+      products: products || [],
     };
   } catch (err: any) {
     console.error("Failed to load products:", err);
     return {
       error: err.message,
-      products: []
+      products: [],
     };
   }
 };

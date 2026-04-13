@@ -1,6 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-import { BACKEND_URL, SESSION_COOKIE, DEFAULT_SESSION_MAX_AGE } from "$lib/backend";
+import {
+  BACKEND_URL,
+  SESSION_COOKIE,
+  DEFAULT_SESSION_MAX_AGE,
+} from "$lib/backend";
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.user) {
@@ -55,7 +59,8 @@ export const actions: Actions = {
           const retryAfter = parsedError?.retryAfter;
           const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15;
           return fail(429, {
-            error: "Too many login attempts. Please try again in {{minutes}} minute(s).",
+            error:
+              "Too many login attempts. Please try again in {{minutes}} minute(s).",
             errorParams: { minutes },
             username,
           });
@@ -66,39 +71,51 @@ export const actions: Actions = {
           if (typeof candidate === "string" && candidate.trim().length > 0) {
             message = candidate.trim();
           }
-        } else if (typeof parsedError === "string" && parsedError.trim().length > 0) {
+        } else if (
+          typeof parsedError === "string" &&
+          parsedError.trim().length > 0
+        ) {
           message = parsedError.trim();
         }
         const msg = message ?? `${resp.status} ${resp.statusText}`;
         return fail(400, { error: msg, username });
       }
 
-      const data = await resp.json() as { token?: string; expiresIn?: number };
+      const data = (await resp.json()) as {
+        token?: string;
+        expiresIn?: number;
+      };
       if (!data?.token) {
         return fail(400, { error: "Login response missing token", username });
       }
-      
+
       const maxAge = data.expiresIn || DEFAULT_SESSION_MAX_AGE;
-      
+
       cookies.set(SESSION_COOKIE, data.token, {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.COOKIE_SECURE !== "false",
-        maxAge: maxAge > 0 ? maxAge : undefined
+        maxAge: maxAge > 0 ? maxAge : undefined,
       });
-
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       if (/401|403/.test(errorMessage)) {
         return fail(401, { error: "Invalid credentials", username });
       }
       if (/5\d\d/.test(errorMessage)) {
-        return fail(500, { error: "Server error. Please try again later.", username });
+        return fail(500, {
+          error: "Server error. Please try again later.",
+          username,
+        });
       }
-      return fail(500, { error: "Unable to connect to server. Please check your connection and try again.", username });
+      return fail(500, {
+        error:
+          "Unable to connect to server. Please check your connection and try again.",
+        username,
+      });
     }
-    
+
     throw redirect(303, "/dashboard");
-  }
+  },
 };

@@ -7,15 +7,20 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "customers" && p.action === "update"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "customers" && p.action === "update",
+    );
   if (!hasPerm) {
     throw redirect(303, `/customers/${params.id}`);
   }
 
   try {
-    const customer = await backendGet(`/api/v1/customers/${params.id}`, locals.authHeader);
+    const customer = await backendGet(
+      `/api/v1/customers/${params.id}`,
+      locals.authHeader,
+    );
     return { customer };
   } catch (err: any) {
     return {
@@ -46,9 +51,14 @@ export const actions: Actions = {
     if (!payload.name) return fail(400, { error: "Name is required" });
 
     try {
-      await backendPut(`/api/v1/customers/${params.id}`, locals.authHeader, payload);
+      await backendPut(
+        `/api/v1/customers/${params.id}`,
+        locals.authHeader,
+        payload,
+      );
     } catch (e: any) {
-      if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
+      if (e && typeof e === "object" && "status" in e && "location" in e)
+        throw e;
       return fail(500, { error: e.message || String(e) });
     }
     throw redirect(303, `/customers/${params.id}`);

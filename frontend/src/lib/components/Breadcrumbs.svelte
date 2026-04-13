@@ -2,7 +2,7 @@
   import { page } from "$app/state";
 
   interface Props {
-    t: (key: string, params?: Record<string, string|number>) => string;
+    t: (key: string, params?: Record<string, string | number>) => string;
   }
   let { t }: Props = $props();
 
@@ -27,21 +27,28 @@
     pdf: "PDF",
   };
 
-  let segments = $derived(page.url.pathname.replace(/(^\/+|\/+?$)/g, "").split("/").filter(Boolean));
-  
-  let crumbs = $derived(segments.map((seg, idx) => {
-    let hrefAcc = "/" + segments.slice(0, idx + 1).join("/");
-    let isLast = idx === segments.length - 1;
-    let english = LABEL_MAP[seg] || titleize(seg);
-    return {
-      label: t(english),
-      href: isLast ? undefined : hrefAcc,
-    };
-  }));
+  let segments = $derived(
+    page.url.pathname
+      .replace(/(^\/+|\/+?$)/g, "")
+      .split("/")
+      .filter(Boolean),
+  );
+
+  let crumbs = $derived(
+    segments.map((seg, idx) => {
+      let hrefAcc = "/" + segments.slice(0, idx + 1).join("/");
+      let isLast = idx === segments.length - 1;
+      let english = LABEL_MAP[seg] || titleize(seg);
+      return {
+        label: t(english),
+        href: isLast ? undefined : hrefAcc,
+      };
+    }),
+  );
 </script>
 
 {#if segments.length >= 2}
-  <div class="breadcrumbs text-sm mb-4">
+  <div class="breadcrumbs mb-4 text-sm">
     <ul>
       {#each crumbs as c}
         <li>

@@ -6,26 +6,11 @@
   let t = getContext("i18n") as (key: string) => string;
 
   let user = $derived(data.user);
-  let canCreate = $derived(user?.isAdmin || user?.permissions?.some(p => p.resource === "users" && p.action === "create"));
+  let canCreate = $derived(user?.isAdmin || user?.permissions?.some((p) => p.resource === "users" && p.action === "create"));
   let usersList = $derived(data.users || []);
 
-  function getUserLabel(u: {
-    displayName?: string;
-    display_name?: string;
-    name?: string;
-    username?: string;
-    userName?: string;
-    user_name?: string;
-    email?: string;
-  }) {
-    const label = [
-      u.displayName,
-      u.display_name,
-      u.name,
-      u.username,
-      u.userName,
-      u.user_name,
-    ].find((v) => typeof v === "string" && v.trim().length > 0);
+  function getUserLabel(u: { displayName?: string; display_name?: string; name?: string; username?: string; userName?: string; user_name?: string; email?: string }) {
+    const label = [u.displayName, u.display_name, u.name, u.username, u.userName, u.user_name].find((v) => typeof v === "string" && v.trim().length > 0);
 
     if (label) return label;
     if (u.email && u.email.includes("@")) return u.email.split("@")[0];
@@ -33,7 +18,7 @@
   }
 </script>
 
-<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+<div class="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
   <h1 class="text-2xl font-semibold">{t("Users")}</h1>
   {#if canCreate}
     <a href="/users/new" class="btn btn-sm btn-primary w-full sm:w-auto">
@@ -50,25 +35,25 @@
 {/if}
 
 <!-- Mobile List -->
-<div class="block md:hidden space-y-3">
+<div class="block space-y-3 md:hidden">
   {#each usersList as u}
-    <a href={`/users/${u.id}`} class="card bg-base-100 border border-base-300 hover:shadow-md transition-shadow">
+    <a href={`/users/${u.id}`} class="card bg-base-100 border-base-300 border transition-shadow hover:shadow-md">
       <div class="card-body p-4">
-        <div class="flex gap-2 items-center mb-1">
+        <div class="mb-1 flex items-center gap-2">
           <span class="font-semibold">{getUserLabel(u)}</span>
           {#if u.isAdmin}
             <span class="badge badge-primary badge-sm">{t("Admin")}</span>
           {/if}
         </div>
-        <div class="text-sm opacity-70 break-all">{u.email}</div>
+        <div class="text-sm break-all opacity-70">{u.email}</div>
       </div>
     </a>
   {/each}
 </div>
 
 <!-- Desktop Table -->
-<div class="hidden md:block overflow-x-auto rounded-box bg-base-100 border border-base-300">
-  <table class="table table-zebra w-full text-sm">
+<div class="rounded-box bg-base-100 border-base-300 hidden overflow-x-auto border md:block">
+  <table class="table-zebra table w-full text-sm">
     <thead class="bg-base-200 text-base-content">
       <tr class="font-medium">
         <th>{t("Name")}</th>
@@ -94,7 +79,7 @@
       {/each}
       {#if usersList.length === 0}
         <tr>
-          <td colspan="3" class="text-center py-10 text-sm opacity-70">
+          <td colspan="3" class="py-10 text-center text-sm opacity-70">
             {t("No users found.")}
           </td>
         </tr>

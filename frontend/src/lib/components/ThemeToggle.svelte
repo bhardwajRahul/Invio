@@ -1,62 +1,137 @@
 <script lang="ts">
-  import { onMount, getContext } from "svelte";
-  import { Sun, Moon } from "lucide-svelte";
-  
-  let { size = "md", class: className = "", label = "" } = $props();
+  import { onMount } from "svelte";
+  import ThemeCard from "$lib/components/ThemeCard.svelte";
+  import { getTheme, setTheme } from "$lib/theme.ts";
 
-  const THEME_KEY = "theme";
-  const LIGHT = "invio-light";
-  const DARK = "invio";
-  
-  let theme = $state(LIGHT);
-  let t = getContext("i18n") as (key: string) => string;
+  let selectedTheme = $state<string>("invio-dark");
 
   onMount(() => {
-    try {
-      const current = document.documentElement.getAttribute("data-theme");
-      if (current === LIGHT || current === DARK) {
-        theme = current;
-      } else {
-        const stored = localStorage.getItem(THEME_KEY) || "";
-        const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
-        const initial = (stored === LIGHT || stored === DARK) ? stored : preferred;
-        theme = initial;
-        document.documentElement.setAttribute("data-theme", initial);
-      }
-    } catch (_err) {
-      // ignore
-    }
+    selectedTheme = getTheme();
   });
 
-  function toggle() {
-    const next = theme === DARK ? LIGHT : DARK;
-    theme = next;
-    try {
-      document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem(THEME_KEY, next);
-    } catch (_err) {
-      // ignore
-    }
+  function handleThemeSelect(themeId: string) {
+    setTheme(themeId);
+    selectedTheme = themeId;
   }
 
-  let buttonLabel = $derived(label || t("Toggle light/dark theme"));
-  let sizeClass = $derived(size === "sm" ? "btn-sm" : size === "lg" ? "btn-lg" : "");
+  const themes = [
+    {
+      id: "invio-light",
+    },
+    {
+      id: "invio-dark",
+    },
+    {
+      id: "light",
+    },
+    {
+      id: "dark",
+    },
+    {
+      id: "cupcake",
+    },
+    {
+      id: "bumblebee",
+    },
+    {
+      id: "emerald",
+    },
+    {
+      id: "corporate",
+    },
+    {
+      id: "synthwave",
+    },
+    {
+      id: "retro",
+    },
+    {
+      id: "cyberpunk",
+    },
+    {
+      id: "valentine",
+    },
+    {
+      id: "halloween",
+    },
+    {
+      id: "garden",
+    },
+    {
+      id: "forest",
+    },
+    {
+      id: "aqua",
+    },
+    {
+      id: "lofi",
+    },
+    {
+      id: "pastel",
+    },
+    {
+      id: "fantasy",
+    },
+    {
+      id: "wireframe",
+    },
+    {
+      id: "black",
+    },
+    {
+      id: "luxury",
+    },
+    {
+      id: "dracula",
+    },
+    {
+      id: "cmyk",
+    },
+    {
+      id: "autumn",
+    },
+    {
+      id: "business",
+    },
+    {
+      id: "acid",
+    },
+    {
+      id: "lemonade",
+    },
+    {
+      id: "night",
+    },
+    {
+      id: "coffee",
+    },
+    {
+      id: "winter",
+    },
+    {
+      id: "dim",
+    },
+    {
+      id: "nord",
+    },
+    {
+      id: "sunset",
+    },
+    {
+      id: "caramellatte",
+    },
+    {
+      id: "abyss",
+    },
+    {
+      id: "silk",
+    },
+  ];
+
 </script>
 
-<button
-  type="button"
-  class="btn btn-ghost {sizeClass} {className}"
-  onclick={toggle}
-  aria-label={buttonLabel}
-  title={buttonLabel}
->
-  {#if theme === DARK}
-    <Moon size={20} />
-  {:else}
-    <Sun size={20} />
-  {/if}
-  <span class="ml-2 hidden sm:inline text-sm opacity-70">
-    {theme === DARK ? t("Dark") : t("Light")}
-  </span>
-</button>
-
+<div class="grid grid-cols-2 gap-2 xl:grid-cols-3">
+  {#each themes as item}
+    <ThemeCard theme={item} selectedTheme={selectedTheme} onSelect={handleThemeSelect} />
+  {/each}
+</div>

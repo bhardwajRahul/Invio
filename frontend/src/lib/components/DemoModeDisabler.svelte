@@ -10,6 +10,8 @@
           el.classList.add("opacity-50", "cursor-not-allowed");
         }
       });
-    } catch (_e) { /* ignore */ }
+    } catch (_e) {
+      /* ignore */
+    }
   });
 </script>

@@ -25,13 +25,27 @@
     pricesIncludeTax: initInvoice?.pricesIncludeTax ? "true" : "false",
     roundingMode: initInvoice?.roundingMode || "line",
     paymentTerms: initInvoice?.paymentTerms ?? initSettings.paymentTerms ?? "",
-    notes: initInvoice?.notes ?? initSettings.defaultNotes ?? ""
+    notes: initInvoice?.notes ?? initSettings.defaultNotes ?? "",
   });
 
   let items = $state(
     initInvoice?.items?.length
-      ? initInvoice.items.map((i: any) => ({ ...i, id: crypto.randomUUID(), productId: i.productId || "" }))
-      : [{ id: crypto.randomUUID(), productId: "", description: "", quantity: 1, unitPrice: 0, taxPercent: 0, notes: "" }]
+      ? initInvoice.items.map((i: any) => ({
+          ...i,
+          id: crypto.randomUUID(),
+          productId: i.productId || "",
+        }))
+      : [
+          {
+            id: crypto.randomUUID(),
+            productId: "",
+            description: "",
+            quantity: 1,
+            unitPrice: 0,
+            taxPercent: 0,
+            notes: "",
+          },
+        ],
   );
 
   let customers = $derived(data.customers || []);
@@ -39,7 +53,15 @@
   let taxDefinitions = $derived(data.taxDefinitions || []);
 
   function addItem() {
-    items.push({ id: crypto.randomUUID(), productId: "", description: "", quantity: 1, unitPrice: 0, taxPercent: 0, notes: "" });
+    items.push({
+      id: crypto.randomUUID(),
+      productId: "",
+      description: "",
+      quantity: 1,
+      unitPrice: 0,
+      taxPercent: 0,
+      notes: "",
+    });
   }
 
   function applyProductSelection(item: any, productId: string) {
@@ -73,7 +95,9 @@
       e.dataTransfer.setData("text/plain", id);
     }
     // Defer setting the state to avoid firing dragend immediately
-    setTimeout(() => { draggedId = id; }, 0);
+    setTimeout(() => {
+      draggedId = id;
+    }, 0);
   }
 
   function handleDragOver(e: DragEvent, id: string) {
@@ -127,8 +151,12 @@
     }
   }
 
-  let subtotal = $derived(items.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0));
-  let tax = $derived(form.taxMode === "invoice" ? subtotal * ((Number(form.taxRate) || 0) / 100) : items.reduce((sum, item) => sum + (((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) * ((Number(item.taxPercent) || 0) / 100)), 0));
+  let subtotal = $derived(items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0));
+  let tax = $derived(
+    form.taxMode === "invoice"
+      ? subtotal * ((Number(form.taxRate) || 0) / 100)
+      : items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * ((Number(item.taxPercent) || 0) / 100), 0),
+  );
   let total = $derived(form.pricesIncludeTax === "true" ? subtotal : subtotal + tax); // Simplified for visual parity
 
   async function handleSubmit(e: SubmitEvent | Event) {
@@ -137,18 +165,31 @@
     error = "";
 
     try {
-      const payload = { ...form, pricesIncludeTax: form.pricesIncludeTax === "true", items: items.map(i => ({ description: i.description, quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), taxPercent: Number(i.taxPercent||0), notes: i.notes })) };
+      const payload = {
+        ...form,
+        pricesIncludeTax: form.pricesIncludeTax === "true",
+        items: items.map((i) => ({
+          description: i.description,
+          quantity: Number(i.quantity),
+          unitPrice: Number(i.unitPrice),
+          taxPercent: Number(i.taxPercent || 0),
+          notes: i.notes,
+        })),
+      };
       const url = initInvoice ? "/api/v1/invoices/" + initInvoice.id : "/api/v1/invoices";
       const res = await fetch(url, {
         method: initInvoice ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      
+
       if (!res.ok) {
         const d = await res.text();
         let errMsg = "Failed to save invoice";
-        try { const j = JSON.parse(d); errMsg = j.error || errMsg; } catch {}
+        try {
+          const j = JSON.parse(d);
+          errMsg = j.error || errMsg;
+        } catch {}
         throw new Error(errMsg);
       }
 
@@ -160,7 +201,7 @@
         throw new Error("JSON parse error: " + err.message + " (Response: " + txt.substring(0, 100) + " )");
       }
       goto("/invoices/" + result.id);
-    } catch(err: any) {
+    } catch (err: any) {
       error = err.message;
     } finally {
       saving = false;
@@ -179,7 +220,7 @@
     <div class="alert alert-error">{error}</div>
   {/if}
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
     <label class="form-control">
       <div class="label">
         <span class="label-text">{t("Customer")} <span class="text-error">*</span></span>
@@ -221,7 +262,7 @@
     </label>
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
     <label class="form-control">
       <div class="label">
         <span class="label-text">{t("Issue Date")}</span>
@@ -238,7 +279,7 @@
   </div>
 
   <div>
-    <div class="flex items-center justify-between mb-2">
+    <div class="mb-2 flex items-center justify-between">
       <div class="block text-sm font-semibold">
         {t("IStems")} <span class="text-error">*</span>
       </div>
@@ -248,13 +289,13 @@
       </button>
     </div>
 
-    <div class="hidden lg:flex flex-row flex-nowrap items-center gap-2 mb-1 text-xs opacity-60 font-medium">
+    <div class="mb-1 hidden flex-row flex-nowrap items-center gap-2 text-xs font-medium opacity-60 lg:flex">
       <div class="w-6 shrink-0"></div>
       {#if products.length > 0}
         <div class="w-44 max-w-xs shrink-0 text-center">{t("Product")}</div>
       {/if}
-      <div class="flex-1 min-w-0 pl-3">{t("Description")}</div>
-      <div class="w-16 sm:w-20 shrink-0 text-center">{t("Quantity")}</div>
+      <div class="min-w-0 flex-1 pl-3">{t("Description")}</div>
+      <div class="w-16 shrink-0 text-center sm:w-20">{t("Quantity")}</div>
       <div class="w-24 shrink-0 text-center">{t("Price")}</div>
       {#if form.taxMode === "line"}
         <div class="w-20 shrink-0 text-center">{t("Tax %")}</div>
@@ -265,56 +306,54 @@
 
     <div class="space-y-3" role="list">
       {#each items as item, i (item.id)}
-        <div role="listitem"
-             class="flex flex-nowrap items-center gap-2 p-1 rounded-box transition-colors {draggedId === item.id ? 'opacity-50' : ''} {dragHoverId === item.id ? 'bg-base-200' : ''}"
-             draggable="true"
-             ondragstart={(e) => handleDragStart(e, item.id)}
-             ondragover={(e) => handleDragOver(e, item.id)}
-             ondragleave={() => handleDragLeave(item.id)}
-             ondrop={(e) => handleDrop(e, item.id)}
-             ondragend={handleDragEnd}>
+        <div
+          role="listitem"
+          class="rounded-box flex flex-nowrap items-center gap-2 p-1 transition-colors {draggedId === item.id ? 'opacity-50' : ''} {dragHoverId === item.id ? 'bg-base-200' : ''}"
+          draggable="true"
+          ondragstart={(e) => handleDragStart(e, item.id)}
+          ondragover={(e) => handleDragOver(e, item.id)}
+          ondragleave={() => handleDragLeave(item.id)}
+          ondrop={(e) => handleDrop(e, item.id)}
+          ondragend={handleDragEnd}
+        >
           <button type="button" class="btn btn-ghost btn-sm btn-square shrink-0 cursor-move opacity-40 hover:opacity-100" tabindex="-1">
             <GripVertical size={16} />
           </button>
 
           {#if products.length > 0}
-            <select
-              class="select select-bordered w-44 max-w-xs shrink-0"
-              bind:value={item.productId}
-              onchange={(e) => applyProductSelection(item, (e.currentTarget as HTMLSelectElement).value)}
-            >
+            <select class="select select-bordered w-44 max-w-xs shrink-0" bind:value={item.productId} onchange={(e) => applyProductSelection(item, (e.currentTarget as HTMLSelectElement).value)}>
               <option value="">{t("Select product")}</option>
               {#each products as p}
                 <option value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>
               {/each}
             </select>
           {/if}
-          
+
           <input class="input input-bordered w-full min-w-0" bind:value={item.description} placeholder={t("Description")} required />
-          <input type="number" min="0" step="1" class="input input-bordered w-16 sm:w-20 shrink-0 text-center" bind:value={item.quantity} />
+          <input type="number" min="0" step="1" class="input input-bordered w-16 shrink-0 text-center sm:w-20" bind:value={item.quantity} />
           <input type="number" min="0" step="any" class="input input-bordered w-24 shrink-0 text-center" bind:value={item.unitPrice} />
           {#if form.taxMode === "line"}
             <input type="number" min="0" step="any" class="input input-bordered w-20 shrink-0 text-center" bind:value={item.taxPercent} placeholder="%" />
           {/if}
           <input class="input input-bordered w-40 max-w-xs shrink-0" bind:value={item.notes} placeholder={t("Notes")} />
-          
+
           <button type="button" class="btn btn-ghost btn-square btn-sm shrink-0" onclick={() => removeItem(i)} aria-label={t("Remove item")}>&times;</button>
         </div>
       {/each}
     </div>
 
     <div class="mt-6 flex flex-col items-end space-y-2 text-sm">
-      <div class="flex justify-between w-48">
+      <div class="flex w-48 justify-between">
         <span>{t("Subtotal")}:</span>
         <span>{subtotal.toFixed(2)}</span>
       </div>
       {#if tax > 0}
-      <div class="flex justify-between w-48">
-        <span>{t("Tax")}:</span>
-        <span>{tax.toFixed(2)}</span>
-      </div>
+        <div class="flex w-48 justify-between">
+          <span>{t("Tax")}:</span>
+          <span>{tax.toFixed(2)}</span>
+        </div>
       {/if}
-      <div class="flex justify-between w-48 font-bold text-lg">
+      <div class="flex w-48 justify-between text-lg font-bold">
         <span>{t("Total")}:</span>
         <span>{total.toFixed(2)} {form.currency}</span>
       </div>
@@ -322,11 +361,17 @@
   </div>
 
   <div class="flex gap-4 text-xs opacity-50">
-    <span class="flex items-center gap-1"><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">S</kbd> {t("Save")}</span>
-    <span class="flex items-center gap-1"><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">Enter</kbd> {t("Add item")}</span>
+    <span class="flex items-center gap-1"
+      ><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">S</kbd>
+      {t("Save")}</span
+    >
+    <span class="flex items-center gap-1"
+      ><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">Enter</kbd>
+      {t("Add item")}</span
+    >
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
     <label class="form-control">
       <div class="label"><span class="label-text">{t("Tax Mode")}</span></div>
       <select class="select select-bordered w-full" bind:value={form.taxMode}>
@@ -334,14 +379,18 @@
         <option value="line">{t("Per line")}</option>
       </select>
     </label>
-    
-    <label class="form-control" class:hidden={form.taxMode !== 'invoice'}>
-      <div class="label"><span class="label-text">{t("Tax Rate (%)")}</span></div>
+
+    <label class="form-control" class:hidden={form.taxMode !== "invoice"}>
+      <div class="label">
+        <span class="label-text">{t("Tax Rate (%)")}</span>
+      </div>
       <input type="number" class="input input-bordered w-full" bind:value={form.taxRate} step="any" min="0" />
     </label>
 
     <label class="form-control">
-      <div class="label"><span class="label-text">{t("Prices include tax?")}</span></div>
+      <div class="label">
+        <span class="label-text">{t("Prices include tax?")}</span>
+      </div>
       <select class="select select-bordered w-full" bind:value={form.pricesIncludeTax}>
         <option value="false">{t("No")}</option>
         <option value="true">{t("Yes")}</option>
@@ -349,7 +398,9 @@
     </label>
 
     <label class="form-control">
-      <div class="label"><span class="label-text">{t("Rounding mode")}</span></div>
+      <div class="label">
+        <span class="label-text">{t("Rounding mode")}</span>
+      </div>
       <select class="select select-bordered w-full" bind:value={form.roundingMode}>
         <option value="line">{t("Round per line")}</option>
         <option value="total">{t("Round on total")}</option>
@@ -357,15 +408,17 @@
     </label>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
     <label class="form-control">
-      <div class="label"><span class="label-text">{t("Payment Terms")}</span></div>
-      <textarea class="textarea textarea-bordered w-full h-24" bind:value={form.paymentTerms}></textarea>
+      <div class="label">
+        <span class="label-text">{t("Payment Terms")}</span>
+      </div>
+      <textarea class="textarea textarea-bordered h-24 w-full" bind:value={form.paymentTerms}></textarea>
     </label>
-    
+
     <label class="form-control">
       <div class="label"><span class="label-text">{t("Notes")}</span></div>
-      <textarea class="textarea textarea-bordered w-full h-24" bind:value={form.notes}></textarea>
+      <textarea class="textarea textarea-bordered h-24 w-full" bind:value={form.notes}></textarea>
     </label>
   </div>
 </form>

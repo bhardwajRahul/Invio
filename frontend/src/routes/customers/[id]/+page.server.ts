@@ -7,15 +7,20 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     throw redirect(303, "/login");
   }
 
-  const hasPerm = locals.user.isAdmin || locals.user.permissions?.some(
-    (p: any) => p.resource === "customers" && p.action === "read"
-  );
+  const hasPerm =
+    locals.user.isAdmin ||
+    locals.user.permissions?.some(
+      (p: any) => p.resource === "customers" && p.action === "read",
+    );
   if (!hasPerm) {
     throw redirect(303, "/customers");
   }
 
   try {
-    const customer = await backendGet(`/api/v1/customers/${params.id}`, locals.authHeader);
+    const customer = await backendGet(
+      `/api/v1/customers/${params.id}`,
+      locals.authHeader,
+    );
     return { customer };
   } catch (err: any) {
     return {
@@ -30,10 +35,15 @@ export const actions: Actions = {
     try {
       await backendDelete(`/api/v1/customers/${params.id}`, locals.authHeader);
     } catch (e: any) {
-      if (e && typeof e === 'object' && 'status' in e && 'location' in e) throw e;
+      if (e && typeof e === "object" && "status" in e && "location" in e)
+        throw e;
       // It's likely blocked by existing invoices
-      return fail(400, { error: e.message || "Cannot delete this customer. There may be invoices associated with them." });
+      return fail(400, {
+        error:
+          e.message ||
+          "Cannot delete this customer. There may be invoices associated with them.",
+      });
     }
     throw redirect(303, "/customers");
-  }
+  },
 };

@@ -8,9 +8,9 @@
 </script>
 
 <form method="post" use:enhance>
-  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+  <div class="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
     <h1 class="text-2xl font-semibold">{t("Create Product")}</h1>
-    <div class="flex items-center gap-2 w-full sm:w-auto">
+    <div class="flex w-full items-center gap-2 sm:w-auto">
       <a href="/products" class="btn btn-ghost btn-sm flex-1 sm:flex-none">
         {t("Cancel")}
       </a>
@@ -44,7 +44,7 @@
       <textarea id="description" name="description" class="textarea textarea-bordered w-full" rows="3"></textarea>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="form-control w-full">
         <label class="label pb-1" for="unitPrice">
           <span class="label-text">
@@ -62,7 +62,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="form-control w-full">
         <label class="label pb-1" for="unit">
           <span class="label-text">{t("Unit")}</span>
@@ -89,7 +89,7 @@
     </div>
 
     {#if data.taxDefinitions && data.taxDefinitions.length > 0}
-      <div class="form-control w-full sm:w-1/2 pr-0 sm:pr-2">
+      <div class="form-control w-full pr-0 sm:w-1/2 sm:pr-2">
         <label class="label pb-1" for="taxDefinitionId">
           <span class="label-text">{t("Tax Definition")}</span>
         </label>

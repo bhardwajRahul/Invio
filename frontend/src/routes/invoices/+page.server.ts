@@ -23,8 +23,10 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       if (byInvoiceNumber !== 0) return byInvoiceNumber;
 
       // Stable fallback when numbers are equal/missing.
-      return new Date(b.updatedAt || b.issueDate || 0).getTime() -
-        new Date(a.updatedAt || a.issueDate || 0).getTime();
+      return (
+        new Date(b.updatedAt || b.issueDate || 0).getTime() -
+        new Date(a.updatedAt || a.issueDate || 0).getTime()
+      );
     });
     return { invoices };
   } catch (err) {

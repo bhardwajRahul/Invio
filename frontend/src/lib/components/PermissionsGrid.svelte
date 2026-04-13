@@ -13,20 +13,14 @@
   let t = getContext("i18n") as (key: string) => string;
 
   // Build a Set for fast lookup
-  let permSet = $derived(
-    new Set(currentPermissions.map((p) => `${p.resource}:${p.action}`))
-  );
+  let permSet = $derived(new Set(currentPermissions.map((p) => `${p.resource}:${p.action}`)));
 
   // Collect all unique actions across all resources (column headers)
-  let allActions = $derived(
-    Array.from(new Set(Object.values(resourceActions).flat()))
-  );
+  let allActions = $derived(Array.from(new Set(Object.values(resourceActions).flat())));
 
   // Pretty-print a resource name
   function formatResource(r: string): string {
-    return r
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return r.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   // Pretty-print an action name
@@ -38,26 +32,22 @@
 
   function selectAll() {
     if (!gridElement) return;
-    gridElement
-      .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
-      .forEach((cb) => {
-        cb.checked = true;
-      });
+    gridElement.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = true;
+    });
   }
 
   function clearAll() {
     if (!gridElement) return;
-    gridElement
-      .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
-      .forEach((cb) => {
-        cb.checked = false;
-      });
+    gridElement.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = false;
+    });
   }
 </script>
 
 <div bind:this={gridElement} id="permissions-grid">
   {#if !disabled}
-    <div class="flex gap-2 mb-3">
+    <div class="mb-3 flex gap-2">
       <button type="button" class="btn btn-xs btn-outline" onclick={selectAll}>
         {t("Select All")}
       </button>
@@ -68,8 +58,8 @@
   {/if}
 
   <!-- Permissions grid -->
-  <div class="overflow-x-auto border border-base-300 rounded-lg">
-    <table class="table table-sm table-pin-rows">
+  <div class="border-base-300 overflow-x-auto rounded-lg border">
+    <table class="table-sm table-pin-rows table">
       <thead>
         <tr>
           <th class="bg-base-200">{t("Resource")}</th>
@@ -94,13 +84,7 @@
                 </td>
               {:else}
                 <td class="text-center">
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm checkbox-primary"
-                    {name}
-                    checked={permSet.has(key)}
-                    {disabled}
-                  />
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" {name} checked={permSet.has(key)} {disabled} />
                 </td>
               {/if}
             {/each}
