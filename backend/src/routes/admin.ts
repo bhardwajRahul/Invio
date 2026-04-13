@@ -132,24 +132,84 @@ function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
 const SUPPORTED_LOCALES = new Set(availableInvoiceLocales());
 
 function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
-  if (!data || !Object.prototype.hasOwnProperty.call(data, "locale")) {
-    return;
+  if (!data) return;
+
+  // Accept common aliases and normalize to canonical keys
+  if (
+    !Object.prototype.hasOwnProperty.call(data, "dateFormat") &&
+    Object.prototype.hasOwnProperty.call(data, "date_format")
+  ) {
+    (data as Record<string, unknown>).dateFormat =
+      (data as Record<string, unknown>).date_format;
+    delete (data as Record<string, unknown>).date_format;
   }
-  const raw = String((data as Record<string, unknown>).locale ?? "").trim();
-  if (!raw) {
-    delete (data as Record<string, unknown>).locale;
-    return;
+  if (
+    !Object.prototype.hasOwnProperty.call(data, "numberFormat") &&
+    Object.prototype.hasOwnProperty.call(data, "number_format")
+  ) {
+    (data as Record<string, unknown>).numberFormat =
+      (data as Record<string, unknown>).number_format;
+    delete (data as Record<string, unknown>).number_format;
   }
-  const lower = raw.toLowerCase();
-  if (SUPPORTED_LOCALES.has(lower)) {
-    (data as Record<string, unknown>).locale = lower;
-    return;
+
+  // Accept common aliases and normalize to canonical key
+  if (
+    !Object.prototype.hasOwnProperty.call(data, "postalCityFormat") &&
+    Object.prototype.hasOwnProperty.call(data, "postal_city_format")
+  ) {
+    (data as Record<string, unknown>).postalCityFormat =
+      (data as Record<string, unknown>).postal_city_format;
+    delete (data as Record<string, unknown>).postal_city_format;
   }
-  const base = lower.split("-")[0];
-  if (SUPPORTED_LOCALES.has(base)) {
-    (data as Record<string, unknown>).locale = base;
-  } else {
-    (data as Record<string, unknown>).locale = "en";
+  if (
+    !Object.prototype.hasOwnProperty.call(data, "postalCityFormat") &&
+    Object.prototype.hasOwnProperty.call(data, "postalcityformat")
+  ) {
+    (data as Record<string, unknown>).postalCityFormat =
+      (data as Record<string, unknown>).postalcityformat;
+    delete (data as Record<string, unknown>).postalcityformat;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "locale")) {
+    const raw = String((data as Record<string, unknown>).locale ?? "").trim();
+    if (!raw) {
+      delete (data as Record<string, unknown>).locale;
+    } else {
+      const lower = raw.toLowerCase();
+      if (SUPPORTED_LOCALES.has(lower)) {
+        (data as Record<string, unknown>).locale = lower;
+      } else {
+        const base = lower.split("-")[0];
+        if (SUPPORTED_LOCALES.has(base)) {
+          (data as Record<string, unknown>).locale = base;
+        } else {
+          (data as Record<string, unknown>).locale = "en";
+        }
+      }
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "postalCityFormat")) {
+    const rawFormat = String(data.postalCityFormat ?? "").trim().toLowerCase();
+    if (rawFormat === "city-postal" || rawFormat === "postal-city") {
+      (data as Record<string, unknown>).postalCityFormat = rawFormat;
+    } else {
+      (data as Record<string, unknown>).postalCityFormat = "auto";
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "numberFormat")) {
+    const rawNumberFormat = String(data.numberFormat ?? "").trim().toLowerCase();
+    (data as Record<string, unknown>).numberFormat = rawNumberFormat === "period"
+      ? "period"
+      : "comma";
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "dateFormat")) {
+    const rawDateFormat = String(data.dateFormat ?? "").trim();
+    (data as Record<string, unknown>).dateFormat = rawDateFormat === "DD.MM.YYYY"
+      ? "DD.MM.YYYY"
+      : "YYYY-MM-DD";
   }
 }
 
@@ -661,6 +721,19 @@ adminRoutes.get("/settings", async (c) => {
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
   if (!map.locale) map.locale = "en";
+  if (!map.dateFormat && map.date_format) map.dateFormat = map.date_format;
+  if (!map.numberFormat && map.number_format) {
+    map.numberFormat = map.number_format;
+  }
+  if (!map.postalCityFormat && map.postal_city_format) {
+    map.postalCityFormat = map.postal_city_format;
+  }
+  if (!map.postalCityFormat && map.postalcityformat) {
+    map.postalCityFormat = map.postalcityformat;
+  }
+  if (!map.dateFormat) map.dateFormat = "YYYY-MM-DD";
+  if (!map.numberFormat) map.numberFormat = "comma";
+  if (!map.postalCityFormat) map.postalCityFormat = "auto";
   // Expose demo mode to frontend UI
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -753,6 +826,19 @@ adminRoutes.get("/admin/settings", async (c) => {
   if (map.logoUrl && !map.logo) map.logo = map.logoUrl;
   if (map.logoUrl) delete map.logoUrl;
   if (!map.locale) map.locale = "en";
+  if (!map.dateFormat && map.date_format) map.dateFormat = map.date_format;
+  if (!map.numberFormat && map.number_format) {
+    map.numberFormat = map.number_format;
+  }
+  if (!map.postalCityFormat && map.postal_city_format) {
+    map.postalCityFormat = map.postal_city_format;
+  }
+  if (!map.postalCityFormat && map.postalcityformat) {
+    map.postalCityFormat = map.postalcityformat;
+  }
+  if (!map.dateFormat) map.dateFormat = "YYYY-MM-DD";
+  if (!map.numberFormat) map.numberFormat = "comma";
+  if (!map.postalCityFormat) map.postalCityFormat = "auto";
   // Expose demo mode to frontend UI for admin-prefixed route as well
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -1031,6 +1117,8 @@ adminRoutes.get("/invoices/:id/html", requirePermission("invoices", "read"), asy
     acc[s.key] = s.value as string;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
+  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
   if (!settingsMap.logo && settingsMap.logoUrl) {
     settingsMap.logo = settingsMap.logoUrl;
   }
@@ -1040,6 +1128,8 @@ adminRoutes.get("/invoices/:id/html", requirePermission("invoices", "read"), asy
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
+    companyCountryCode: settingsMap.companyCountryCode || "",
+    postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
@@ -1097,6 +1187,8 @@ adminRoutes.get("/invoices/:id/pdf", requirePermission("invoices", "export"), as
     acc[s.key] = s.value as string;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
+  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
   if (!settingsMap.logo && settingsMap.logoUrl) {
     settingsMap.logo = settingsMap.logoUrl;
   }
@@ -1106,6 +1198,8 @@ adminRoutes.get("/invoices/:id/pdf", requirePermission("invoices", "export"), as
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
+    companyCountryCode: settingsMap.companyCountryCode || "",
+    postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",

@@ -105,6 +105,7 @@ export interface BusinessSettings {
   companyAddress?: string;
   companyCity?: string;
   companyPostalCode?: string;
+  postalCityFormat?: "auto" | "city-postal" | "postal-city";
   companyEmail?: string;
   companyPhone?: string;
   companyTaxId?: string;

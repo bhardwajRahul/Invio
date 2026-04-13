@@ -13,7 +13,13 @@
   let t = getContext("i18n") as (key: string) => string;
 
   let initialSettings = $derived(data.settings || {});
-  let settings = $state({} as any);
+  let settings = $state({
+    dateFormat: "YYYY-MM-DD",
+    numberFormat: "comma",
+    postalCityFormat: "auto",
+    ...data.settings
+  } as Record<string, any>);
+
   let saving = $state(false);
   let error = $state("");
   let success = $state("");
@@ -22,9 +28,14 @@
   let section = $derived(page.url.searchParams.get("section") || "company");
   let canUpdateSettings = $derived(true); // TODO: user permissions
 
+  // Keep settings synced if data.settings changes from an external invalidation
   $effect(() => {
-    if (Object.keys(settings).length === 0) {
-      settings = { ...initialSettings };
+    if (data.settings) {
+      if (Object.keys(settings).length === 0) {
+        settings = { ...data.settings };
+      } else {
+        // Just make sure the references don't break
+      }
     }
   });
 
@@ -35,16 +46,28 @@
     success = "";
 
     try {
+      const payload = JSON.parse(JSON.stringify(settings));
       const res = await fetch("/api/v1/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error(t("Failed to save settings"));
 
+      const latestRes = await fetch("/api/v1/settings");
+      if (latestRes.ok) {
+        const latest = await latestRes.json();
+        settings = {
+          ...latest,
+          dateFormat: latest.dateFormat || "YYYY-MM-DD",
+          numberFormat: latest.numberFormat || "comma",
+          postalCityFormat: latest.postalCityFormat || "auto",
+        };
+      }
+
       success = t("Settings updated successfully");
-      invalidateAll();
+      await invalidateAll();
     } catch (err: any) {
       error = err.message;
     } finally {
@@ -264,13 +287,29 @@
               ><div class="label">
                 <span class="label-text">{t("Date Format")}</span>
               </div>
-              <input type="text" class="input input-bordered w-full" bind:value={settings.dateFormat} disabled={!canUpdateSettings} placeholder="MM/DD/YYYY" />
+              <select class="select select-bordered w-full" bind:value={settings.dateFormat} disabled={!canUpdateSettings}>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                <option value="DD.MM.YYYY">DD.MM.YYYY</option>
+              </select>
             </label>
             <label class="form-control"
               ><div class="label">
                 <span class="label-text">{t("Number Format")}</span>
               </div>
-              <input type="text" class="input input-bordered w-full" bind:value={settings.numberFormat} disabled={!canUpdateSettings} placeholder="1,000.00" />
+              <select class="select select-bordered w-full" bind:value={settings.numberFormat} disabled={!canUpdateSettings}>
+                <option value="comma">1,000.00</option>
+                <option value="period">1.000,00</option>
+              </select>
+            </label>
+            <label class="form-control"
+              ><div class="label">
+                <span class="label-text">{t("Postal/City Format")}</span>
+              </div>
+              <select class="select select-bordered w-full" bind:value={settings.postalCityFormat} disabled={!canUpdateSettings}>
+                <option value="auto">{t("Auto (from country)")}</option>
+                <option value="postal-city">{t("Postal Code + City")}</option>
+                <option value="city-postal">{t("City + Postal Code")}</option>
+              </select>
             </label>
           </div>
         {:else if section === "payments"}

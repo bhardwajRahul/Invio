@@ -31,28 +31,38 @@ export const load: PageServerLoad = async ({ locals }) => {
     console.error("demo mode fetch failed", err);
   }
 
-  try {
-    const [s, t, tax, pc, pu, xp] = await Promise.all([
-      backendGet("/api/v1/settings", auth).catch(() => ({})),
-      backendGet("/api/v1/templates", auth).catch(() => []),
-      backendGet("/api/v1/tax-definitions", auth).catch(() => []),
-      backendGet("/api/v1/product-categories", auth).catch(() => []),
-      backendGet("/api/v1/product-units", auth).catch(() => []),
-      backendGet("/api/v1/xml-profiles", auth).catch(() => []),
-    ]);
+  const [sRes, tRes, taxRes, pcRes, puRes, xpRes] = await Promise.allSettled([
+    backendGet("/api/v1/settings", auth),
+    backendGet("/api/v1/templates", auth),
+    backendGet("/api/v1/tax-definitions", auth),
+    backendGet("/api/v1/product-categories", auth),
+    backendGet("/api/v1/product-units", auth),
+    backendGet("/api/v1/xml-profiles", auth),
+  ]);
 
-    settings = s || {};
-    templates = t || [];
-    taxDefinitions = tax || [];
-    productCategories = pc || [];
-    productUnits = pu || [];
-    xmlProfiles = xp || [];
-  } catch (err: any) {
-    error = err.message;
+  settings = sRes.status === "fulfilled" ? (sRes.value || {}) : {};
+  templates = tRes.status === "fulfilled" ? (tRes.value || []) : [];
+  taxDefinitions = taxRes.status === "fulfilled" ? (taxRes.value || []) : [];
+  productCategories = pcRes.status === "fulfilled" ? (pcRes.value || []) : [];
+  productUnits = puRes.status === "fulfilled" ? (puRes.value || []) : [];
+  xmlProfiles = xpRes.status === "fulfilled" ? (xpRes.value || []) : [];
+
+  // Keep localization settings stable even if /settings fetch has transient issues.
+  const localization = locals.localization || {};
+  const settingsMap = settings as Record<string, unknown>;
+  if (!settingsMap.locale && localization.locale) settingsMap.locale = localization.locale;
+  if (!settingsMap.dateFormat && localization.dateFormat) settingsMap.dateFormat = localization.dateFormat;
+  if (!settingsMap.numberFormat && localization.numberFormat) settingsMap.numberFormat = localization.numberFormat;
+  if (!settingsMap.postalCityFormat && localization.postalCityFormat) {
+    settingsMap.postalCityFormat = localization.postalCityFormat;
+  }
+
+  if (sRes.status === "rejected") {
+    error = sRes.reason?.message || String(sRes.reason || "Failed to load settings");
   }
 
   return {
-    settings,
+    settings: settingsMap,
     templates,
     taxDefinitions,
     productCategories,

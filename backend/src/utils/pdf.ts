@@ -48,6 +48,52 @@ function _escapeHtmlWithBreaks(value: unknown): string {
   return escapeHtml(value).replace(/\r?\n/g, "<br />");
 }
 
+const CITY_FIRST_POSTAL_COUNTRIES = new Set([
+  "US",
+  "GB",
+  "BR",
+  "AU",
+  "CA",
+  "NZ",
+  "IE",
+  "MX",
+]);
+
+type PostalCityFormat = "auto" | "city-postal" | "postal-city";
+
+function normalizePostalCityFormat(value?: string): PostalCityFormat {
+  if (value === "city-postal" || value === "postal-city") return value;
+  return "auto";
+}
+
+function formatPostalCityLine(
+  postalCode?: string,
+  city?: string,
+  countryCode?: string,
+  format?: string,
+): string | undefined {
+  const postal = (postalCode || "").trim();
+  const place = (city || "").trim();
+  if (!postal && !place) return undefined;
+  if (!postal) return place;
+  if (!place) return postal;
+
+  const normalizedFormat = normalizePostalCityFormat(format);
+  if (normalizedFormat === "city-postal") {
+    // City + Postal formats frequently expect a comma for readable locality. Example: Boston, 02110
+    return `${place}, ${postal}`;
+  }
+  if (normalizedFormat === "postal-city") {
+    return `${postal} ${place}`;
+  }
+
+  const country = (countryCode || "").trim().toUpperCase();
+  if (CITY_FIRST_POSTAL_COUNTRIES.has(country)) {
+    return `${place} ${postal}`;
+  }
+  return `${postal} ${place}`;
+}
+
 const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function isPrivateIPv4Host(hostname: string): boolean {
@@ -237,13 +283,12 @@ function buildContext(
   const requestedLocale = localeOverride ?? invoice.locale ?? settings?.locale;
   const { locale: resolvedLocale, labels } = getInvoiceLabels(requestedLocale);
   const currency = invoice.currency || settings?.currency || "USD";
-  const companyPostalCity = (() => {
-    const parts = [
-      (settings?.companyPostalCode || "").trim(),
-      (settings?.companyCity || "").trim(),
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(" ") : undefined;
-  })();
+  const companyPostalCity = formatPostalCityLine(
+    settings?.companyPostalCode,
+    settings?.companyCity,
+    settings?.companyCountryCode,
+    settings?.postalCityFormat,
+  );
   const taxLabel = (settings?.taxLabel && String(settings.taxLabel).trim())
     ? String(settings.taxLabel).trim()
     : labels.taxLabel;
@@ -273,7 +318,7 @@ function buildContext(
   return {
     // Company
     companyName: settings?.companyName || "Your Company",
-    companyAddress: settings?.companyAddress || "",
+    companyAddress: _escapeHtmlWithBreaks(settings?.companyAddress || ""),
     companyCity: (settings?.companyCity || "").trim() || undefined,
     companyPostalCode: (settings?.companyPostalCode || "").trim() || undefined,
     companyPostalCity,
@@ -297,13 +342,12 @@ function buildContext(
     customerCity: invoice.customer.city,
     customerPostalCode: invoice.customer.postalCode,
     customerCountryCode: invoice.customer.countryCode,
-    customerPostalCity: (() => {
-      const parts = [
-        (invoice.customer.postalCode || "").trim(),
-        (invoice.customer.city || "").trim(),
-      ].filter(Boolean);
-      return parts.length > 0 ? parts.join(" ") : undefined;
-    })(),
+    customerPostalCity: formatPostalCityLine(
+      invoice.customer.postalCode,
+      invoice.customer.city,
+      invoice.customer.countryCode,
+      settings?.postalCityFormat,
+    ),
     customerTaxId: invoice.customer.taxId,
 
     // Items

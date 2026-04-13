@@ -5,10 +5,11 @@
   import type { SubmitFunction } from "@sveltejs/kit";
 
   import { hasPermission } from "$lib/types";
+  import { formatPostalCityLine } from "$lib/address";
 
   let { data, form } = $props();
   let t = getContext("i18n") as (key: string) => string;
-  let loc = getContext("localization") as any;
+  const getLoc = getContext("localization") as () => any;
 
   let invoice = $derived(data.invoice);
   let showPublishedBanner = $derived(data.showPublishedBanner);
@@ -37,7 +38,7 @@
     const year = dt.getFullYear();
     const month = String(dt.getMonth() + 1).padStart(2, "0");
     const day = String(dt.getDate()).padStart(2, "0");
-    if (loc?.dateFormat === "DD.MM.YYYY") {
+    if (getLoc()?.dateFormat === "DD.MM.YYYY") {
       return `${day}.${month}.${year}`;
     }
     return `${year}-${month}-${day}`;
@@ -264,7 +265,15 @@
         <span class="mr-1 opacity-70">{t("Address")}:</span>
         <div class="whitespace-pre-line">
           {#if invoice.customer?.address || invoice.customer?.city}
-            {[invoice.customer?.address, `${invoice.customer?.postalCode || ""} ${invoice.customer?.city || ""}`.trim()].filter(Boolean).join("\n")}
+            {[
+              invoice.customer?.address,
+              formatPostalCityLine(
+                invoice.customer?.city,
+                invoice.customer?.postalCode,
+                invoice.customer?.countryCode,
+                getLoc()?.postalCityFormat,
+              ),
+            ].filter(Boolean).join("\n")}
             {#if invoice.customer?.countryCode}
               <br />{invoice.customer.countryCode}
             {/if}

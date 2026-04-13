@@ -28,6 +28,7 @@ export const handle: Handle = async ({ event, resolve }) => {
           settings.locale,
           settings.numberFormat,
           settings.dateFormat,
+          settings.postalCityFormat,
         );
       }
 

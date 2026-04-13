@@ -4,7 +4,7 @@
   import DemoModeDisabler from "$lib/components/DemoModeDisabler.svelte";
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte";
   import "./layout.css";
-  import { setThemeFromStorage } from "$lib/theme.ts"
+  import { setThemeFromStorage } from "$lib/theme"
   import { setContext } from "svelte";
   import { createTranslator } from "$lib/i18n/mod";
   import { onMount } from "svelte";
@@ -17,6 +17,7 @@
 
   // Expose to children as a function that delegates to the derived `t`
   setContext("i18n", (key: string, params?: Record<string, string | number>) => t(key, params));
+  setContext("localization", () => localizationData);
 
   let demoMode = false;
   let isAdmin = $derived(authUser?.isAdmin ?? false);

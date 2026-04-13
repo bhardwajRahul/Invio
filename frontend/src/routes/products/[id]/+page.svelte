@@ -17,7 +17,7 @@
   function fmtMoney(cur: string | undefined, n: number) {
     if (!cur) cur = "USD";
     try {
-      return new Intl.NumberFormat(data.localization?.numberFormat === "period" ? "de-DE" : "en-US", { style: "currency", cur }).format(n || 0);
+      return new Intl.NumberFormat(data.localization?.numberFormat === "period" ? "de-DE" : "en-US", { style: "currency", currency: cur }).format(n || 0);
     } catch {
       return `${cur} ${Number(n || 0).toFixed(2)}`;
     }

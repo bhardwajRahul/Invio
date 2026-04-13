@@ -93,6 +93,8 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     acc[s.key] = s.value;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
+  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
   if (!settingsMap.logo && settingsMap.logoUrl) {
     settingsMap.logo = settingsMap.logoUrl as string;
   }
@@ -101,9 +103,14 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
     companyAddress: settingsMap.companyAddress || "",
+    companyCity: settingsMap.companyCity || "",
+    companyPostalCode: settingsMap.companyPostalCode || "",
+    companyCountryCode: settingsMap.companyCountryCode || "",
+    postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
+    companyCountryCode: settingsMap.companyCountryCode || settingsMap.countryCode || "",
     currency: settingsMap.currency || "USD",
       taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
@@ -190,6 +197,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     acc[s.key] = s.value;
     return acc;
   }, {} as Record<string, string>);
+  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
+  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
   if (!settingsMap.logo && settingsMap.logoUrl) {
     settingsMap.logo = settingsMap.logoUrl as string;
   }
@@ -199,6 +208,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
+    companyCountryCode: settingsMap.companyCountryCode || "",
+    postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
@@ -266,6 +277,7 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
+    companyCountryCode: settingsMap.companyCountryCode || "",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",

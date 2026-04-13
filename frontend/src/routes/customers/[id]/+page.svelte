@@ -4,9 +4,11 @@
   import { enhance } from "$app/forms";
   import type { SubmitFunction } from "@sveltejs/kit";
   import { hasPermission } from "$lib/types";
+  import { formatPostalCityLine } from "$lib/address";
 
   let { data, form } = $props();
   let t = getContext("i18n") as (key: string) => string;
+  const getLoc = getContext("localization") as () => any;
 
   let c = $derived(data.customer);
   let user = $derived(data.user);
@@ -77,11 +79,7 @@
         <div class="mb-1 text-sm opacity-70">
           {t("City")} / {t("Postal Code")}
         </div>
-        <div class="font-medium">
-          {c.city || ""}
-          {c.postalCode ? `(${c.postalCode})` : ""}
-          {#if !c.city && !c.postalCode}-{/if}
-        </div>
+        <div class="font-medium">{formatPostalCityLine(c.city, c.postalCode, c.countryCode, getLoc()?.postalCityFormat) || "-"}</div>
       </div>
       <div>
         <div class="mb-1 text-sm opacity-70">{t("Tax ID")}</div>
