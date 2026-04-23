@@ -1,6 +1,9 @@
 <script lang="ts">
   import { UserPlus } from "lucide-svelte";
   import { getContext } from "svelte";
+  import { formatPostalCityLine } from "$lib/address";
+  
+  const getLoc = getContext("localization") as () => any;
 
   let { data } = $props();
   let t = getContext("i18n") as (key: string) => string;
@@ -56,6 +59,9 @@
     <thead class="bg-base-200 text-base-content">
       <tr class="font-medium">
         <th>{t("Name")}</th>
+        <th>{t("Contact Name")}</th>
+        <th>{t("Address")}</th>
+        <th>{t("City")} / {t("Postal Code")}</th>
         <th>{t("Email")}</th>
       </tr>
     </thead>
@@ -65,6 +71,9 @@
           <td>
             <a class="link" href={`/customers/${c.id}`}>{c.name || c.id}</a>
           </td>
+          <td class="opacity-70">{c.contactName || ""}</td>
+          <td class="opacity-70">{c.address || ""}</td>
+          <td class="opacity-70">{formatPostalCityLine(c.city, c.postalCode, c.countryCode, getLoc()?.postalCityFormat) || "-"}</td>
           <td class="opacity-70">{c.email || ""}</td>
         </tr>
       {/each}
