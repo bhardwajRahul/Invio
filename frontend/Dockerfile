@@ -4,7 +4,7 @@ FROM oven/bun:1 AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy VERSION file from parent context
+# Copy VERSION file
 COPY ../VERSION ./VERSION
 
 # Copy package files
