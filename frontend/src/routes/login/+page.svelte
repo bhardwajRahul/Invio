@@ -18,6 +18,8 @@
         </h2>
         <form
           method="POST"
+          action="?/login"
+          enctype="multipart/form-data"
           use:enhance={() => {
             isLoading = true;
             return async ({ update }) => {

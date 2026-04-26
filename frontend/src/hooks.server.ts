@@ -13,7 +13,6 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.authHeader = authHeader || "";
   event.locals.user = null;
   event.locals.localization = DEFAULT_LOCALIZATION;
-
   if (authHeader) {
     try {
       // Fetch both in parallel just like in deno

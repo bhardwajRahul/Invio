@@ -17,6 +17,7 @@ permissions:
   packages: write
 
 jobs:
+  # Existing job for backend and frontend separate images
   build_and_push:
     runs-on: ubuntu-latest
     strategy:
@@ -43,7 +44,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Ensure we have a lowercase owner/repo for all refs
       - name: Lowercase repository
         id: repo
         shell: bash
@@ -80,6 +80,66 @@ jobs:
           push: ${{ !github.event.pull_request.head.repo.fork }}
           cache-from: |
             type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}-${{ matrix.image }}:buildcache
+            type=gha
+          cache-to: ${{ steps.cache-target.outputs.config }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+
+  build_and_push_combined:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3.6.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.11.1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3.5.0
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase repository
+        id: repo
+        shell: bash
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Generate docker image tags for combined image
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            name=ghcr.io/${{ steps.repo.outputs.name }},enable=true   # ← exactly the repo name
+
+      - name: Determine cache-to
+        id: cache-target
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]; then
+            echo "config=type=gha,mode=max" >> $GITHUB_OUTPUT
+          else
+            echo "config<<EOF" >> $GITHUB_OUTPUT
+            echo "type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache,mode=max" >> $GITHUB_OUTPUT
+            echo "type=gha,mode=max" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push combined image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ !github.event.pull_request.head.repo.fork }}
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache
             type=gha
           cache-to: ${{ steps.cache-target.outputs.config }}
           tags: ${{ steps.metadata.outputs.tags }}

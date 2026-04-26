@@ -1,13 +1,13 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { LayoutDashboard, LogOut, MoreHorizontal, Package, ReceiptText, Settings, UserCog, Users } from "lucide-svelte";
+  import "@fontsource-variable/inter/wght.css";
+  import { LayoutDashboard, LogOut, Ellipsis, Package, ReceiptText, Settings, UserCog, Users } from "lucide-svelte";
   import DemoModeDisabler from "$lib/components/DemoModeDisabler.svelte";
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte";
   import "./layout.css";
-  import { setThemeFromStorage } from "$lib/theme"
+  import { setThemeFromStorage } from "$lib/theme";
   import { setContext } from "svelte";
   import { createTranslator } from "$lib/i18n/mod";
-  import { onMount } from "svelte";
   let { data, children } = $props();
 
   let authUser = $derived(data.user);
@@ -107,10 +107,10 @@
               <li>
                 <details bind:this={moreMenuDetails}>
                   <summary>
-                    <MoreHorizontal size={16} />
+                    <Ellipsis size={16} />
                     {t("More")}
                   </summary>
-                  <ul class="bg-base-100 rounded-box z-[20] w-52 p-2">
+                  <ul class="bg-base-100 rounded-box z-20 w-52 p-2">
                     {#if canViewProducts}
                       <li>
                         <a href="/products">
