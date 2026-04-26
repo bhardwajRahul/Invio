@@ -17,6 +17,7 @@ export type InvoiceLabels = {
   itemHeaderDescription: string;
   itemHeaderQuantity: string;
   itemHeaderQuantityShort: string;
+  itemHeaderUnit: string;
   itemHeaderUnitPrice: string;
   itemHeaderUnitPriceShort: string;
   itemHeaderAmount: string;
@@ -56,6 +57,7 @@ const REQUIRED_KEYS = [
   "itemHeaderDescription",
   "itemHeaderQuantity",
   "itemHeaderQuantityShort",
+  "itemHeaderUnit",
   "itemHeaderUnitPrice",
   "itemHeaderUnitPriceShort",
   "itemHeaderAmount",
@@ -88,7 +90,9 @@ function coerceLabels(locale: string, raw: unknown): InvoiceLabels {
   const record = raw as Record<string, unknown>;
   for (const key of REQUIRED_KEYS) {
     if (typeof record[key] !== "string") {
-      throw new Error(`Missing or invalid key '${key}' in locale '${locale}' translations`);
+      throw new Error(
+        `Missing or invalid key '${key}' in locale '${locale}' translations`,
+      );
     }
   }
   return Object.freeze(record as InvoiceLabels);
@@ -111,7 +115,9 @@ function normalizeLocale(locale?: string): string {
   return "en";
 }
 
-export function getInvoiceLabels(locale?: string): { locale: string; labels: InvoiceLabels } {
+export function getInvoiceLabels(
+  locale?: string,
+): { locale: string; labels: InvoiceLabels } {
   const normalized = normalizeLocale(locale);
   return { locale: normalized, labels: catalogs[normalized] };
 }

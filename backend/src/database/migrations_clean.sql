@@ -55,6 +55,7 @@ CREATE TABLE invoice_items (
   invoice_id TEXT REFERENCES invoices(id) ON DELETE CASCADE,
   description TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
+  unit TEXT,
   unit_price NUMERIC NOT NULL,
   line_total NUMERIC NOT NULL,
   notes TEXT,

@@ -397,6 +397,7 @@
           <tr>
             <th>{{labels.itemHeaderDescription}}</th>
             <th>{{labels.itemHeaderQuantityShort}}</th>
+            {{#hasItemUnits}}<th>{{labels.itemHeaderUnit}}</th>{{/hasItemUnits}}
             <th>{{labels.itemHeaderUnitPrice}}</th>
             <th>{{labels.itemHeaderAmount}}</th>
           </tr>
@@ -409,6 +410,7 @@
               {{#notes}}<div class="item-notes">{{notes}}</div>{{/notes}}
             </td>
             <td class="quantity">{{quantity}}</td>
+            {{#hasItemUnits}}<td>{{unit}}</td>{{/hasItemUnits}}
             <td class="unit-price">{{unitPrice}}</td>
             <td class="line-total">{{lineTotal}}</td>
           </tr>

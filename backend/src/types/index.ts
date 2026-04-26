@@ -67,6 +67,7 @@ export interface InvoiceItem {
   productId?: string;
   description: string;
   quantity: number;
+  unit?: string;
   unitPrice: number;
   lineTotal: number;
   notes?: string;
@@ -258,8 +259,10 @@ export interface CreateInvoiceRequest {
 
   // Items
   items: {
+    productId?: string;
     description: string;
     quantity: number;
+    unit?: string;
     unitPrice: number;
     notes?: string;
     // Optional per-line taxes (advanced). If omitted, falls back to invoice-level taxRate
@@ -343,10 +346,12 @@ export interface TemplateContext {
   items: Array<{
     description: string;
     quantity: number;
+    unit?: string;
     unitPrice: string;
     lineTotal: string;
     notes?: string;
   }>;
+  hasItemUnits?: boolean;
 
   // Totals
   subtotal: string;

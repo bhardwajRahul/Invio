@@ -33,6 +33,7 @@
       ? initInvoice.items.map((i: any) => ({
           ...i,
           id: crypto.randomUUID(),
+          unit: i.unit || "",
           productId: i.productId || "",
         }))
       : [
@@ -41,6 +42,7 @@
             productId: "",
             description: "",
             quantity: 1,
+            unit: "",
             unitPrice: 0,
             taxPercent: 0,
             notes: "",
@@ -58,6 +60,7 @@
       productId: "",
       description: "",
       quantity: 1,
+      unit: "",
       unitPrice: 0,
       taxPercent: 0,
       notes: "",
@@ -73,6 +76,7 @@
 
     item.description = product.name || item.description;
     item.unitPrice = Number(product.unitPrice ?? product.unit_price ?? item.unitPrice ?? 0);
+    item.unit = String(product.unit ?? item.unit ?? "");
 
     if (form.taxMode === "line" && product.taxDefinitionId) {
       const taxDef = taxDefinitions.find((t: any) => t.id === product.taxDefinitionId);
@@ -169,8 +173,10 @@
         ...form,
         pricesIncludeTax: form.pricesIncludeTax === "true",
         items: items.map((i) => ({
+          productId: i.productId || undefined,
           description: i.description,
           quantity: Number(i.quantity),
+          unit: typeof i.unit === "string" ? i.unit.trim() : "",
           unitPrice: Number(i.unitPrice),
           taxPercent: Number(i.taxPercent || 0),
           notes: i.notes,
@@ -281,7 +287,7 @@
   <div>
     <div class="mb-2 flex items-center justify-between">
       <div class="block text-sm font-semibold">
-        {t("IStems")} <span class="text-error">*</span>
+        {t("Items")} <span class="text-error">*</span>
       </div>
       <button type="button" class="btn btn-sm" onclick={addItem}>
         <Plus size={16} />
@@ -296,6 +302,7 @@
       {/if}
       <div class="min-w-0 flex-1 pl-3">{t("Description")}</div>
       <div class="w-16 shrink-0 text-center sm:w-20">{t("Quantity")}</div>
+      <div class="w-24 shrink-0 text-center">{t("Unit")}</div>
       <div class="w-24 shrink-0 text-center">{t("Price")}</div>
       {#if form.taxMode === "line"}
         <div class="w-20 shrink-0 text-center">{t("Tax %")}</div>
@@ -331,6 +338,7 @@
 
           <input class="input input-bordered w-full min-w-0" bind:value={item.description} placeholder={t("Description")} required />
           <input type="number" min="0" step="1" class="input input-bordered w-16 shrink-0 text-center sm:w-20" bind:value={item.quantity} />
+          <input class="input input-bordered w-24 shrink-0 text-center" bind:value={item.unit} placeholder={t("Unit")} />
           <input type="number" min="0" step="any" class="input input-bordered w-24 shrink-0 text-center" bind:value={item.unitPrice} />
           {#if form.taxMode === "line"}
             <input type="number" min="0" step="any" class="input input-bordered w-20 shrink-0 text-center" bind:value={item.taxPercent} placeholder="%" />

@@ -12,6 +12,7 @@
   "itemHeaderDescription": "Descrição",
   "itemHeaderQuantity": "Quantidade",
   "itemHeaderQuantityShort": "Qtd",
+  "itemHeaderUnit": "Unidade",
   "itemHeaderUnitPrice": "Preço Unitário",
   "itemHeaderUnitPriceShort": "Taxa",
   "itemHeaderAmount": "Valor",

@@ -76,6 +76,7 @@ CREATE TABLE invoice_items (
   invoice_id TEXT REFERENCES invoices(id) ON DELETE CASCADE,
   description TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
+  unit TEXT,
   unit_price NUMERIC NOT NULL,
   line_total NUMERIC NOT NULL,
   notes TEXT,
@@ -178,6 +179,7 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 
 -- Link invoice items to products (optional reference)
 ALTER TABLE invoice_items ADD COLUMN product_id TEXT REFERENCES products(id);
+ALTER TABLE invoice_items ADD COLUMN unit TEXT;
 
 -- Add 'voided' to invoice status CHECK constraint.
 -- SQLite CHECK constraints are immutable, but adding 'voided' via a direct

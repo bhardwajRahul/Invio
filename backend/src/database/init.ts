@@ -1,15 +1,15 @@
 import { DB } from "sqlite";
-import { getEnv, isDemoMode, getAdminCredentials } from "../utils/env.ts";
+import { getAdminCredentials, getEnv, isDemoMode } from "../utils/env.ts";
 import { hashPassword } from "../utils/password.ts";
 import { generateUUID } from "../utils/uuid.ts";
 import { RESOURCE_ACTIONS } from "../types/index.ts";
-import type { Resource, Action } from "../types/index.ts";
+import type { Action, Resource } from "../types/index.ts";
 
 let db: DB;
 
-// 
+//
 //  Path helpers
-// 
+//
 
 function resolvePath(p: string): string {
   return p.startsWith("/") ? p : p;
@@ -22,16 +22,22 @@ function simpleDirname(p: string): string {
 
 function ensureDir(dir: string): void {
   if (dir && dir !== "." && dir !== "/") {
-    try { Deno.mkdirSync(dir, { recursive: true }); } catch { /* ok */ }
+    try {
+      Deno.mkdirSync(dir, { recursive: true });
+    } catch { /* ok */ }
   }
 }
 
-// 
+//
 //  Version & backup helpers
-// 
+//
 
 function readAppVersion(): string {
-  try { return Deno.readTextFileSync("./VERSION").trim(); } catch { return "unknown"; }
+  try {
+    return Deno.readTextFileSync("./VERSION").trim();
+  } catch {
+    return "unknown";
+  }
 }
 
 function getStoredSchemaVersion(database: DB): string | null {
@@ -54,7 +60,10 @@ function storeSchemaVersion(database: DB): void {
   } catch { /* ignore */ }
 }
 
-function createDatabaseBackup(dbPath: string, fromVersion?: string | null): void {
+function createDatabaseBackup(
+  dbPath: string,
+  fromVersion?: string | null,
+): void {
   const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const suffix = fromVersion ? `_v${fromVersion}` : "";
   const backupPath = dbPath.replace(/\.db$/, "") + `_backup${suffix}_${ts}.db`;
@@ -74,13 +83,15 @@ function backupIfVersionChanged(database: DB, dbPath: string): void {
       createDatabaseBackup(dbPath, stored);
     }
   } catch {
-    try { createDatabaseBackup(dbPath); } catch { /* ignore */ }
+    try {
+      createDatabaseBackup(dbPath);
+    } catch { /* ignore */ }
   }
 }
 
-// 
+//
 //  Migration helpers
-// 
+//
 
 /** Parse a .sql file into executable statements (strip comments, split on `;`). */
 function parseSqlStatements(sql: string): string[] {
@@ -133,9 +144,9 @@ function addColumnIfMissing(
   }
 }
 
-// 
+//
 //  Schema upgrades
-// 
+//
 
 function ensureCustomerColumns(database: DB): void {
   addColumnIfMissing(database, "customers", "contact_name", "TEXT");
@@ -145,12 +156,28 @@ function ensureCustomerColumns(database: DB): void {
 }
 
 function ensureInvoiceColumns(database: DB): void {
-  addColumnIfMissing(database, "invoices", "prices_include_tax", "BOOLEAN DEFAULT 0");
-  addColumnIfMissing(database, "invoices", "rounding_mode", "TEXT DEFAULT 'line'");
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "prices_include_tax",
+    "BOOLEAN DEFAULT 0",
+  );
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "rounding_mode",
+    "TEXT DEFAULT 'line'",
+  );
 }
 
 function ensureInvoiceItemColumns(database: DB): void {
-  addColumnIfMissing(database, "invoice_items", "product_id", "TEXT REFERENCES products(id)");
+  addColumnIfMissing(database, "invoice_items", "unit", "TEXT");
+  addColumnIfMissing(
+    database,
+    "invoice_items",
+    "product_id",
+    "TEXT REFERENCES products(id)",
+  );
 }
 
 function ensureTaxTables(database: DB): void {
@@ -260,9 +287,14 @@ function migrateInvoicesForVoided(database: DB): void {
     "SELECT sql FROM sqlite_master WHERE type='table' AND name='invoices'",
   );
   const createSql = checkSql.length > 0 ? String(checkSql[0][0]) : "";
-  if (!createSql || (createSql.includes("voided") && createSql.includes("complete"))) return;
+  if (
+    !createSql ||
+    (createSql.includes("voided") && createSql.includes("complete"))
+  ) return;
 
-  console.log("Migrating invoices table to support 'voided' and 'complete' statuses");
+  console.log(
+    "Migrating invoices table to support 'voided' and 'complete' statuses",
+  );
 
   const itemCountBefore = Number(
     (database.query("SELECT COUNT(*) FROM invoice_items") as unknown[][])[0][0],
@@ -298,21 +330,39 @@ function migrateInvoicesForVoided(database: DB): void {
       )
     `);
 
-    const existingCols = (database.query("PRAGMA table_info(invoices)") as unknown[][]).map((r) => String(r[1]));
-    const newCols = (database.query("PRAGMA table_info(invoices_new)") as unknown[][]).map((r) => String(r[1]));
+    const existingCols =
+      (database.query("PRAGMA table_info(invoices)") as unknown[][]).map((r) =>
+        String(r[1])
+      );
+    const newCols =
+      (database.query("PRAGMA table_info(invoices_new)") as unknown[][]).map((
+        r,
+      ) => String(r[1]));
     const colList = existingCols.filter((c) => newCols.includes(c)).join(", ");
 
-    database.execute(`INSERT INTO invoices_new (${colList}) SELECT ${colList} FROM invoices`);
+    database.execute(
+      `INSERT INTO invoices_new (${colList}) SELECT ${colList} FROM invoices`,
+    );
     database.execute("DROP TABLE invoices");
     database.execute("ALTER TABLE invoices_new RENAME TO invoices");
 
-    database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number)");
-    database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id)");
-    database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)");
-    database.execute("CREATE INDEX IF NOT EXISTS idx_invoices_share_token ON invoices(share_token)");
+    database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number)",
+    );
+    database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id)",
+    );
+    database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)",
+    );
+    database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_invoices_share_token ON invoices(share_token)",
+    );
 
     database.execute("COMMIT");
-    console.log(" Migrated invoices table to support 'voided' and 'complete' statuses");
+    console.log(
+      " Migrated invoices table to support 'voided' and 'complete' statuses",
+    );
   } catch (migErr) {
     database.execute("ROLLBACK");
     throw migErr;
@@ -327,8 +377,8 @@ function migrateInvoicesForVoided(database: DB): void {
   if (itemCountAfter !== itemCountBefore) {
     console.error(
       `  WARNING: invoice_items row count changed during migration! ` +
-      `Before: ${itemCountBefore}, After: ${itemCountAfter}. ` +
-      `Check your database backup for recovery.`,
+        `Before: ${itemCountBefore}, After: ${itemCountAfter}. ` +
+        `Check your database backup for recovery.`,
     );
   } else if (itemCountBefore > 0) {
     console.log(`   Verified: ${itemCountBefore} invoice items preserved`);
@@ -349,9 +399,9 @@ function ensureSchemaUpgrades(database: DB): void {
   }
 }
 
-// 
+//
 //  Built-in templates
-// 
+//
 
 const BUILTIN_TEMPLATES = [
   { id: "professional-modern", name: "Professional Modern", isDefault: false },
@@ -372,7 +422,10 @@ function insertBuiltinTemplates(database: DB): void {
   for (const t of BUILTIN_TEMPLATES) {
     const html = loadTemplateHtml(t.id);
     try {
-      const existing = database.query("SELECT html FROM templates WHERE id = ?", [t.id]);
+      const existing = database.query(
+        "SELECT html FROM templates WHERE id = ?",
+        [t.id],
+      );
       if (existing.length === 0) {
         database.query(
           "INSERT INTO templates (id, name, html, is_default, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -404,18 +457,22 @@ function ensureTemplateDefaults(database: DB): void {
 
     database.query("UPDATE templates SET is_default = 0");
 
-    const preferred = ids.includes("minimalist-clean") ? "minimalist-clean" : ids[0];
+    const preferred = ids.includes("minimalist-clean")
+      ? "minimalist-clean"
+      : ids[0];
     if (preferred) {
-      database.query("UPDATE templates SET is_default = 1 WHERE id = ?", [preferred]);
+      database.query("UPDATE templates SET is_default = 1 WHERE id = ?", [
+        preferred,
+      ]);
     }
   } catch (e) {
     console.error("Failed to ensure template defaults:", e);
   }
 }
 
-// 
+//
 //  Admin seeding
-// 
+//
 
 async function seedAdminUser(database: DB): Promise<void> {
   try {
@@ -433,7 +490,12 @@ async function seedAdminUser(database: DB): Promise<void> {
       [id, username, username, passwordHash, now, now],
     );
 
-    for (const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [Resource, readonly Action[]][]) {
+    for (
+      const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
+        Resource,
+        readonly Action[],
+      ][]
+    ) {
       for (const action of actions) {
         database.query(
           "INSERT INTO user_permissions (id, user_id, resource, action) VALUES (?, ?, ?, ?)",
@@ -449,9 +511,9 @@ async function seedAdminUser(database: DB): Promise<void> {
   }
 }
 
-// 
+//
 //  Public API: init / reset / accessors
-// 
+//
 
 export async function initDatabase(): Promise<void> {
   const dbPath = resolvePath(getEnv("DATABASE_PATH", "./invio.db")!);
@@ -459,7 +521,10 @@ export async function initDatabase(): Promise<void> {
 
   // Detect existing database (upgrade vs fresh install)
   let dbFileExisted = false;
-  try { Deno.statSync(dbPath); dbFileExisted = true; } catch { /* new install */ }
+  try {
+    Deno.statSync(dbPath);
+    dbFileExisted = true;
+  } catch { /* new install */ }
 
   db = new DB(dbPath);
 
@@ -485,15 +550,21 @@ export async function resetDatabaseFromDemo(): Promise<void> {
   const demoDb = getEnv("DEMO_DB_PATH");
   const activePath = resolvePath(getEnv("DATABASE_PATH", "./invio.db")!);
   if (!demoDb) {
-    console.warn("DEMO_MODE is true but DEMO_DB_PATH is not set; skipping reset.");
+    console.warn(
+      "DEMO_MODE is true but DEMO_DB_PATH is not set; skipping reset.",
+    );
     return;
   }
 
-  try { closeDatabase(); } catch { /* ignore */ }
+  try {
+    closeDatabase();
+  } catch { /* ignore */ }
 
   try {
     ensureDir(simpleDirname(activePath));
-    try { Deno.removeSync(activePath); } catch { /* ok if missing */ }
+    try {
+      Deno.removeSync(activePath);
+    } catch { /* ok if missing */ }
     Deno.copyFileSync(resolvePath(demoDb), activePath);
     console.log("  Demo database reset from DEMO_DB_PATH.");
   } catch (e) {
@@ -504,7 +575,9 @@ export async function resetDatabaseFromDemo(): Promise<void> {
 }
 
 export function getDatabase(): DB {
-  if (!db) throw new Error("Database not initialized. Call initDatabase() first.");
+  if (!db) {
+    throw new Error("Database not initialized. Call initDatabase() first.");
+  }
   return db;
 }
 
@@ -512,9 +585,9 @@ export function closeDatabase(): void {
   if (db) db.close();
 }
 
-// 
+//
 //  Invoice numbering
-// 
+//
 
 function cryptoRandom(len: number): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -535,23 +608,37 @@ function getNumberingSettings(): {
   pattern?: string;
   enabled: boolean;
 } {
-  const cfg = { prefix: "INV", includeYear: true, pad: 3, pattern: undefined as string | undefined, enabled: true };
+  const cfg = {
+    prefix: "INV",
+    includeYear: true,
+    pad: 3,
+    pattern: undefined as string | undefined,
+    enabled: true,
+  };
   try {
     const rows = db.query(
       "SELECT key, value FROM settings WHERE key IN ('invoicePrefix','invoiceIncludeYear','invoiceNumberPadding','invoiceNumberPattern')",
     );
     const m = new Map<string, string>();
-    for (const r of rows) { const [k, v] = r as [string, string]; m.set(k, v); }
+    for (const r of rows) {
+      const [k, v] = r as [string, string];
+      m.set(k, v);
+    }
 
     cfg.prefix = (m.get("invoicePrefix") || cfg.prefix).trim() || cfg.prefix;
-    cfg.includeYear = (m.get("invoiceIncludeYear") || "true").toLowerCase() !== "false";
+    cfg.includeYear =
+      (m.get("invoiceIncludeYear") || "true").toLowerCase() !== "false";
     const p = parseInt(m.get("invoiceNumberPadding") || String(cfg.pad), 10);
     if (!Number.isNaN(p) && p >= 2 && p <= 8) cfg.pad = p;
     cfg.pattern = (m.get("invoiceNumberPattern") || "").trim() || undefined;
 
     try {
-      const raw = db.query("SELECT value FROM settings WHERE key = 'invoiceNumberingEnabled' LIMIT 1");
-      if (raw.length > 0) cfg.enabled = String(raw[0][0]).toLowerCase() !== "false";
+      const raw = db.query(
+        "SELECT value FROM settings WHERE key = 'invoiceNumberingEnabled' LIMIT 1",
+      );
+      if (raw.length > 0) {
+        cfg.enabled = String(raw[0][0]).toLowerCase() !== "false";
+      }
     } catch { /* ignore */ }
   } catch { /* use defaults */ }
   return cfg;
@@ -559,7 +646,10 @@ function getNumberingSettings(): {
 
 /** Find the highest existing sequential suffix matching `likePrefix%`. */
 function findMaxSequence(likePrefix: string): number {
-  const rows = db.query("SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?", [likePrefix + "%"]);
+  const rows = db.query(
+    "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?",
+    [likePrefix + "%"],
+  );
   const escaped = likePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`^${escaped}(\\d+).*?$`);
   let max = 0;
@@ -600,14 +690,16 @@ export function getNextInvoiceNumber(): string {
   }
 
   // Legacy mode: PREFIX-YYYY-NNN
-  const base = cfg.includeYear ? `${cfg.prefix}-${new Date().getFullYear()}-` : `${cfg.prefix}-`;
+  const base = cfg.includeYear
+    ? `${cfg.prefix}-${new Date().getFullYear()}-`
+    : `${cfg.prefix}-`;
   const next = findMaxSequence(base) + 1;
   return `${base}${String(next).padStart(cfg.pad, "0")}`;
 }
 
-// 
+//
 //  Invoice total calculations
-// 
+//
 
 export interface CalculatedTotals {
   subtotal: number;
@@ -628,11 +720,15 @@ export function calculateInvoiceTotals(
 ): CalculatedTotals {
   const rate = Math.max(0, Number(taxRate) || 0) / 100;
 
-  const lineGrosses = items.map((it) => (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0));
+  const lineGrosses = items.map((it) =>
+    (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)
+  );
   const subtotal = lineGrosses.reduce((a, b) => a + b, 0);
 
   let finalDiscount = Number(discountAmount) || 0;
-  if (discountPercentage > 0) finalDiscount = subtotal * (discountPercentage / 100);
+  if (discountPercentage > 0) {
+    finalDiscount = subtotal * (discountPercentage / 100);
+  }
   finalDiscount = Math.min(Math.max(finalDiscount, 0), subtotal);
 
   let taxAmount = 0;
@@ -642,7 +738,9 @@ export function calculateInvoiceTotals(
     // Proportional per-line discount, rounded per line
     let distributed = 0;
     const lineDiscounts = lineGrosses.map((g, idx) => {
-      if (idx === lineGrosses.length - 1) return r2(finalDiscount - distributed);
+      if (idx === lineGrosses.length - 1) {
+        return r2(finalDiscount - distributed);
+      }
       const d = r2(finalDiscount * (g / subtotal));
       distributed += d;
       return d;
@@ -650,7 +748,10 @@ export function calculateInvoiceTotals(
 
     let sumTax = 0, sumTotal = 0;
     for (let i = 0; i < lineGrosses.length; i++) {
-      const afterDiscount = Math.max(0, lineGrosses[i] - (lineDiscounts[i] || 0));
+      const afterDiscount = Math.max(
+        0,
+        lineGrosses[i] - (lineDiscounts[i] || 0),
+      );
       if (pricesIncludeTax) {
         const net = rate > 0 ? afterDiscount / (1 + rate) : afterDiscount;
         sumTax += r2(afterDiscount - net);
@@ -676,5 +777,10 @@ export function calculateInvoiceTotals(
     }
   }
 
-  return { subtotal: r2(subtotal), discountAmount: r2(finalDiscount), taxAmount, total };
+  return {
+    subtotal: r2(subtotal),
+    discountAmount: r2(finalDiscount),
+    taxAmount,
+    total,
+  };
 }
