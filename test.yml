@@ -1,0 +1,16 @@
+name: invio
+
+services:
+  invio:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - invio_data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  invio_data:
+    driver: local

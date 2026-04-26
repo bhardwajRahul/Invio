@@ -57,15 +57,6 @@ RUN mkdir -p /app/data
 # ---------- Config ----------
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-ENV PORT=3000 \
-    FRONTEND_PORT=8000 \
-    BACKEND_URL=http://127.0.0.1:3000 \
-    ADMIN_USER=admin \
-    ADMIN_PASS=supersecret \
-    JWT_SECRET=change-me-in-production \
-    DATABASE_PATH=/app/data/invio.db \
-    WEASYPRINT_BIN=/usr/bin/weasyprint
-
 EXPOSE 8000
 
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
