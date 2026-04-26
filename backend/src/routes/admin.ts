@@ -68,11 +68,17 @@ import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 import { availableInvoiceLocales } from "../i18n/translations.ts";
+
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
 import { isDemoMode } from "../utils/env.ts";
 import { saveDataUrlLogo, saveUploadedLogoFile } from "../utils/logoStorage.ts";
-import { requireAdminAuth, requirePermission, requireAdmin, getAuthUser } from "../middleware/auth.ts";
+import {
+  requireAdminAuth,
+  requirePermission,
+  requireAdmin,
+  getAuthUser,
+} from "../middleware/auth.ts";
 import {
   listUsers,
   getUserById as getUserByIdCtrl,
@@ -109,7 +115,9 @@ function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
   ) {
     const v = String(
       (data as Record<string, unknown>)["defaultPricesIncludeTax"] ?? "",
-    ).toLowerCase().trim();
+    )
+      .toLowerCase()
+      .trim();
     const truthy = new Set(["1", "true", "yes", "y", "on"]);
     (data as Record<string, unknown>)["defaultPricesIncludeTax"] = truthy.has(v)
       ? "true"
@@ -118,18 +126,50 @@ function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
 
   // defaultRoundingMode: normalize to "line" | "total" (default line)
   if (
-    data && Object.prototype.hasOwnProperty.call(data, "defaultRoundingMode")
+    data &&
+    Object.prototype.hasOwnProperty.call(data, "defaultRoundingMode")
   ) {
     const v = String(
       (data as Record<string, unknown>)["defaultRoundingMode"] ?? "",
-    ).toLowerCase().trim();
-    (data as Record<string, unknown>)["defaultRoundingMode"] = v === "total"
-      ? "total"
-      : "line";
+    )
+      .toLowerCase()
+      .trim();
+    (data as Record<string, unknown>)["defaultRoundingMode"] =
+      v === "total" ? "total" : "line";
   }
 }
 
 const SUPPORTED_LOCALES = new Set(availableInvoiceLocales());
+
+function deriveLocaleFromCountryCode(countryCode?: string): string | undefined {
+  if (!countryCode) return undefined;
+  const code = String(countryCode).trim().toUpperCase();
+  if (!code) return undefined;
+
+  // Keep mapping constrained to currently supported invoice locales
+  if (code === "DE" || code === "AT" || code === "CH") return "de";
+  if (code === "NL" || code === "BE") return "nl";
+  if (code === "PT" || code === "BR") return "pt-br";
+
+  return undefined;
+}
+
+function resolveInvoiceRenderLocale(
+  invoiceLocale: string | undefined,
+  customerCountryCode: string | undefined,
+  settingsLocale: string | undefined,
+): string | undefined {
+  const fromInvoice = invoiceLocale?.trim().toLowerCase();
+  if (fromInvoice && SUPPORTED_LOCALES.has(fromInvoice)) return fromInvoice;
+
+  const fromCountry = deriveLocaleFromCountryCode(customerCountryCode);
+  if (fromCountry && SUPPORTED_LOCALES.has(fromCountry)) return fromCountry;
+
+  const fromSettings = settingsLocale?.trim().toLowerCase();
+  if (fromSettings && SUPPORTED_LOCALES.has(fromSettings)) return fromSettings;
+
+  return "en";
+}
 
 function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
   if (!data) return;
@@ -139,16 +179,18 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
     !Object.prototype.hasOwnProperty.call(data, "dateFormat") &&
     Object.prototype.hasOwnProperty.call(data, "date_format")
   ) {
-    (data as Record<string, unknown>).dateFormat =
-      (data as Record<string, unknown>).date_format;
+    (data as Record<string, unknown>).dateFormat = (
+      data as Record<string, unknown>
+    ).date_format;
     delete (data as Record<string, unknown>).date_format;
   }
   if (
     !Object.prototype.hasOwnProperty.call(data, "numberFormat") &&
     Object.prototype.hasOwnProperty.call(data, "number_format")
   ) {
-    (data as Record<string, unknown>).numberFormat =
-      (data as Record<string, unknown>).number_format;
+    (data as Record<string, unknown>).numberFormat = (
+      data as Record<string, unknown>
+    ).number_format;
     delete (data as Record<string, unknown>).number_format;
   }
 
@@ -157,16 +199,18 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
     !Object.prototype.hasOwnProperty.call(data, "postalCityFormat") &&
     Object.prototype.hasOwnProperty.call(data, "postal_city_format")
   ) {
-    (data as Record<string, unknown>).postalCityFormat =
-      (data as Record<string, unknown>).postal_city_format;
+    (data as Record<string, unknown>).postalCityFormat = (
+      data as Record<string, unknown>
+    ).postal_city_format;
     delete (data as Record<string, unknown>).postal_city_format;
   }
   if (
     !Object.prototype.hasOwnProperty.call(data, "postalCityFormat") &&
     Object.prototype.hasOwnProperty.call(data, "postalcityformat")
   ) {
-    (data as Record<string, unknown>).postalCityFormat =
-      (data as Record<string, unknown>).postalcityformat;
+    (data as Record<string, unknown>).postalCityFormat = (
+      data as Record<string, unknown>
+    ).postalcityformat;
     delete (data as Record<string, unknown>).postalcityformat;
   }
 
@@ -190,7 +234,9 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "postalCityFormat")) {
-    const rawFormat = String(data.postalCityFormat ?? "").trim().toLowerCase();
+    const rawFormat = String(data.postalCityFormat ?? "")
+      .trim()
+      .toLowerCase();
     if (rawFormat === "city-postal" || rawFormat === "postal-city") {
       (data as Record<string, unknown>).postalCityFormat = rawFormat;
     } else {
@@ -199,79 +245,46 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "numberFormat")) {
-    const rawNumberFormat = String(data.numberFormat ?? "").trim().toLowerCase();
-    (data as Record<string, unknown>).numberFormat = rawNumberFormat === "period"
-      ? "period"
-      : "comma";
+    const rawNumberFormat = String(data.numberFormat ?? "")
+      .trim()
+      .toLowerCase();
+    (data as Record<string, unknown>).numberFormat =
+      rawNumberFormat === "period" ? "period" : "comma";
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "dateFormat")) {
     const rawDateFormat = String(data.dateFormat ?? "").trim();
-    (data as Record<string, unknown>).dateFormat = rawDateFormat === "DD.MM.YYYY"
-      ? "DD.MM.YYYY"
-      : "YYYY-MM-DD";
+    (data as Record<string, unknown>).dateFormat =
+      rawDateFormat === "DD.MM.YYYY" ? "DD.MM.YYYY" : "YYYY-MM-DD";
   }
 }
 
 // Demo mode flag (mutations allowed; periodic resets handle reverting state)
 const DEMO_MODE = isDemoMode();
 
-adminRoutes.use(
-  "/invoices/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/invoices/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/customers/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/customers/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/products/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/products/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/templates/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/templates/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/tax-definitions/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/tax-definitions/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/product-categories/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/product-categories/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/product-units/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/product-units/*", requireAdminAuth);
 
-adminRoutes.use(
-  "/settings",
-  requireAdminAuth,
-);
+adminRoutes.use("/settings", requireAdminAuth);
 
-adminRoutes.use(
-  "/settings/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/settings/*", requireAdminAuth);
 
 // Protect admin alias routes as well
-adminRoutes.use(
-  "/admin/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/admin/*", requireAdminAuth);
 
 // Protect export routes
-adminRoutes.use(
-  "/export/*",
-  requireAdminAuth,
-);
+adminRoutes.use("/export/*", requireAdminAuth);
 
 // Demo helper: trigger an immediate reset (only effective when DEMO_MODE=true)
 adminRoutes.post("/admin/demo/reset", async (c) => {
@@ -285,27 +298,35 @@ adminRoutes.post("/admin/demo/reset", async (c) => {
 });
 
 // Invoice routes
-adminRoutes.get("/invoices/next-number", requirePermission("invoices", "create"), (c) => {
-  try {
-    const next = getNextInvoiceNumber();
-    return c.json({ next });
-  } catch (e) {
-    return c.json({ error: String(e) }, 500);
-  }
-});
-adminRoutes.post("/invoices", requirePermission("invoices", "create"), async (c) => {
-  const data = await c.req.json();
-  try {
-    const invoice = createInvoice(data);
-    return c.json(invoice);
-  } catch (e) {
-    const msg = String(e);
-    if (/already exists/i.test(msg)) {
-      return c.json({ error: msg }, 409);
+adminRoutes.get(
+  "/invoices/next-number",
+  requirePermission("invoices", "create"),
+  (c) => {
+    try {
+      const next = getNextInvoiceNumber();
+      return c.json({ next });
+    } catch (e) {
+      return c.json({ error: String(e) }, 500);
     }
-    return c.json({ error: msg }, 400);
-  }
-});
+  },
+);
+adminRoutes.post(
+  "/invoices",
+  requirePermission("invoices", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    try {
+      const invoice = createInvoice(data);
+      return c.json(invoice);
+    } catch (e) {
+      const msg = String(e);
+      if (/already exists/i.test(msg)) {
+        return c.json({ error: msg }, 409);
+      }
+      return c.json({ error: msg }, 400);
+    }
+  },
+);
 
 adminRoutes.get("/invoices", requirePermission("invoices", "read"), (c) => {
   const invoices = getInvoices();
@@ -315,7 +336,9 @@ adminRoutes.get("/invoices", requirePermission("invoices", "read"), (c) => {
     try {
       const customer = getCustomerById(inv.customerId);
       customerName = customer?.name;
-    } catch (_e) { /* ignore */ }
+    } catch (_e) {
+      /* ignore */
+    }
     const issue_date = inv.issueDate
       ? new Date(inv.issueDate).toISOString().slice(0, 10)
       : undefined;
@@ -344,372 +367,480 @@ adminRoutes.get("/invoices/:id", requirePermission("invoices", "read"), (c) => {
   return c.json({ ...invoice, issue_date, due_date });
 });
 
-adminRoutes.put("/invoices/:id", requirePermission("invoices", "update"), async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
-  try {
-    const invoice = await updateInvoice(id, data);
-    return c.json(invoice);
-  } catch (e) {
-    const msg = String(e);
-    if (/already exists/i.test(msg)) {
-      return c.json({ error: msg }, 409);
+adminRoutes.put(
+  "/invoices/:id",
+  requirePermission("invoices", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    const data = await c.req.json();
+    try {
+      const invoice = await updateInvoice(id, data);
+      return c.json(invoice);
+    } catch (e) {
+      const msg = String(e);
+      if (/already exists/i.test(msg)) {
+        return c.json({ error: msg }, 409);
+      }
+      return c.json({ error: msg }, 400);
     }
-    return c.json({ error: msg }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.delete("/invoices/:id", requirePermission("invoices", "delete"), async (c) => {
-  const id = c.req.param("id");
-  try {
-    await deleteInvoice(id);
-    return c.json({ success: true });
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+adminRoutes.delete(
+  "/invoices/:id",
+  requirePermission("invoices", "delete"),
+  async (c) => {
+    const id = c.req.param("id");
+    try {
+      await deleteInvoice(id);
+      return c.json({ success: true });
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
 
-adminRoutes.post("/invoices/:id/publish", requirePermission("invoices", "publish"), async (c) => {
-  const id = c.req.param("id");
-  try {
-    const result = await publishInvoice(id);
+adminRoutes.post(
+  "/invoices/:id/publish",
+  requirePermission("invoices", "publish"),
+  async (c) => {
+    const id = c.req.param("id");
+    try {
+      const result = await publishInvoice(id);
+      return c.json(result);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
+
+adminRoutes.post(
+  "/invoices/:id/unpublish",
+  requirePermission("invoices", "publish"),
+  async (c) => {
+    const id = c.req.param("id");
+    const result = await unpublishInvoice(id);
     return c.json(result);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.post("/invoices/:id/unpublish", requirePermission("invoices", "publish"), async (c) => {
-  const id = c.req.param("id");
-  const result = await unpublishInvoice(id);
-  return c.json(result);
-});
+adminRoutes.post(
+  "/invoices/:id/duplicate",
+  requirePermission("invoices", "create"),
+  async (c) => {
+    const id = c.req.param("id");
+    const copy = await duplicateInvoice(id);
+    if (!copy) return c.json({ error: "Invoice not found" }, 404);
+    return c.json(copy);
+  },
+);
 
-adminRoutes.post("/invoices/:id/duplicate", requirePermission("invoices", "create"), async (c) => {
-  const id = c.req.param("id");
-  const copy = await duplicateInvoice(id);
-  if (!copy) return c.json({ error: "Invoice not found" }, 404);
-  return c.json(copy);
-});
-
-adminRoutes.post("/invoices/:id/void", requirePermission("invoices", "void"), async (c) => {
-  const id = c.req.param("id");
-  try {
-    const result = await voidInvoice(id);
-    return c.json(result);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+adminRoutes.post(
+  "/invoices/:id/void",
+  requirePermission("invoices", "void"),
+  async (c) => {
+    const id = c.req.param("id");
+    try {
+      const result = await voidInvoice(id);
+      return c.json(result);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
 
 // Template routes
-adminRoutes.get("/templates", requirePermission("templates", "read"), async (c) => {
-  let templates = await getTemplates();
-  // Overlay the default from settings if present; also compute 'updatable' flag when a manifest source exists
-  try {
-    const settings = await getSettings();
-    const map = settings.reduce((acc: Record<string, string>, s) => {
-      acc[s.key] = s.value as string;
-      return acc;
-    }, {} as Record<string, string>);
-    const current = map.templateId;
-    if (current) {
-      templates = templates.map((t) => ({
-        ...t,
-        isDefault: t.id === current,
-        updatable: !!map[`templateSource:${t.id}`],
-      }));
-    } else {
-      templates = templates.map((t) => ({
-        ...t,
-        updatable: !!map[`templateSource:${t.id}`],
-      }));
+adminRoutes.get(
+  "/templates",
+  requirePermission("templates", "read"),
+  async (c) => {
+    let templates = await getTemplates();
+    // Overlay the default from settings if present; also compute 'updatable' flag when a manifest source exists
+    try {
+      const settings = await getSettings();
+      const map = settings.reduce(
+        (acc: Record<string, string>, s) => {
+          acc[s.key] = s.value as string;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+      const current = map.templateId;
+      if (current) {
+        templates = templates.map((t) => ({
+          ...t,
+          isDefault: t.id === current,
+          updatable: !!map[`templateSource:${t.id}`],
+        }));
+      } else {
+        templates = templates.map((t) => ({
+          ...t,
+          updatable: !!map[`templateSource:${t.id}`],
+        }));
+      }
+    } catch {
+      /* ignore */
     }
-  } catch { /* ignore */ }
-  return c.json(templates);
-});
+    return c.json(templates);
+  },
+);
 
 // Tax definition routes
-adminRoutes.get("/tax-definitions", requirePermission("tax_definitions", "read"), (c) => {
-  try {
-    const list = getTaxDefinitions();
-    return c.json(list);
-  } catch (e) {
-    return c.json({ error: String(e) }, 500);
-  }
-});
-
-adminRoutes.get("/tax-definitions/:id", requirePermission("tax_definitions", "read"), (c) => {
-  try {
-    const id = c.req.param("id");
-    const tax = getTaxDefinitionById(id);
-    if (!tax) return c.json({ error: "Not found" }, 404);
-    return c.json(tax);
-  } catch (e) {
-    return c.json({ error: String(e) }, 500);
-  }
-});
-
-adminRoutes.post("/tax-definitions", requirePermission("tax_definitions", "create"), async (c) => {
-  const data = await c.req.json();
-  try {
-    const created = createTaxDefinition(data);
-    return c.json(created, 201);
-  } catch (e) {
-    const msg = String(e);
-    if (/unique constraint failed: tax_definitions\.code/i.test(msg)) {
-      return c.json({ error: "Tax code already exists" }, 409);
+adminRoutes.get(
+  "/tax-definitions",
+  requirePermission("tax_definitions", "read"),
+  (c) => {
+    try {
+      const list = getTaxDefinitions();
+      return c.json(list);
+    } catch (e) {
+      return c.json({ error: String(e) }, 500);
     }
-    return c.json({ error: msg }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.put("/tax-definitions/:id", requirePermission("tax_definitions", "update"), async (c) => {
-  const data = await c.req.json();
-  try {
-    const id = c.req.param("id");
-    const updated = updateTaxDefinition(id, data);
-    return c.json(updated);
-  } catch (e) {
-    const msg = String(e);
-    if (msg === "NOT_FOUND") return c.json({ error: "Not found" }, 404);
-    if (/unique constraint failed: tax_definitions\.code/i.test(msg)) {
-      return c.json({ error: "Tax code already exists" }, 409);
+adminRoutes.get(
+  "/tax-definitions/:id",
+  requirePermission("tax_definitions", "read"),
+  (c) => {
+    try {
+      const id = c.req.param("id");
+      const tax = getTaxDefinitionById(id);
+      if (!tax) return c.json({ error: "Not found" }, 404);
+      return c.json(tax);
+    } catch (e) {
+      return c.json({ error: String(e) }, 500);
     }
-    return c.json({ error: msg }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.delete("/tax-definitions/:id", requirePermission("tax_definitions", "delete"), (c) => {
-  try {
-    const id = c.req.param("id");
-    const result = deleteTaxDefinition(id);
-    return c.json(result);
-  } catch (e) {
-    const msg = String(e);
-    if (msg === "NOT_FOUND") return c.json({ error: "Not found" }, 404);
-    return c.json({ error: msg }, 400);
-  }
-});
+adminRoutes.post(
+  "/tax-definitions",
+  requirePermission("tax_definitions", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    try {
+      const created = createTaxDefinition(data);
+      return c.json(created, 201);
+    } catch (e) {
+      const msg = String(e);
+      if (/unique constraint failed: tax_definitions\.code/i.test(msg)) {
+        return c.json({ error: "Tax code already exists" }, 409);
+      }
+      return c.json({ error: msg }, 400);
+    }
+  },
+);
 
-adminRoutes.post("/templates", requirePermission("templates", "create"), async (c) => {
-  const data = await c.req.json();
-  const template = await createTemplate(data);
-  return c.json(template);
-});
+adminRoutes.put(
+  "/tax-definitions/:id",
+  requirePermission("tax_definitions", "update"),
+  async (c) => {
+    const data = await c.req.json();
+    try {
+      const id = c.req.param("id");
+      const updated = updateTaxDefinition(id, data);
+      return c.json(updated);
+    } catch (e) {
+      const msg = String(e);
+      if (msg === "NOT_FOUND") return c.json({ error: "Not found" }, 404);
+      if (/unique constraint failed: tax_definitions\.code/i.test(msg)) {
+        return c.json({ error: "Tax code already exists" }, 409);
+      }
+      return c.json({ error: msg }, 400);
+    }
+  },
+);
+
+adminRoutes.delete(
+  "/tax-definitions/:id",
+  requirePermission("tax_definitions", "delete"),
+  (c) => {
+    try {
+      const id = c.req.param("id");
+      const result = deleteTaxDefinition(id);
+      return c.json(result);
+    } catch (e) {
+      const msg = String(e);
+      if (msg === "NOT_FOUND") return c.json({ error: "Not found" }, 404);
+      return c.json({ error: msg }, 400);
+    }
+  },
+);
+
+adminRoutes.post(
+  "/templates",
+  requirePermission("templates", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    const template = await createTemplate(data);
+    return c.json(template);
+  },
+);
 
 // Install a template from a remote manifest URL (YAML or JSON)
-adminRoutes.post("/templates/install-from-manifest", requirePermission("templates", "install"), async (c) => {
-  try {
-    const { url } = await c.req.json();
-    if (!url || typeof url !== "string") {
-      return c.json({ error: "Missing 'url'" }, 400);
-    }
-    const t = await installTemplateFromManifest(url);
+adminRoutes.post(
+  "/templates/install-from-manifest",
+  requirePermission("templates", "install"),
+  async (c) => {
     try {
-      // Remember the source manifest used for this template id to enable future updates
-      setSetting(`templateSource:${t.id}`, url);
-    } catch (_e) { /* non-fatal */ }
-    return c.json(t);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+      const { url } = await c.req.json();
+      if (!url || typeof url !== "string") {
+        return c.json({ error: "Missing 'url'" }, 400);
+      }
+      const t = await installTemplateFromManifest(url);
+      try {
+        // Remember the source manifest used for this template id to enable future updates
+        setSetting(`templateSource:${t.id}`, url);
+      } catch (_e) {
+        /* non-fatal */
+      }
+      return c.json(t);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
 
 // Install a local template from an uploaded .zip file
-adminRoutes.post("/templates/upload", requirePermission("templates", "install"), async (c) => {
-  try {
-    const contentType = c.req.header("content-type") || "";
+adminRoutes.post(
+  "/templates/upload",
+  requirePermission("templates", "install"),
+  async (c) => {
+    try {
+      const contentType = c.req.header("content-type") || "";
 
-    let zipData: Uint8Array;
+      let zipData: Uint8Array;
 
-    if (contentType.includes("multipart/form-data")) {
-      // Handle multipart form upload
-      const formData = await c.req.formData();
-      const file = formData.get("file");
-      if (!file || !(file instanceof File)) {
-        return c.json({ error: "No file uploaded" }, 400);
+      if (contentType.includes("multipart/form-data")) {
+        // Handle multipart form upload
+        const formData = await c.req.formData();
+        const file = formData.get("file");
+        if (!file || !(file instanceof File)) {
+          return c.json({ error: "No file uploaded" }, 400);
+        }
+        if (!file.name.endsWith(".zip")) {
+          return c.json({ error: "File must be a .zip archive" }, 400);
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          return c.json({ error: "File too large (max 5MB)" }, 400);
+        }
+        const arrayBuffer = await file.arrayBuffer();
+        zipData = new Uint8Array(arrayBuffer);
+      } else if (
+        contentType.includes("application/zip") ||
+        contentType.includes("application/octet-stream")
+      ) {
+        // Handle raw binary upload
+        const arrayBuffer = await c.req.arrayBuffer();
+        if (arrayBuffer.byteLength > 5 * 1024 * 1024) {
+          return c.json({ error: "File too large (max 5MB)" }, 400);
+        }
+        zipData = new Uint8Array(arrayBuffer);
+      } else {
+        return c.json(
+          {
+            error:
+              "Invalid content type. Expected multipart/form-data or application/zip",
+          },
+          400,
+        );
       }
-      if (!file.name.endsWith(".zip")) {
-        return c.json({ error: "File must be a .zip archive" }, 400);
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        return c.json({ error: "File too large (max 5MB)" }, 400);
-      }
-      const arrayBuffer = await file.arrayBuffer();
-      zipData = new Uint8Array(arrayBuffer);
-    } else if (contentType.includes("application/zip") || contentType.includes("application/octet-stream")) {
-      // Handle raw binary upload
-      const arrayBuffer = await c.req.arrayBuffer();
-      if (arrayBuffer.byteLength > 5 * 1024 * 1024) {
-        return c.json({ error: "File too large (max 5MB)" }, 400);
-      }
-      zipData = new Uint8Array(arrayBuffer);
-    } else {
-      return c.json({ error: "Invalid content type. Expected multipart/form-data or application/zip" }, 400);
+
+      const t = await installLocalTemplateFromZip(zipData);
+      return c.json(t);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
     }
-
-    const t = await installLocalTemplateFromZip(zipData);
-    return c.json(t);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
 // Update a template by id using its stored source manifest URL
-adminRoutes.post("/templates/:id/update", requirePermission("templates", "update"), async (c) => {
-  const id = c.req.param("id");
-  try {
-    const src = await getSetting(`templateSource:${id}`);
-    if (!src || typeof src !== "string") {
-      return c.json({ error: "No stored manifest URL for this template" }, 404);
+adminRoutes.post(
+  "/templates/:id/update",
+  requirePermission("templates", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    try {
+      const src = await getSetting(`templateSource:${id}`);
+      if (!src || typeof src !== "string") {
+        return c.json(
+          { error: "No stored manifest URL for this template" },
+          404,
+        );
+      }
+      const updated = await installTemplateFromManifest(src);
+      if (!updated || updated.id !== id) {
+        return c.json({ error: "Manifest ID does not match template id" }, 400);
+      }
+      return c.json({ ok: true, template: updated });
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
     }
-    const updated = await installTemplateFromManifest(src);
-    if (!updated || updated.id !== id) {
-      return c.json({ error: "Manifest ID does not match template id" }, 400);
-    }
-    return c.json({ ok: true, template: updated });
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
 // Delete a template (disallow removing built-in app templates)
-adminRoutes.delete("/templates/:id", requirePermission("templates", "delete"), async (c) => {
-  const id = c.req.param("id");
-  // Built-in templates are protected
-  const builtin = new Set(["professional-modern", "minimalist-clean"]);
-  if (builtin.has(id)) {
-    return c.json({ error: "Cannot delete built-in templates" }, 400);
-  }
-
-  // If this template is currently selected in settings, reset to minimalist-clean
-  try {
-    const current = await getSetting("templateId");
-    if (current === id) {
-      await setSetting("templateId", "minimalist-clean");
+adminRoutes.delete(
+  "/templates/:id",
+  requirePermission("templates", "delete"),
+  async (c) => {
+    const id = c.req.param("id");
+    // Built-in templates are protected
+    const builtin = new Set(["professional-modern", "minimalist-clean"]);
+    if (builtin.has(id)) {
+      return c.json({ error: "Cannot delete built-in templates" }, 400);
     }
-  } catch (_e) {
-    // non-fatal
-  }
 
-  try {
-    await deleteTemplate(id);
-    return c.json({ success: true });
-  } catch (e) {
-    return c.json({ error: String(e) }, 500);
-  }
-});
+    // If this template is currently selected in settings, reset to minimalist-clean
+    try {
+      const current = await getSetting("templateId");
+      if (current === id) {
+        await setSetting("templateId", "minimalist-clean");
+      }
+    } catch (_e) {
+      // non-fatal
+    }
+
+    try {
+      await deleteTemplate(id);
+      return c.json({ success: true });
+    } catch (e) {
+      return c.json({ error: String(e) }, 500);
+    }
+  },
+);
 
 // Get template by ID
-adminRoutes.get("/templates/:id", requirePermission("templates", "read"), (c) => {
-  const id = c.req.param("id");
-  const template = getTemplateById(id);
-  if (!template) {
-    return c.json({ error: "Template not found" }, 404);
-  }
-  return c.json(template);
-});
+adminRoutes.get(
+  "/templates/:id",
+  requirePermission("templates", "read"),
+  (c) => {
+    const id = c.req.param("id");
+    const template = getTemplateById(id);
+    if (!template) {
+      return c.json({ error: "Template not found" }, 404);
+    }
+    return c.json(template);
+  },
+);
 
 // Preview template with sample data
-adminRoutes.post("/templates/:id/preview", requirePermission("templates", "read"), async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
+adminRoutes.post(
+  "/templates/:id/preview",
+  requirePermission("templates", "read"),
+  async (c) => {
+    const id = c.req.param("id");
+    const data = await c.req.json();
 
-  const template = getTemplateById(id);
-  if (!template) {
-    return c.json({ error: "Template not found" }, 404);
-  }
+    const template = getTemplateById(id);
+    if (!template) {
+      return c.json({ error: "Template not found" }, 404);
+    }
 
-  // Add sample data if not provided
-  const sampleData = {
-    companyName: "Sample Company Inc",
-    companyAddress: "123 Business St, City, State 12345",
-    companyEmail: "contact@sample.com",
-    companyPhone: "+1-555-123-4567",
-    companyTaxId: "TAX123456",
-    invoiceNumber: "INV-2025-001",
-    issueDate: "2025-08-26",
-    dueDate: "2025-09-25",
-    currency: "USD",
-    status: "draft",
-    customerName: "John Doe",
-    customerEmail: "john@example.com",
-    customerAddress: "456 Client Ave, City, State 54321",
-    customerPostalCity: "54321 City",
-    customerCountryCode: "US",
-    highlightColor: data.highlightColor || "#2563eb",
-    highlightColorLight: data.highlightColorLight || "#dbeafe",
-    subtotal: 2500.00,
-    discountAmount: 250.00,
-    discountPercentage: 10,
-    taxRate: 8.5,
-    taxAmount: 191.25,
-    total: 2441.25,
-    hasDiscount: true,
-    hasTax: true,
+    // Add sample data if not provided
+    const sampleData = {
+      companyName: "Sample Company Inc",
+      companyAddress: "123 Business St, City, State 12345",
+      companyEmail: "contact@sample.com",
+      companyPhone: "+1-555-123-4567",
+      companyTaxId: "TAX123456",
+      invoiceNumber: "INV-2025-001",
+      issueDate: "2025-08-26",
+      dueDate: "2025-09-25",
+      currency: "USD",
+      status: "draft",
+      customerName: "John Doe",
+      customerEmail: "john@example.com",
+      customerAddress: "456 Client Ave, City, State 54321",
+      customerPostalCity: "54321 City",
+      customerCountryCode: "US",
+      highlightColor: data.highlightColor || "#2563eb",
+      highlightColorLight: data.highlightColorLight || "#dbeafe",
+      subtotal: 2500.0,
+      discountAmount: 250.0,
+      discountPercentage: 10,
+      taxRate: 8.5,
+      taxAmount: 191.25,
+      total: 2441.25,
+      hasDiscount: true,
+      hasTax: true,
 
-    items: [
-      {
-        description: "Website Development",
-        quantity: 1,
-        unitPrice: 2500.00,
-        lineTotal: 2500.00,
-        notes: "Custom responsive website with modern design",
-      },
-    ],
-    notes: "Thank you for your business! Payment is due within 30 days.",
-    paymentTerms: "Net 30 days",
-    paymentMethods: "Bank Transfer, Credit Card",
-    bankAccount: "Account: 123-456-789, Routing: 987-654-321",
-    ...data,
-  };
+      items: [
+        {
+          description: "Website Development",
+          quantity: 1,
+          unitPrice: 2500.0,
+          lineTotal: 2500.0,
+          notes: "Custom responsive website with modern design",
+        },
+      ],
+      notes: "Thank you for your business! Payment is due within 30 days.",
+      paymentTerms: "Net 30 days",
+      paymentMethods: "Bank Transfer, Credit Card",
+      bankAccount: "Account: 123-456-789, Routing: 987-654-321",
+      ...data,
+    };
 
-  try {
-    const renderedHtml = renderTemplate(template.html, sampleData);
-    return new Response(renderedHtml, {
-      headers: { "Content-Type": "text/html" },
-    });
-  } catch (error) {
-    return c.json({
-      error: "Failed to render template",
-      details: String(error),
-    }, 500);
-  }
-});
+    try {
+      const renderedHtml = renderTemplate(template.html, sampleData);
+      return new Response(renderedHtml, {
+        headers: { "Content-Type": "text/html" },
+      });
+    } catch (error) {
+      return c.json(
+        {
+          error: "Failed to render template",
+          details: String(error),
+        },
+        500,
+      );
+    }
+  },
+);
 
 // Load template from file
-adminRoutes.post("/templates/load-from-file", requirePermission("templates", "create"), async (c) => {
-  try {
-    const { filePath, name, isDefault, highlightColor } = await c.req.json();
+adminRoutes.post(
+  "/templates/load-from-file",
+  requirePermission("templates", "create"),
+  async (c) => {
+    try {
+      const { filePath, name, isDefault, highlightColor } = await c.req.json();
 
-    const html = await loadTemplateFromFile(filePath);
-    const template = await createTemplate({
-      name,
-      html,
-      isDefault: isDefault || false,
-    });
+      const html = await loadTemplateFromFile(filePath);
+      const template = await createTemplate({
+        name,
+        html,
+        isDefault: isDefault || false,
+      });
 
-    return c.json({
-      ...template,
-      highlightColor: highlightColor || "#2563eb",
-      message: "Template loaded successfully from file",
-    });
-  } catch (error) {
-    return c.json({
-      error: "Failed to load template from file",
-      details: String(error),
-    }, 500);
-  }
-});
+      return c.json({
+        ...template,
+        highlightColor: highlightColor || "#2563eb",
+        message: "Template loaded successfully from file",
+      });
+    } catch (error) {
+      return c.json(
+        {
+          error: "Failed to load template from file",
+          details: String(error),
+        },
+        500,
+      );
+    }
+  },
+);
 
 // Settings routes
 adminRoutes.get("/settings", async (c) => {
   const settings = await getSettings();
-  const map = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value as string;
-    return acc;
-  }, {} as Record<string, string>);
+  const map = settings.reduce(
+    (acc: Record<string, string>, s) => {
+      acc[s.key] = s.value as string;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
   // Provide normalized aliases expected by the frontend
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
@@ -739,84 +870,107 @@ adminRoutes.get("/settings", async (c) => {
   return c.json(map);
 });
 
-adminRoutes.put("/settings", requirePermission("settings", "update"), async (c) => {
-  const data = await c.req.json();
-  // Normalize legacy logoUrl to logo
-  if (typeof data.logoUrl === "string" && !data.logo) {
-    data.logo = data.logoUrl;
-    delete data.logoUrl;
-  }
-  if (typeof data.logo === "string" && data.logo.startsWith("data:image/")) {
-    data.logo = await saveDataUrlLogo(data.logo);
-  }
-  // Normalize tax-related settings
-  normalizeTaxSettingsPayload(data);
-  normalizeLocaleSettingPayload(data);
-  const settings = await updateSettings(data);
-  try {
-    if ("logoUrl" in data) deleteSetting("logoUrl");
-  } catch (_e) { /* ignore legacy cleanup errors */ }
-  // If default template changed, reflect in templates table
-  if (typeof data.templateId === "string" && data.templateId) {
+adminRoutes.put(
+  "/settings",
+  requirePermission("settings", "update"),
+  async (c) => {
+    const data = await c.req.json();
+    // Normalize legacy logoUrl to logo
+    if (typeof data.logoUrl === "string" && !data.logo) {
+      data.logo = data.logoUrl;
+      delete data.logoUrl;
+    }
+    if (typeof data.logo === "string" && data.logo.startsWith("data:image/")) {
+      data.logo = await saveDataUrlLogo(data.logo);
+    }
+    // Normalize tax-related settings
+    normalizeTaxSettingsPayload(data);
+    normalizeLocaleSettingPayload(data);
+    const settings = await updateSettings(data);
     try {
-      setDefaultTemplate(String(data.templateId));
-    } catch { /* ignore */ }
-  }
-  return c.json(settings);
-});
+      if ("logoUrl" in data) deleteSetting("logoUrl");
+    } catch (_e) {
+      /* ignore legacy cleanup errors */
+    }
+    // If default template changed, reflect in templates table
+    if (typeof data.templateId === "string" && data.templateId) {
+      try {
+        setDefaultTemplate(String(data.templateId));
+      } catch {
+        /* ignore */
+      }
+    }
+    return c.json(settings);
+  },
+);
 
 // Partial update (PATCH) to merge provided keys only
-adminRoutes.patch("/settings", requirePermission("settings", "update"), async (c) => {
-  const data = await c.req.json();
-  // Normalize legacy logoUrl to logo
-  if (typeof data.logoUrl === "string" && !data.logo) {
-    data.logo = data.logoUrl;
-    delete data.logoUrl;
-  }
-  if (typeof data.logo === "string" && data.logo.startsWith("data:image/")) {
-    data.logo = await saveDataUrlLogo(data.logo);
-  }
-  // Normalize countryCode alias to companyCountryCode
-  if (typeof data.countryCode === "string" && !data.companyCountryCode) {
-    data.companyCountryCode = data.countryCode;
-    delete data.countryCode;
-  }
-  // Normalize tax-related settings
-  normalizeTaxSettingsPayload(data);
-  normalizeLocaleSettingPayload(data);
-  const settings = await updateSettings(data);
-  if (typeof data.templateId === "string" && data.templateId) {
-    try {
-      setDefaultTemplate(String(data.templateId));
-    } catch { /* ignore */ }
-  }
-  try {
-    if ("logoUrl" in data) deleteSetting("logoUrl");
-  } catch (_e) { /* ignore legacy cleanup errors */ }
-  return c.json(settings);
-});
-
-adminRoutes.post("/settings/logo-upload", requirePermission("settings", "update"), async (c) => {
-  try {
-    const form = await c.req.formData();
-    const entry = form.get("file");
-    if (!(entry instanceof File)) {
-      return c.json({ error: "Missing file" }, 400);
+adminRoutes.patch(
+  "/settings",
+  requirePermission("settings", "update"),
+  async (c) => {
+    const data = await c.req.json();
+    // Normalize legacy logoUrl to logo
+    if (typeof data.logoUrl === "string" && !data.logo) {
+      data.logo = data.logoUrl;
+      delete data.logoUrl;
     }
-    const logo = await saveUploadedLogoFile(entry);
-    return c.json({ logo });
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+    if (typeof data.logo === "string" && data.logo.startsWith("data:image/")) {
+      data.logo = await saveDataUrlLogo(data.logo);
+    }
+    // Normalize countryCode alias to companyCountryCode
+    if (typeof data.countryCode === "string" && !data.companyCountryCode) {
+      data.companyCountryCode = data.countryCode;
+      delete data.countryCode;
+    }
+    // Normalize tax-related settings
+    normalizeTaxSettingsPayload(data);
+    normalizeLocaleSettingPayload(data);
+    const settings = await updateSettings(data);
+    if (typeof data.templateId === "string" && data.templateId) {
+      try {
+        setDefaultTemplate(String(data.templateId));
+      } catch {
+        /* ignore */
+      }
+    }
+    try {
+      if ("logoUrl" in data) deleteSetting("logoUrl");
+    } catch (_e) {
+      /* ignore legacy cleanup errors */
+    }
+    return c.json(settings);
+  },
+);
+
+adminRoutes.post(
+  "/settings/logo-upload",
+  requirePermission("settings", "update"),
+  async (c) => {
+    try {
+      const form = await c.req.formData();
+      const entry = form.get("file");
+      if (!(entry instanceof File)) {
+        return c.json({ error: "Missing file" }, 400);
+      }
+      const logo = await saveUploadedLogoFile(entry);
+      return c.json({ logo });
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
 
 // Optional admin-prefixed aliases for clarity/documentation parity
 adminRoutes.get("/admin/settings", async (c) => {
   const settings = await getSettings();
-  const map = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value as string;
-    return acc;
-  }, {} as Record<string, string>);
+  const map = settings.reduce(
+    (acc: Record<string, string>, s) => {
+      acc[s.key] = s.value as string;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
   if (map.companyEmail && !map.email) map.email = map.companyEmail;
   if (map.companyPhone && !map.phone) map.phone = map.companyPhone;
   if (map.companyTaxId && !map.taxId) map.taxId = map.companyTaxId;
@@ -844,71 +998,103 @@ adminRoutes.get("/admin/settings", async (c) => {
   return c.json(map);
 });
 
-adminRoutes.put("/admin/settings", requirePermission("settings", "update"), async (c) => {
-  const data = await c.req.json();
-  if (typeof data.logoUrl === "string" && !data.logo) {
-    data.logo = data.logoUrl;
-    delete data.logoUrl;
-  }
-  // Normalize tax-related settings
-  normalizeTaxSettingsPayload(data);
-  normalizeLocaleSettingPayload(data);
-  const settings = await updateSettings(data);
-  try {
-    if ("logoUrl" in data) deleteSetting("logoUrl");
-  } catch (_e) { /* ignore legacy cleanup errors */ }
-  return c.json(settings);
-});
+adminRoutes.put(
+  "/admin/settings",
+  requirePermission("settings", "update"),
+  async (c) => {
+    const data = await c.req.json();
+    if (typeof data.logoUrl === "string" && !data.logo) {
+      data.logo = data.logoUrl;
+      delete data.logoUrl;
+    }
+    // Normalize tax-related settings
+    normalizeTaxSettingsPayload(data);
+    normalizeLocaleSettingPayload(data);
+    const settings = await updateSettings(data);
+    try {
+      if ("logoUrl" in data) deleteSetting("logoUrl");
+    } catch (_e) {
+      /* ignore legacy cleanup errors */
+    }
+    return c.json(settings);
+  },
+);
 
-adminRoutes.patch("/admin/settings", requirePermission("settings", "update"), async (c) => {
-  const data = await c.req.json();
-  if (typeof data.logoUrl === "string" && !data.logo) {
-    data.logo = data.logoUrl;
-    delete data.logoUrl;
-  }
-  // Normalize tax-related settings
-  normalizeTaxSettingsPayload(data);
-  normalizeLocaleSettingPayload(data);
-  const settings = await updateSettings(data);
-  try {
-    if ("logoUrl" in data) deleteSetting("logoUrl");
-  } catch (_e) { /* ignore legacy cleanup errors */ }
-  return c.json(settings);
-});
+adminRoutes.patch(
+  "/admin/settings",
+  requirePermission("settings", "update"),
+  async (c) => {
+    const data = await c.req.json();
+    if (typeof data.logoUrl === "string" && !data.logo) {
+      data.logo = data.logoUrl;
+      delete data.logoUrl;
+    }
+    // Normalize tax-related settings
+    normalizeTaxSettingsPayload(data);
+    normalizeLocaleSettingPayload(data);
+    const settings = await updateSettings(data);
+    try {
+      if ("logoUrl" in data) deleteSetting("logoUrl");
+    } catch (_e) {
+      /* ignore legacy cleanup errors */
+    }
+    return c.json(settings);
+  },
+);
 
 // Customer routes
-adminRoutes.get("/customers", requirePermission("customers", "read"), async (c) => {
-  const customers = await getCustomers();
-  return c.json(customers);
-});
+adminRoutes.get(
+  "/customers",
+  requirePermission("customers", "read"),
+  async (c) => {
+    const customers = await getCustomers();
+    return c.json(customers);
+  },
+);
 
-adminRoutes.get("/customers/:id", requirePermission("customers", "read"), async (c) => {
-  const id = c.req.param("id");
-  const customer = await getCustomerById(id);
-  if (!customer) {
-    return c.json({ error: "Customer not found" }, 404);
-  }
-  return c.json(customer);
-});
+adminRoutes.get(
+  "/customers/:id",
+  requirePermission("customers", "read"),
+  async (c) => {
+    const id = c.req.param("id");
+    const customer = await getCustomerById(id);
+    if (!customer) {
+      return c.json({ error: "Customer not found" }, 404);
+    }
+    return c.json(customer);
+  },
+);
 
-adminRoutes.post("/customers", requirePermission("customers", "create"), async (c) => {
-  const data = await c.req.json();
-  const customer = createCustomer(data);
-  return c.json(customer);
-});
+adminRoutes.post(
+  "/customers",
+  requirePermission("customers", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    const customer = createCustomer(data);
+    return c.json(customer);
+  },
+);
 
-adminRoutes.put("/customers/:id", requirePermission("customers", "update"), async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
-  const customer = await updateCustomer(id, data);
-  return c.json(customer);
-});
+adminRoutes.put(
+  "/customers/:id",
+  requirePermission("customers", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    const data = await c.req.json();
+    const customer = await updateCustomer(id, data);
+    return c.json(customer);
+  },
+);
 
-adminRoutes.delete("/customers/:id", requirePermission("customers", "delete"), async (c) => {
-  const id = c.req.param("id");
-  await deleteCustomer(id);
-  return c.json({ success: true });
-});
+adminRoutes.delete(
+  "/customers/:id",
+  requirePermission("customers", "delete"),
+  async (c) => {
+    const id = c.req.param("id");
+    await deleteCustomer(id);
+    return c.json({ success: true });
+  },
+);
 
 // Product routes
 adminRoutes.get("/products", requirePermission("products", "read"), (c) => {
@@ -928,464 +1114,586 @@ adminRoutes.get("/products/:id", requirePermission("products", "read"), (c) => {
   return c.json(product);
 });
 
-adminRoutes.post("/products", requirePermission("products", "create"), async (c) => {
-  const data = await c.req.json();
-  try {
-    const product = createProduct(data);
-    return c.json(product, 201);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
-
-adminRoutes.put("/products/:id", requirePermission("products", "update"), async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
-  try {
-    const product = updateProduct(id, data);
-    if (!product) {
-      return c.json({ error: "Product not found" }, 404);
+adminRoutes.post(
+  "/products",
+  requirePermission("products", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    try {
+      const product = createProduct(data);
+      return c.json(product, 201);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
     }
-    return c.json(product);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.delete("/products/:id", requirePermission("products", "delete"), (c) => {
-  const id = c.req.param("id");
-  try {
-    deleteProduct(id);
-    return c.json({ success: true });
-  } catch (e) {
-    const msg = String(e);
-    if (msg.includes("not found")) {
-      return c.json({ error: "Product not found" }, 404);
+adminRoutes.put(
+  "/products/:id",
+  requirePermission("products", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    const data = await c.req.json();
+    try {
+      const product = updateProduct(id, data);
+      if (!product) {
+        return c.json({ error: "Product not found" }, 404);
+      }
+      return c.json(product);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
     }
-    return c.json({ error: msg }, 400);
-  }
-});
+  },
+);
+
+adminRoutes.delete(
+  "/products/:id",
+  requirePermission("products", "delete"),
+  (c) => {
+    const id = c.req.param("id");
+    try {
+      deleteProduct(id);
+      return c.json({ success: true });
+    } catch (e) {
+      const msg = String(e);
+      if (msg.includes("not found")) {
+        return c.json({ error: "Product not found" }, 404);
+      }
+      return c.json({ error: msg }, 400);
+    }
+  },
+);
 
 // Check if product is used in invoices
-adminRoutes.get("/products/:id/usage", requirePermission("products", "read"), (c) => {
-  const id = c.req.param("id");
-  const product = getProductById(id);
-  if (!product) {
-    return c.json({ error: "Product not found" }, 404);
-  }
-  const usedInInvoices = isProductUsedInInvoices(id);
-  return c.json({ usedInInvoices });
-});
-
-// Reactivate a soft-deleted product
-adminRoutes.post("/products/:id/reactivate", requirePermission("products", "update"), (c) => {
-  const id = c.req.param("id");
-  try {
-    const product = reactivateProduct(id);
+adminRoutes.get(
+  "/products/:id/usage",
+  requirePermission("products", "read"),
+  (c) => {
+    const id = c.req.param("id");
+    const product = getProductById(id);
     if (!product) {
       return c.json({ error: "Product not found" }, 404);
     }
-    return c.json(product);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+    const usedInInvoices = isProductUsedInInvoices(id);
+    return c.json({ usedInInvoices });
+  },
+);
+
+// Reactivate a soft-deleted product
+adminRoutes.post(
+  "/products/:id/reactivate",
+  requirePermission("products", "update"),
+  (c) => {
+    const id = c.req.param("id");
+    try {
+      const product = reactivateProduct(id);
+      if (!product) {
+        return c.json({ error: "Product not found" }, 404);
+      }
+      return c.json(product);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
 
 // Product Categories
-adminRoutes.get("/product-categories", requirePermission("products", "read"), (c) => {
-  const categories = getCategories();
-  return c.json(categories);
-});
+adminRoutes.get(
+  "/product-categories",
+  requirePermission("products", "read"),
+  (c) => {
+    const categories = getCategories();
+    return c.json(categories);
+  },
+);
 
-adminRoutes.get("/product-categories/:id", requirePermission("products", "read"), (c) => {
-  if (!category) {
-    return c.json({ error: "Category not found" }, 404);
-  }
-  return c.json(category);
-});
-
-adminRoutes.post("/product-categories", requirePermission("products", "create"), async (c) => {
-  const data = await c.req.json();
-  try {
-    const category = createCategory(data);
-    return c.json(category, 201);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
-
-adminRoutes.put("/product-categories/:id", requirePermission("products", "update"), async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
-  try {
-    const category = updateCategory(id, data);
+adminRoutes.get(
+  "/product-categories/:id",
+  requirePermission("products", "read"),
+  (c) => {
     if (!category) {
       return c.json({ error: "Category not found" }, 404);
     }
     return c.json(category);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.delete("/product-categories/:id", requirePermission("products", "delete"), (c) => {
-  const id = c.req.param("id");
-  try {
-    const deleted = deleteCategory(id);
-    if (!deleted) {
-      return c.json({ error: "Category not found" }, 404);
+adminRoutes.post(
+  "/product-categories",
+  requirePermission("products", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    try {
+      const category = createCategory(data);
+      return c.json(category, 201);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
     }
-    return c.json({ success: true });
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.get("/product-categories/:id/usage", requirePermission("products", "read"), (c) => {
-  const id = c.req.param("id");
-  const usage = isCategoryUsed(id);
-  return c.json(usage);
-});
+adminRoutes.put(
+  "/product-categories/:id",
+  requirePermission("products", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    const data = await c.req.json();
+    try {
+      const category = updateCategory(id, data);
+      if (!category) {
+        return c.json({ error: "Category not found" }, 404);
+      }
+      return c.json(category);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
+
+adminRoutes.delete(
+  "/product-categories/:id",
+  requirePermission("products", "delete"),
+  (c) => {
+    const id = c.req.param("id");
+    try {
+      const deleted = deleteCategory(id);
+      if (!deleted) {
+        return c.json({ error: "Category not found" }, 404);
+      }
+      return c.json({ success: true });
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
+
+adminRoutes.get(
+  "/product-categories/:id/usage",
+  requirePermission("products", "read"),
+  (c) => {
+    const id = c.req.param("id");
+    const usage = isCategoryUsed(id);
+    return c.json(usage);
+  },
+);
 
 // Product Units
-adminRoutes.get("/product-units", requirePermission("products", "read"), (c) => {
-  const units = getUnits();
-  return c.json(units);
-});
+adminRoutes.get(
+  "/product-units",
+  requirePermission("products", "read"),
+  (c) => {
+    const units = getUnits();
+    return c.json(units);
+  },
+);
 
-adminRoutes.get("/product-units/:id", requirePermission("products", "read"), (c) => {
-  if (!unit) {
-    return c.json({ error: "Unit not found" }, 404);
-  }
-  return c.json(unit);
-});
-
-adminRoutes.post("/product-units", requirePermission("products", "create"), async (c) => {
-  const data = await c.req.json();
-  try {
-    const unit = createUnit(data);
-    return c.json(unit, 201);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
-
-adminRoutes.put("/product-units/:id", requirePermission("products", "update"), async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
-  try {
-    const unit = updateUnit(id, data);
+adminRoutes.get(
+  "/product-units/:id",
+  requirePermission("products", "read"),
+  (c) => {
     if (!unit) {
       return c.json({ error: "Unit not found" }, 404);
     }
     return c.json(unit);
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.delete("/product-units/:id", requirePermission("products", "delete"), (c) => {
-  const id = c.req.param("id");
-  try {
-    const deleted = deleteUnit(id);
-    if (!deleted) {
-      return c.json({ error: "Unit not found" }, 404);
+adminRoutes.post(
+  "/product-units",
+  requirePermission("products", "create"),
+  async (c) => {
+    const data = await c.req.json();
+    try {
+      const unit = createUnit(data);
+      return c.json(unit, 201);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
     }
-    return c.json({ success: true });
-  } catch (e) {
-    return c.json({ error: String(e) }, 400);
-  }
-});
+  },
+);
 
-adminRoutes.get("/product-units/:id/usage", requirePermission("products", "read"), (c) => {
-  const id = c.req.param("id");
-  const usage = isUnitUsed(id);
-  return c.json(usage);
-});
+adminRoutes.put(
+  "/product-units/:id",
+  requirePermission("products", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    const data = await c.req.json();
+    try {
+      const unit = updateUnit(id, data);
+      if (!unit) {
+        return c.json({ error: "Unit not found" }, 404);
+      }
+      return c.json(unit);
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
+
+adminRoutes.delete(
+  "/product-units/:id",
+  requirePermission("products", "delete"),
+  (c) => {
+    const id = c.req.param("id");
+    try {
+      const deleted = deleteUnit(id);
+      if (!deleted) {
+        return c.json({ error: "Unit not found" }, 404);
+      }
+      return c.json({ success: true });
+    } catch (e) {
+      return c.json({ error: String(e) }, 400);
+    }
+  },
+);
+
+adminRoutes.get(
+  "/product-units/:id/usage",
+  requirePermission("products", "read"),
+  (c) => {
+    const id = c.req.param("id");
+    const usage = isUnitUsed(id);
+    return c.json(usage);
+  },
+);
 
 // Authenticated HTML/PDF generation for invoices by ID (no share token required)
-adminRoutes.get("/invoices/:id/html", requirePermission("invoices", "read"), async (c) => {
-  const id = c.req.param("id");
-  const invoice = getInvoiceById(id);
-  if (!invoice) {
-    return c.json({ message: "Invoice not found" }, 404);
-  }
+adminRoutes.get(
+  "/invoices/:id/html",
+  requirePermission("invoices", "read"),
+  async (c) => {
+    const id = c.req.param("id");
+    const invoice = getInvoiceById(id);
+    if (!invoice) {
+      return c.json({ message: "Invoice not found" }, 404);
+    }
 
-  // Settings map
-  const settings = await getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value as string;
-    return acc;
-  }, {} as Record<string, string>);
-  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
-  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
-  if (!settingsMap.logo && settingsMap.logoUrl) {
-    settingsMap.logo = settingsMap.logoUrl;
-  }
+    // Settings map
+    const settings = await getSettings();
+    const settingsMap = settings.reduce(
+      (acc: Record<string, string>, s) => {
+        acc[s.key] = s.value as string;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    if (!settingsMap.postalCityFormat && settingsMap.postal_city_format)
+      settingsMap.postalCityFormat = settingsMap.postal_city_format;
+    if (!settingsMap.postalCityFormat && settingsMap.postalcityformat)
+      settingsMap.postalCityFormat = settingsMap.postalcityformat;
+    if (!settingsMap.logo && settingsMap.logoUrl) {
+      settingsMap.logo = settingsMap.logoUrl;
+    }
 
-  const businessSettings = {
-    companyName: settingsMap.companyName || "Your Company",
-    companyAddress: settingsMap.companyAddress || "",
-    companyCity: settingsMap.companyCity || "",
-    companyPostalCode: settingsMap.companyPostalCode || "",
-    companyCountryCode: settingsMap.companyCountryCode || "",
-    postalCityFormat: settingsMap.postalCityFormat || "auto",
-    companyEmail: settingsMap.companyEmail || "",
-    companyPhone: settingsMap.companyPhone || "",
-    companyTaxId: settingsMap.companyTaxId || "",
-    currency: settingsMap.currency || "USD",
-    taxLabel: settingsMap.taxLabel || undefined,
-    logo: settingsMap.logo,
-    // brandLayout removed; always treating as logo-left in rendering
-    paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
-    bankAccount: settingsMap.bankAccount || "",
-    paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
-    defaultNotes: settingsMap.defaultNotes || "",
-    locale: settingsMap.locale || undefined,
-  };
+    const businessSettings = {
+      companyName: settingsMap.companyName || "Your Company",
+      companyAddress: settingsMap.companyAddress || "",
+      companyCity: settingsMap.companyCity || "",
+      companyPostalCode: settingsMap.companyPostalCode || "",
+      companyCountryCode: settingsMap.companyCountryCode || "",
+      postalCityFormat: settingsMap.postalCityFormat || "auto",
+      companyEmail: settingsMap.companyEmail || "",
+      companyPhone: settingsMap.companyPhone || "",
+      companyTaxId: settingsMap.companyTaxId || "",
+      currency: settingsMap.currency || "USD",
+      taxLabel: settingsMap.taxLabel || undefined,
+      logo: settingsMap.logo,
+      // brandLayout removed; always treating as logo-left in rendering
+      paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
+      bankAccount: settingsMap.bankAccount || "",
+      paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
+      defaultNotes: settingsMap.defaultNotes || "",
+      locale: settingsMap.locale || undefined,
+    };
 
-  // Use template/highlight from settings only (no query overrides)
-  const highlight = settingsMap.highlight ?? undefined;
-  let selectedTemplateId: string | undefined = settingsMap.templateId
-    ?.toLowerCase();
-  if (
-    selectedTemplateId === "professional" ||
-    selectedTemplateId === "professional-modern"
-  ) selectedTemplateId = "professional-modern";
-  else if (
-    selectedTemplateId === "minimalist" ||
-    selectedTemplateId === "minimalist-clean"
-  ) selectedTemplateId = "minimalist-clean";
+    // Use template/highlight from settings only (no query overrides)
+    const highlight = settingsMap.highlight ?? undefined;
+    let selectedTemplateId: string | undefined =
+      settingsMap.templateId?.toLowerCase();
+    if (
+      selectedTemplateId === "professional" ||
+      selectedTemplateId === "professional-modern"
+    )
+      selectedTemplateId = "professional-modern";
+    else if (
+      selectedTemplateId === "minimalist" ||
+      selectedTemplateId === "minimalist-clean"
+    )
+      selectedTemplateId = "minimalist-clean";
 
-  const html = buildInvoiceHTML(
-    invoice,
-    businessSettings,
-    selectedTemplateId,
-    highlight,
-    settingsMap.dateFormat,
-    settingsMap.numberFormat,
-    settingsMap.locale,
-  );
-  return new Response(html, {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
-});
+    const customer = getCustomerById(invoice.customerId);
+    const renderLocale = resolveInvoiceRenderLocale(
+      invoice.locale,
+      customer?.countryCode,
+      settingsMap.locale,
+    );
 
-adminRoutes.get("/invoices/:id/pdf", requirePermission("invoices", "export"), async (c) => {
-  const id = c.req.param("id");
-  const invoice = getInvoiceById(id);
-  if (!invoice) {
-    return c.json({ message: "Invoice not found" }, 404);
-  }
-
-  // Settings map
-  const settings = await getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value as string;
-    return acc;
-  }, {} as Record<string, string>);
-  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
-  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
-  if (!settingsMap.logo && settingsMap.logoUrl) {
-    settingsMap.logo = settingsMap.logoUrl;
-  }
-
-  const businessSettings = {
-    companyName: settingsMap.companyName || "Your Company",
-    companyAddress: settingsMap.companyAddress || "",
-    companyCity: settingsMap.companyCity || "",
-    companyPostalCode: settingsMap.companyPostalCode || "",
-    companyCountryCode: settingsMap.companyCountryCode || "",
-    postalCityFormat: settingsMap.postalCityFormat || "auto",
-    companyEmail: settingsMap.companyEmail || "",
-    companyPhone: settingsMap.companyPhone || "",
-    companyTaxId: settingsMap.companyTaxId || "",
-    currency: settingsMap.currency || "USD",
-    taxLabel: settingsMap.taxLabel || undefined,
-    logo: settingsMap.logo,
-    // brandLayout removed; always treating as logo-left in rendering
-    paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
-    bankAccount: settingsMap.bankAccount || "",
-    paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
-    defaultNotes: settingsMap.defaultNotes || "",
-    locale: settingsMap.locale || undefined,
-  };
-
-  // Use template/highlight from settings only (no query overrides)
-  const highlight = settingsMap.highlight ?? undefined;
-  let selectedTemplateId: string | undefined = settingsMap.templateId
-    ?.toLowerCase();
-  if (
-    selectedTemplateId === "professional" ||
-    selectedTemplateId === "professional-modern"
-  ) selectedTemplateId = "professional-modern";
-  else if (
-    selectedTemplateId === "minimalist" ||
-    selectedTemplateId === "minimalist-clean"
-  ) selectedTemplateId = "minimalist-clean";
-
-  try {
-    const embedXml =
-      String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
-    const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
-    const pdfBuffer = await generatePDF(
+    const html = buildInvoiceHTML(
       invoice,
       businessSettings,
       selectedTemplateId,
       highlight,
-      {
-        embedXml,
-        embedXmlProfileId: xmlProfileId,
-        dateFormat: settingsMap.dateFormat,
-        numberFormat: settingsMap.numberFormat,
-        locale: settingsMap.locale,
-      },
+      settingsMap.dateFormat,
+      settingsMap.numberFormat,
+      renderLocale,
     );
-    // Detect embedded attachments for diagnostics
-    let hasAttachment = false;
-    let attachmentNames: string[] = [];
-    try {
-      // Dynamically import to avoid import cycles
-      const { PDFDocument } = await import("pdf-lib");
-      const doc = await PDFDocument.load(pdfBuffer);
-      const maybe = (doc as unknown as {
-        getAttachments?: () => Record<string, Uint8Array>;
-      }).getAttachments?.();
-      if (maybe && typeof maybe === "object") {
-        attachmentNames = Object.keys(maybe);
-        hasAttachment = attachmentNames.length > 0;
-      }
-    } catch (_e) { /* ignore */ }
-    return new Response(pdfBuffer, {
+    return new Response(html, {
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="invoice-${
-          invoice.invoiceNumber || id
-        }.pdf"`,
-        ...(hasAttachment
-          ? {
-            "X-Embedded-XML": "true",
-            "X-Embedded-XML-Names": attachmentNames.join(","),
-          }
-          : { "X-Embedded-XML": "false" }),
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
       },
     });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("/invoices/:id/pdf failed:", msg);
-    return c.json({ error: "Failed to generate PDF", details: msg }, 500);
-  }
-});
+  },
+);
+
+adminRoutes.get(
+  "/invoices/:id/pdf",
+  requirePermission("invoices", "export"),
+  async (c) => {
+    const id = c.req.param("id");
+    const invoice = getInvoiceById(id);
+    if (!invoice) {
+      return c.json({ message: "Invoice not found" }, 404);
+    }
+
+    // Settings map
+    const settings = await getSettings();
+    const settingsMap = settings.reduce(
+      (acc: Record<string, string>, s) => {
+        acc[s.key] = s.value as string;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    if (!settingsMap.postalCityFormat && settingsMap.postal_city_format)
+      settingsMap.postalCityFormat = settingsMap.postal_city_format;
+    if (!settingsMap.postalCityFormat && settingsMap.postalcityformat)
+      settingsMap.postalCityFormat = settingsMap.postalcityformat;
+    if (!settingsMap.logo && settingsMap.logoUrl) {
+      settingsMap.logo = settingsMap.logoUrl;
+    }
+
+    const businessSettings = {
+      companyName: settingsMap.companyName || "Your Company",
+      companyAddress: settingsMap.companyAddress || "",
+      companyCity: settingsMap.companyCity || "",
+      companyPostalCode: settingsMap.companyPostalCode || "",
+      companyCountryCode: settingsMap.companyCountryCode || "",
+      postalCityFormat: settingsMap.postalCityFormat || "auto",
+      companyEmail: settingsMap.companyEmail || "",
+      companyPhone: settingsMap.companyPhone || "",
+      companyTaxId: settingsMap.companyTaxId || "",
+      currency: settingsMap.currency || "USD",
+      taxLabel: settingsMap.taxLabel || undefined,
+      logo: settingsMap.logo,
+      // brandLayout removed; always treating as logo-left in rendering
+      paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
+      bankAccount: settingsMap.bankAccount || "",
+      paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
+      defaultNotes: settingsMap.defaultNotes || "",
+      locale: settingsMap.locale || undefined,
+    };
+
+    // Use template/highlight from settings only (no query overrides)
+    const highlight = settingsMap.highlight ?? undefined;
+    let selectedTemplateId: string | undefined =
+      settingsMap.templateId?.toLowerCase();
+    if (
+      selectedTemplateId === "professional" ||
+      selectedTemplateId === "professional-modern"
+    )
+      selectedTemplateId = "professional-modern";
+    else if (
+      selectedTemplateId === "minimalist" ||
+      selectedTemplateId === "minimalist-clean"
+    )
+      selectedTemplateId = "minimalist-clean";
+
+    try {
+      const embedXml =
+        String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
+      const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
+      const customer = getCustomerById(invoice.customerId);
+      const renderLocale = resolveInvoiceRenderLocale(
+        invoice.locale,
+        customer?.countryCode,
+        settingsMap.locale,
+      );
+
+      const pdfBuffer = await generatePDF(
+        invoice,
+        businessSettings,
+        selectedTemplateId,
+        highlight,
+        {
+          embedXml,
+          embedXmlProfileId: xmlProfileId,
+          dateFormat: settingsMap.dateFormat,
+          numberFormat: settingsMap.numberFormat,
+          locale: renderLocale,
+        },
+      );
+      // Detect embedded attachments for diagnostics
+      let hasAttachment = false;
+      let attachmentNames: string[] = [];
+      try {
+        // Dynamically import to avoid import cycles
+        const { PDFDocument } = await import("pdf-lib");
+        const doc = await PDFDocument.load(pdfBuffer);
+        const maybe = (
+          doc as unknown as {
+            getAttachments?: () => Record<string, Uint8Array>;
+          }
+        ).getAttachments?.();
+        if (maybe && typeof maybe === "object") {
+          attachmentNames = Object.keys(maybe);
+          hasAttachment = attachmentNames.length > 0;
+        }
+      } catch (_e) {
+        /* ignore */
+      }
+      return new Response(pdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="invoice-${
+            invoice.invoiceNumber || id
+          }.pdf"`,
+          ...(hasAttachment
+            ? {
+                "X-Embedded-XML": "true",
+                "X-Embedded-XML-Names": attachmentNames.join(","),
+              }
+            : { "X-Embedded-XML": "false" }),
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("/invoices/:id/pdf failed:", msg);
+      return c.json({ error: "Failed to generate PDF", details: msg }, 500);
+    }
+  },
+);
 
 // UBL (PEPPOL BIS Billing 3.0) XML for an invoice by ID
-adminRoutes.get("/invoices/:id/ubl.xml", requirePermission("invoices", "export"), async (c) => {
-  const id = c.req.param("id");
-  const invoice = getInvoiceById(id);
-  if (!invoice) {
-    return c.json({ message: "Invoice not found" }, 404);
-  }
+adminRoutes.get(
+  "/invoices/:id/ubl.xml",
+  requirePermission("invoices", "export"),
+  async (c) => {
+    const id = c.req.param("id");
+    const invoice = getInvoiceById(id);
+    if (!invoice) {
+      return c.json({ message: "Invoice not found" }, 404);
+    }
 
-  const settings = await getSettings();
-  const map = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value as string;
-    return acc;
-  }, {} as Record<string, string>);
+    const settings = await getSettings();
+    const map = settings.reduce(
+      (acc: Record<string, string>, s) => {
+        acc[s.key] = s.value as string;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
-  const businessSettings = {
-    companyName: map.companyName || "Your Company",
-    companyAddress: map.companyAddress || "",
-    companyCity: map.companyCity || "",
-    companyPostalCode: map.companyPostalCode || "",
-    companyEmail: map.companyEmail || "",
-    companyPhone: map.companyPhone || "",
-    companyTaxId: map.companyTaxId || "",
-    currency: map.currency || "USD",
-    logo: map.logo,
-    paymentMethods: map.paymentMethods || "Bank Transfer",
-    bankAccount: map.bankAccount || "",
-    paymentTerms: map.paymentTerms || "Due in 30 days",
-    defaultNotes: map.defaultNotes || "",
-    companyCountryCode: map.companyCountryCode || "",
-  };
+    const businessSettings = {
+      companyName: map.companyName || "Your Company",
+      companyAddress: map.companyAddress || "",
+      companyCity: map.companyCity || "",
+      companyPostalCode: map.companyPostalCode || "",
+      companyEmail: map.companyEmail || "",
+      companyPhone: map.companyPhone || "",
+      companyTaxId: map.companyTaxId || "",
+      currency: map.currency || "USD",
+      logo: map.logo,
+      paymentMethods: map.paymentMethods || "Bank Transfer",
+      bankAccount: map.bankAccount || "",
+      paymentTerms: map.paymentTerms || "Due in 30 days",
+      defaultNotes: map.defaultNotes || "",
+      companyCountryCode: map.companyCountryCode || "",
+    };
 
-  // Optional PEPPOL endpoint IDs if configured in settings
-  const xml = generateUBLInvoiceXML(invoice, businessSettings, {
-    sellerEndpointId: map.peppolSellerEndpointId,
-    sellerEndpointSchemeId: map.peppolSellerEndpointSchemeId,
-    buyerEndpointId: map.peppolBuyerEndpointId,
-    buyerEndpointSchemeId: map.peppolBuyerEndpointSchemeId,
-    sellerCountryCode: map.companyCountryCode,
-    buyerCountryCode: invoice.customer.countryCode,
-  });
-
-  return new Response(xml, {
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Content-Disposition": `attachment; filename="invoice-${
-        invoice.invoiceNumber || id
-      }.xml"`,
-    },
-  });
-});
-
-// Generic XML export selecting an internal profile (?profile=ubl21 or stub-generic)
-adminRoutes.get("/invoices/:id/xml", requirePermission("invoices", "export"), async (c) => {
-  const id = c.req.param("id");
-  const invoice = getInvoiceById(id);
-  if (!invoice) return c.json({ message: "Invoice not found" }, 404);
-
-  const settings = await getSettings();
-  const map = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value as string;
-    return acc;
-  }, {} as Record<string, string>);
-
-  const businessSettings = {
-    companyName: map.companyName || "Your Company",
-    companyAddress: map.companyAddress || "",
-    companyCity: map.companyCity || "",
-    companyPostalCode: map.companyPostalCode || "",
-    companyEmail: map.companyEmail || "",
-    companyPhone: map.companyPhone || "",
-    companyTaxId: map.companyTaxId || "",
-    currency: map.currency || "USD",
-    logo: map.logo,
-    paymentMethods: map.paymentMethods || "Bank Transfer",
-    bankAccount: map.bankAccount || "",
-    paymentTerms: map.paymentTerms || "Due in 30 days",
-    defaultNotes: map.defaultNotes || "",
-    companyCountryCode: map.companyCountryCode || "",
-  };
-
-  const url = new URL(c.req.url);
-  const profileParam = url.searchParams.get("profile") || map.xmlProfileId ||
-    undefined;
-  const { xml, profile } = generateInvoiceXML(
-    profileParam,
-    invoice,
-    businessSettings,
-    {
+    // Optional PEPPOL endpoint IDs if configured in settings
+    const xml = generateUBLInvoiceXML(invoice, businessSettings, {
       sellerEndpointId: map.peppolSellerEndpointId,
       sellerEndpointSchemeId: map.peppolSellerEndpointSchemeId,
       buyerEndpointId: map.peppolBuyerEndpointId,
       buyerEndpointSchemeId: map.peppolBuyerEndpointSchemeId,
       sellerCountryCode: map.companyCountryCode,
       buyerCountryCode: invoice.customer.countryCode,
-    },
-  );
+    });
 
-  return new Response(xml, {
-    headers: {
-      "Content-Type": `${profile.mediaType}; charset=utf-8`,
-      "Content-Disposition": `attachment; filename="invoice-${
-        invoice.invoiceNumber || id
-      }.${profile.fileExtension}"`,
-    },
-  });
-});
+    return new Response(xml, {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Content-Disposition": `attachment; filename="invoice-${
+          invoice.invoiceNumber || id
+        }.xml"`,
+      },
+    });
+  },
+);
+
+// Generic XML export selecting an internal profile (?profile=ubl21 or stub-generic)
+adminRoutes.get(
+  "/invoices/:id/xml",
+  requirePermission("invoices", "export"),
+  async (c) => {
+    const id = c.req.param("id");
+    const invoice = getInvoiceById(id);
+    if (!invoice) return c.json({ message: "Invoice not found" }, 404);
+
+    const settings = await getSettings();
+    const map = settings.reduce(
+      (acc: Record<string, string>, s) => {
+        acc[s.key] = s.value as string;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    const businessSettings = {
+      companyName: map.companyName || "Your Company",
+      companyAddress: map.companyAddress || "",
+      companyCity: map.companyCity || "",
+      companyPostalCode: map.companyPostalCode || "",
+      companyEmail: map.companyEmail || "",
+      companyPhone: map.companyPhone || "",
+      companyTaxId: map.companyTaxId || "",
+      currency: map.currency || "USD",
+      logo: map.logo,
+      paymentMethods: map.paymentMethods || "Bank Transfer",
+      bankAccount: map.bankAccount || "",
+      paymentTerms: map.paymentTerms || "Due in 30 days",
+      defaultNotes: map.defaultNotes || "",
+      companyCountryCode: map.companyCountryCode || "",
+    };
+
+    const url = new URL(c.req.url);
+    const profileParam =
+      url.searchParams.get("profile") || map.xmlProfileId || undefined;
+    const { xml, profile } = generateInvoiceXML(
+      profileParam,
+      invoice,
+      businessSettings,
+      {
+        sellerEndpointId: map.peppolSellerEndpointId,
+        sellerEndpointSchemeId: map.peppolSellerEndpointSchemeId,
+        buyerEndpointId: map.peppolBuyerEndpointId,
+        buyerEndpointSchemeId: map.peppolBuyerEndpointSchemeId,
+        sellerCountryCode: map.companyCountryCode,
+        buyerCountryCode: invoice.customer.countryCode,
+      },
+    );
+
+    return new Response(xml, {
+      headers: {
+        "Content-Type": `${profile.mediaType}; charset=utf-8`,
+        "Content-Disposition": `attachment; filename="invoice-${
+          invoice.invoiceNumber || id
+        }.${profile.fileExtension}"`,
+      },
+    });
+  },
+);
 
 // List built-in XML profiles
 adminRoutes.get("/xml-profiles", requirePermission("invoices", "read"), (c) => {
@@ -1425,10 +1733,15 @@ adminRoutes.get("/users/permissions-schema", (c) => {
       user.permissions.some(
         (p) =>
           p.resource === "users" &&
-          (p.action === "read" || p.action === "create" || p.action === "update"),
+          (p.action === "read" ||
+            p.action === "create" ||
+            p.action === "update"),
       ));
   if (!canViewSchema) {
-    return c.json({ error: "Missing permission: users:read|create|update" }, 403);
+    return c.json(
+      { error: "Missing permission: users:read|create|update" },
+      403,
+    );
   }
 
   return c.json({
@@ -1465,30 +1778,34 @@ adminRoutes.get("/users/:id", requirePermission("users", "read"), (c) => {
 });
 
 // PUT /users/:id — update user
-adminRoutes.put("/users/:id", requirePermission("users", "update"), async (c) => {
-  const id = c.req.param("id");
-  try {
-    const data = await c.req.json();
-    const currentUser = getAuthUser(c);
+adminRoutes.put(
+  "/users/:id",
+  requirePermission("users", "update"),
+  async (c) => {
+    const id = c.req.param("id");
+    try {
+      const data = await c.req.json();
+      const currentUser = getAuthUser(c);
 
-    // Prevent admin from demoting themselves
-    if (currentUser.id === id && data.isAdmin === false) {
-      return c.json({ error: "Cannot remove your own admin status" }, 400);
-    }
-    // Prevent admin from deactivating themselves
-    if (currentUser.id === id && data.isActive === false) {
-      return c.json({ error: "Cannot deactivate your own account" }, 400);
-    }
+      // Prevent admin from demoting themselves
+      if (currentUser.id === id && data.isAdmin === false) {
+        return c.json({ error: "Cannot remove your own admin status" }, 400);
+      }
+      // Prevent admin from deactivating themselves
+      if (currentUser.id === id && data.isActive === false) {
+        return c.json({ error: "Cannot deactivate your own account" }, 400);
+      }
 
-    const user = await updateUserCtrl(id, data);
-    return c.json(user);
-  } catch (e) {
-    const msg = String(e);
-    if (/already exists/i.test(msg)) return c.json({ error: msg }, 409);
-    if (/not found/i.test(msg)) return c.json({ error: msg }, 404);
-    return c.json({ error: msg }, 400);
-  }
-});
+      const user = await updateUserCtrl(id, data);
+      return c.json(user);
+    } catch (e) {
+      const msg = String(e);
+      if (/already exists/i.test(msg)) return c.json({ error: msg }, 409);
+      if (/not found/i.test(msg)) return c.json({ error: msg }, 404);
+      return c.json({ error: msg }, 400);
+    }
+  },
+);
 
 // DELETE /users/:id — delete user
 adminRoutes.delete("/users/:id", requirePermission("users", "delete"), (c) => {
