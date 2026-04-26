@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
+  import "@fontsource-variable/inter/wght.css";
   import { LayoutDashboard, LogOut, Ellipsis, Package, ReceiptText, Settings, UserCog, Users } from "lucide-svelte";
   import DemoModeDisabler from "$lib/components/DemoModeDisabler.svelte";
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte";

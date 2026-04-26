@@ -35,6 +35,7 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "daisyui": "^5.5.19",
     "lucide-svelte": "^0.577.0"
   }
