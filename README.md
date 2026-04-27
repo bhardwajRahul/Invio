@@ -1,8 +1,9 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/kittendevv/Invio/refs/heads/main/assets/banner-default.png" alt="Invio" width="100%" />
 </p>
-<p align="center"><b>Self-hosted invoicing without the bloat. Fast, transparent, and fully yours.</b></p>
+<p align="center"><b>Selfhosted invoicing without the bloat.</b></p>
 <p align="center">
+  <a href="https://invio.dev">Website</a> •
   <a href="https://demo.invio.dev">Live Demo</a> •
   <a href="https://github.com/kittendevv/Invio/wiki">Documentation</a> •
   <a href="https://ko-fi.com/codingkitten">Support</a>
@@ -15,90 +16,17 @@
 
 ## 🌟 Why Invio?
 
-- Built for doing, not configuring — create an invoice, send a link, get paid. No CRMs, projects, or bloat getting in your way.
-- You really own it — self‑hosted by default. Your data lives where you put it, and exporting is always an option.
-- Fast & dependable — Deno + Fresh on the frontend and Hono + SQLite on the backend keep things simple and quick.
-- Client‑friendly — share a secure public link—no accounts or passwords required to view invoices.
-- Secure by default — built-in security headers, JWT authentication, and rate limiting to protect your instance.
+- Zero Bloat - Create an invoice, share a link, get paid. No menus to dig through, no setup wizards, no fluff.
+- Fully Selfhosted - Your data, stays your data. Host it on your own hardware and never worry about what happens when a SaaS company changes its pricing or shuts down.
+- Client Friendly - Skip the 'how do I log in?' emails. Just send a secure link, no account needed.
+- Free. Forever. - No subscription, no per-invoice charges, no hidden fees. Invio is fully free and open source. Good tools shouldn't cost a fortune.
 
-## 🔐 Security Features
+## 🚀 Quick Start
 
-Invio includes several security features out of the box:
-
-- **Rate Limiting** — Protects the login endpoint against brute-force attacks (by IP, username, and combination)
-- **Security Headers** — X-Content-Type-Options, X-Frame-Options, CSP, and more
-- **JWT Authentication** — Secure session management with configurable TTL
-- **HSTS Support** — Optional Strict-Transport-Security headers for HTTPS deployments
-
-### Rate Limiting Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RATE_LIMIT_ENABLED` | `true` | Enable/disable rate limiting |
-| `RATE_LIMIT_MAX_ATTEMPTS` | `5` | Max failed attempts before blocking |
-| `RATE_LIMIT_WINDOW_SECONDS` | `900` | Time window (15 minutes) |
-| `RATE_LIMIT_TRUST_PROXY` | `false` | Trust X-Forwarded-For header |
-
-Rate limiting tracks failed attempts by:
-- **IP address** — Blocks an IP after too many failed attempts on any account
-- **Username** — Blocks a username after too many failed attempts from any IP (distributed attack protection)
-- **IP + Username** — Blocks specific combinations
-
-### Reverse Proxy Configuration
-
-When running Invio behind a reverse proxy, set `RATE_LIMIT_TRUST_PROXY=true` and configure your proxy to forward the client IP:
-
-<details>
-<summary><b>nginx</b></summary>
-
-```nginx
-location / {
-    proxy_pass http://localhost:3000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-</details>
-
-<details>
-<summary><b>Apache</b></summary>
-
-```apache
-<VirtualHost *:443>
-    ProxyPreserveHost On
-    ProxyPass / http://localhost:3000/
-    ProxyPassReverse / http://localhost:3000/
-
-    RequestHeader set X-Real-IP "%{REMOTE_ADDR}s"
-    RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}s"
-    RequestHeader set X-Forwarded-Proto "https"
-</VirtualHost>
-```
-
-Requires: `mod_proxy`, `mod_proxy_http`, `mod_headers`
-</details>
-
-<details>
-<summary><b>Caddy</b></summary>
-
-```caddyfile
-invio.example.com {
-    reverse_proxy localhost:3000 {
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
-}
-```
-
-Note: Caddy automatically sets `X-Forwarded-For` by default.
-</details>
-
-See [`.env.example`](.env.example) for all configuration options.
+Check out the [Quick Start guide](https://github.com/kittendevv/Invio/wiki/Quick-Start) in the documentation to get up and running.
 
 ## 🖼️ Screenshots
+
 <details>
 <summary>Dashboard</summary>
   
@@ -139,13 +67,12 @@ Invio is made possible by your contributions!
 
 - Found a bug or have an idea? Open an issue.
 - Want to add a feature or fix something? Fork and submit a PR.
-- All experience levels welcome — we’re excited to build with you.
+- All experience levels welcome!
 
 ## ☕ Support me
 
 If you like Invio and want to support development:
 - Buy me a coffee: https://ko-fi.com/codingkitten
 
-
 ---
-Made with 💖 by <a href="https://github.com/kittendevv">kittendevv</a> and contributors — if you find this useful, please ⭐️ the repo!
+Made with 💖 by <a href="https://github.com/kittendevv">kittendevv</a> and contributors - if you find this useful, please ⭐️ the repo!
