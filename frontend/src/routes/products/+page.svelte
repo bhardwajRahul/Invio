@@ -46,7 +46,7 @@
 
 <!-- Mobile List -->
 <div class="block space-y-3 md:hidden">
-  {#each products as p}
+  {#each products as p (p.id)}
     <a href={`/products/${p.id}`} class="card bg-base-100 border-base-300 border transition-shadow hover:shadow-md">
       <div class="card-body p-4">
         <div class="mb-2 flex items-start justify-between">
@@ -84,7 +84,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each products as p}
+      {#each products as p (p.id)}
         <tr class="hover">
           <td class="max-w-[12rem] truncate">
             <a class="link" href={`/products/${p.id}`}>{p.name || p.id}</a>

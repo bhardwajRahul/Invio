@@ -26,7 +26,9 @@ publicRoutes.get("/demo-mode", (c) => {
 
 publicRoutes.get("/public/assets/logos/:file", async (c) => {
   const file = c.req.param("file") || "";
-  const fsPath = resolveLogoFsPathFromPublicPath(`/public/assets/logos/${file}`);
+  const fsPath = resolveLogoFsPathFromPublicPath(
+    `/public/assets/logos/${file}`,
+  );
   if (!fsPath) return c.notFound();
 
   try {
@@ -89,12 +91,17 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
 
   // Settings map
   const settings = getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value;
-    return acc;
-  }, {} as Record<string, string>);
-  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
-  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
+  const settingsMap = settings.reduce(
+    (acc: Record<string, string>, s) => {
+      acc[s.key] = s.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format)
+    settingsMap.postalCityFormat = settingsMap.postal_city_format;
+  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat)
+    settingsMap.postalCityFormat = settingsMap.postalcityformat;
   if (!settingsMap.logo && settingsMap.logoUrl) {
     settingsMap.logo = settingsMap.logoUrl as string;
   }
@@ -105,17 +112,15 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
-    companyCountryCode: settingsMap.companyCountryCode || "",
+    companyCountryCode:
+      settingsMap.companyCountryCode || settingsMap.countryCode || "",
     postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
-    companyCountryCode: settingsMap.companyCountryCode || settingsMap.countryCode || "",
     currency: settingsMap.currency || "USD",
-      taxLabel: settingsMap.taxLabel || undefined,
+    taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
-    // pass-through layout controls
-    // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
@@ -125,8 +130,8 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
 
   // Use template/highlight from settings only (no query overrides)
   const highlight = settingsMap.highlight ?? undefined;
-  let selectedTemplateId: string | undefined = settingsMap.templateId
-    ?.toLowerCase();
+  let selectedTemplateId: string | undefined =
+    settingsMap.templateId?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"
@@ -140,7 +145,8 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
   }
 
   try {
-    const embedXml = String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
+    const embedXml =
+      String(settingsMap.embedXmlInPdf || "false").toLowerCase() === "true";
     const xmlProfileId = settingsMap.xmlProfileId || "ubl21";
     const pdfBuffer = await generatePDF(
       invoice,
@@ -161,12 +167,16 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     try {
       const { PDFDocument } = await import("pdf-lib");
       const doc = await PDFDocument.load(pdfBuffer);
-      const maybe = (doc as unknown as { getAttachments?: () => Record<string, Uint8Array> }).getAttachments?.();
+      const maybe = (
+        doc as unknown as { getAttachments?: () => Record<string, Uint8Array> }
+      ).getAttachments?.();
       if (maybe && typeof maybe === "object") {
         attachmentNames = Object.keys(maybe);
         hasAttachment = attachmentNames.length > 0;
       }
-    } catch (_e) { /* ignore */ }
+    } catch (_e) {
+      /* ignore */
+    }
     return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
@@ -174,7 +184,12 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
           invoice.invoiceNumber || shareToken
         }.pdf"`,
         "X-Robots-Tag": "noindex",
-        ...(hasAttachment ? { "X-Embedded-XML": "true", "X-Embedded-XML-Names": attachmentNames.join(",") } : { "X-Embedded-XML": "false" }),
+        ...(hasAttachment
+          ? {
+              "X-Embedded-XML": "true",
+              "X-Embedded-XML-Names": attachmentNames.join(","),
+            }
+          : { "X-Embedded-XML": "false" }),
       },
     });
   } catch (e) {
@@ -193,12 +208,17 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
   }
 
   const settings = getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value;
-    return acc;
-  }, {} as Record<string, string>);
-  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) settingsMap.postalCityFormat = settingsMap.postal_city_format;
-  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) settingsMap.postalCityFormat = settingsMap.postalcityformat;
+  const settingsMap = settings.reduce(
+    (acc: Record<string, string>, s) => {
+      acc[s.key] = s.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+  if (!settingsMap.postalCityFormat && settingsMap.postal_city_format)
+    settingsMap.postalCityFormat = settingsMap.postal_city_format;
+  if (!settingsMap.postalCityFormat && settingsMap.postalcityformat)
+    settingsMap.postalCityFormat = settingsMap.postalcityformat;
   if (!settingsMap.logo && settingsMap.logoUrl) {
     settingsMap.logo = settingsMap.logoUrl as string;
   }
@@ -208,17 +228,15 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
-    companyCountryCode: settingsMap.companyCountryCode || "",
+    companyCountryCode:
+      settingsMap.companyCountryCode || settingsMap.countryCode || "",
     postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
-    companyCountryCode: settingsMap.companyCountryCode ||
-      settingsMap.countryCode || "",
     currency: settingsMap.currency || "USD",
-      taxLabel: settingsMap.taxLabel || undefined,
+    taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
-    // brandLayout removed; always treating as logo-left in rendering
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
@@ -228,16 +246,18 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
 
   // Use template/highlight from settings only (no query overrides)
   const highlight = settingsMap.highlight ?? undefined;
-  let selectedTemplateId: string | undefined = settingsMap.templateId
-    ?.toLowerCase();
+  let selectedTemplateId: string | undefined =
+    settingsMap.templateId?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"
-  ) selectedTemplateId = "professional-modern";
+  )
+    selectedTemplateId = "professional-modern";
   else if (
     selectedTemplateId === "minimalist" ||
     selectedTemplateId === "minimalist-clean"
-  ) selectedTemplateId = "minimalist-clean";
+  )
+    selectedTemplateId = "minimalist-clean";
 
   const html = buildInvoiceHTML(
     invoice,
@@ -267,10 +287,13 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
   }
 
   const settings = getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value;
-    return acc;
-  }, {} as Record<string, string>);
+  const settingsMap = settings.reduce(
+    (acc: Record<string, string>, s) => {
+      acc[s.key] = s.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
@@ -282,7 +305,7 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
-      taxLabel: settingsMap.taxLabel || undefined,
+    taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
@@ -318,10 +341,13 @@ publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
   if (!invoice) return c.json({ message: "Invoice not found" }, 404);
 
   const settings = getSettings();
-  const settingsMap = settings.reduce((acc: Record<string, string>, s) => {
-    acc[s.key] = s.value;
-    return acc;
-  }, {} as Record<string, string>);
+  const settingsMap = settings.reduce(
+    (acc: Record<string, string>, s) => {
+      acc[s.key] = s.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 
   const businessSettings = {
     companyName: settingsMap.companyName || "Your Company",
@@ -330,7 +356,7 @@ publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
     companyPhone: settingsMap.companyPhone || "",
     companyTaxId: settingsMap.companyTaxId || "",
     currency: settingsMap.currency || "USD",
-      taxLabel: settingsMap.taxLabel || undefined,
+    taxLabel: settingsMap.taxLabel || undefined,
     logo: settingsMap.logo,
     paymentMethods: settingsMap.paymentMethods || "Bank Transfer",
     bankAccount: settingsMap.bankAccount || "",
@@ -340,15 +366,21 @@ publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
   };
 
   const url = new URL(c.req.url);
-  const profileParam = url.searchParams.get("profile") || settingsMap.xmlProfileId || undefined;
-  const { xml, profile } = generateInvoiceXML(profileParam, invoice, businessSettings, {
-    sellerEndpointId: settingsMap.peppolSellerEndpointId,
-    sellerEndpointSchemeId: settingsMap.peppolSellerEndpointSchemeId,
-    buyerEndpointId: settingsMap.peppolBuyerEndpointId,
-    buyerEndpointSchemeId: settingsMap.peppolBuyerEndpointSchemeId,
-    sellerCountryCode: settingsMap.companyCountryCode,
-    buyerCountryCode: invoice.customer.countryCode,
-  });
+  const profileParam =
+    url.searchParams.get("profile") || settingsMap.xmlProfileId || undefined;
+  const { xml, profile } = generateInvoiceXML(
+    profileParam,
+    invoice,
+    businessSettings,
+    {
+      sellerEndpointId: settingsMap.peppolSellerEndpointId,
+      sellerEndpointSchemeId: settingsMap.peppolSellerEndpointSchemeId,
+      buyerEndpointId: settingsMap.peppolBuyerEndpointId,
+      buyerEndpointSchemeId: settingsMap.peppolBuyerEndpointSchemeId,
+      sellerCountryCode: settingsMap.companyCountryCode,
+      buyerCountryCode: invoice.customer.countryCode,
+    },
+  );
 
   return new Response(xml, {
     headers: {

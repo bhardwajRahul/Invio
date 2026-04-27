@@ -2,7 +2,7 @@
   import { UserPlus } from "lucide-svelte";
   import { getContext } from "svelte";
   import { formatPostalCityLine } from "$lib/address";
-  
+
   const getLoc = getContext("localization") as () => any;
 
   let { data } = $props();
@@ -31,7 +31,7 @@
 
 <!-- Mobile Card View -->
 <div class="block space-y-3 md:hidden">
-  {#each customers as c}
+  {#each customers as c (c.id)}
     <a href={`/customers/${c.id}`} class="card bg-base-100 border-base-300 border transition-shadow hover:shadow-md">
       <div class="card-body p-4">
         <div class="link font-semibold">{c.name || c.id}</div>
@@ -66,7 +66,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each customers as c}
+      {#each customers as c (c.id)}
         <tr class="hover">
           <td>
             <a class="link" href={`/customers/${c.id}`}>{c.name || c.id}</a>

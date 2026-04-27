@@ -114,7 +114,7 @@
       </div>
     {:else}
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {#each templates as tmpl}
+        {#each templates as tmpl (tmpl.id)}
           <div class="card bg-base-200 border-base-300 border">
             <div class="card-body p-4">
               <h4 class="card-title text-base">{tmpl.name}</h4>

@@ -127,11 +127,10 @@
       id: "silk",
     },
   ];
-
 </script>
 
 <div class="grid grid-cols-2 gap-2 xl:grid-cols-3">
-  {#each themes as item}
-    <ThemeCard theme={item} selectedTheme={selectedTheme} onSelect={handleThemeSelect} />
+  {#each themes as item (item.id)}
+    <ThemeCard theme={item} {selectedTheme} onSelect={handleThemeSelect} />
   {/each}
 </div>

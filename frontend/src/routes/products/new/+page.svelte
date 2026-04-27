@@ -69,7 +69,7 @@
         </label>
         <select id="unit" name="unit" class="select select-sm select-bordered w-full">
           <option value="">{t("Select unit")}</option>
-          {#each data.units as u}
+          {#each data.units as u (u.id)}
             <option value={u.code}>{u.name}</option>
           {/each}
         </select>
@@ -81,7 +81,7 @@
         </label>
         <select id="category" name="category" class="select select-sm select-bordered w-full">
           <option value="">{t("Select category")}</option>
-          {#each data.categories as c}
+          {#each data.categories as c (c.id)}
             <option value={c.code}>{c.name}</option>
           {/each}
         </select>
@@ -95,7 +95,7 @@
         </label>
         <select id="taxDefinitionId" name="taxDefinitionId" class="select select-sm select-bordered w-full">
           <option value="">{t("No default tax")}</option>
-          {#each data.taxDefinitions as tax}
+          {#each data.taxDefinitions as tax (tax.id)}
             <option value={tax.id}>
               {tax.name || tax.code || `${tax.percent}%`} ({tax.percent}%)
             </option>

@@ -232,7 +232,7 @@
 <div class="grid grid-cols-1 gap-6 md:grid-cols-[16rem_1fr]">
   <aside class="hidden md:block">
     <ul class="menu bg-base-200 rounded-box w-full gap-1 p-2">
-      {#each sections.filter((s) => (s.condition ? s.condition() : true)) as s}
+      {#each sections.filter((s) => (s.condition ? s.condition() : true)) as s (s.id)}
         <li>
           <a href={getSectionUrl(s.id)} class={section === s.id ? "active" : ""}>
             <s.icon size={20} class="mr-2" />
@@ -245,7 +245,7 @@
 
   <div class="md:hidden">
     <select class="select select-bordered w-full" onchange={(e) => (window.location.href = getSectionUrl(e.currentTarget.value))}>
-      {#each sections.filter((s) => (s.condition ? s.condition() : true)) as s}
+      {#each sections.filter((s) => (s.condition ? s.condition() : true)) as s (s.id)}
         <option value={s.id} selected={section === s.id}>{t(s.label)}</option>
       {/each}
     </select>
@@ -410,7 +410,7 @@
             <p class="font-semibold">{t("Recovery codes (save these now)")}</p>
             <p class="text-sm opacity-80">{t("These codes are shown once and can be used if you lose access to your authenticator app.")}</p>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {#each recoveryCodes as code}
+              {#each recoveryCodes as code (code)}
                 <code class="bg-base-100 rounded px-3 py-2">{code}</code>
               {/each}
             </div>
@@ -595,7 +595,7 @@
               </div>
               <select class="select select-bordered w-full" bind:value={settings.xmlProfileId} disabled={!canUpdateSettings}>
                 {#if xmlProfiles.length > 0}
-                  {#each xmlProfiles as profile}
+                  {#each xmlProfiles as profile (profile.id)}
                     <option value={profile.id}>{profile.name} ({profile.id})</option>
                   {/each}
                 {:else}

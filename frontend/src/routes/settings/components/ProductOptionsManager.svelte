@@ -146,7 +146,7 @@
     {/if}
 
     <div class="space-y-2">
-      {#each productCategories as cat}
+      {#each productCategories as cat (cat.id)}
         <div class="border-base-300 rounded-box bg-base-100 flex items-center justify-between border p-3">
           <div>
             <span class="font-medium">{cat.code}</span>
@@ -200,7 +200,7 @@
     {/if}
 
     <div class="space-y-2">
-      {#each productUnits as unit}
+      {#each productUnits as unit (unit.id)}
         <div class="border-base-300 rounded-box bg-base-100 flex items-center justify-between border p-3">
           <div>
             <span class="font-medium">{unit.code}</span>

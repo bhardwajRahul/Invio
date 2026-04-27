@@ -233,7 +233,7 @@
       </div>
       <select class="select select-bordered w-full" bind:value={form.customerId} required>
         <option value="">{t("Select customer")}</option>
-        {#each customers as c}
+        {#each customers as c (c.id)}
           <option value={c.id}>{c.name}</option>
         {/each}
       </select>
@@ -330,7 +330,7 @@
           {#if products.length > 0}
             <select class="select select-bordered w-44 max-w-xs shrink-0" bind:value={item.productId} onchange={(e) => applyProductSelection(item, (e.currentTarget as HTMLSelectElement).value)}>
               <option value="">{t("Select product")}</option>
-              {#each products as p}
+              {#each products as p (p.id)}
                 <option value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>
               {/each}
             </select>

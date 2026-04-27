@@ -21,9 +21,9 @@
     </div>
   </div>
 
-  {#if form?.error }
+  {#if form?.error}
     <div class="alert alert-error mb-4">
-      <span>{form?.error }</span>
+      <span>{form?.error}</span>
     </div>
   {/if}
 

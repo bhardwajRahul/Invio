@@ -35,7 +35,7 @@
 
 <!-- Mobile List -->
 <div class="block space-y-3 md:hidden">
-  {#each templates as tpl}
+  {#each templates as tpl (tpl.id)}
     <a href={`/templates/${tpl.id}`} class="card bg-base-100 border-base-300 border transition-shadow hover:shadow-md">
       <div class="card-body p-4">
         <div class="font-semibold">{tpl.name || tpl.id}</div>
@@ -57,7 +57,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each templates as tpl}
+      {#each templates as tpl (tpl.id)}
         <tr class="hover">
           <td>
             <a class="link" href={`/templates/${tpl.id}`}>{tpl.name || tpl.id}</a>

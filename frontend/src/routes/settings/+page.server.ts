@@ -40,25 +40,29 @@ export const load: PageServerLoad = async ({ locals }) => {
     backendGet("/api/v1/xml-profiles", auth),
   ]);
 
-  settings = sRes.status === "fulfilled" ? (sRes.value || {}) : {};
-  templates = tRes.status === "fulfilled" ? (tRes.value || []) : [];
-  taxDefinitions = taxRes.status === "fulfilled" ? (taxRes.value || []) : [];
-  productCategories = pcRes.status === "fulfilled" ? (pcRes.value || []) : [];
-  productUnits = puRes.status === "fulfilled" ? (puRes.value || []) : [];
-  xmlProfiles = xpRes.status === "fulfilled" ? (xpRes.value || []) : [];
+  settings = sRes.status === "fulfilled" ? sRes.value || {} : {};
+  templates = tRes.status === "fulfilled" ? tRes.value || [] : [];
+  taxDefinitions = taxRes.status === "fulfilled" ? taxRes.value || [] : [];
+  productCategories = pcRes.status === "fulfilled" ? pcRes.value || [] : [];
+  productUnits = puRes.status === "fulfilled" ? puRes.value || [] : [];
+  xmlProfiles = xpRes.status === "fulfilled" ? xpRes.value || [] : [];
 
   // Keep localization settings stable even if /settings fetch has transient issues.
   const localization = locals.localization || {};
   const settingsMap = settings as Record<string, unknown>;
-  if (!settingsMap.locale && localization.locale) settingsMap.locale = localization.locale;
-  if (!settingsMap.dateFormat && localization.dateFormat) settingsMap.dateFormat = localization.dateFormat;
-  if (!settingsMap.numberFormat && localization.numberFormat) settingsMap.numberFormat = localization.numberFormat;
+  if (!settingsMap.locale && localization.locale)
+    settingsMap.locale = localization.locale;
+  if (!settingsMap.dateFormat && localization.dateFormat)
+    settingsMap.dateFormat = localization.dateFormat;
+  if (!settingsMap.numberFormat && localization.numberFormat)
+    settingsMap.numberFormat = localization.numberFormat;
   if (!settingsMap.postalCityFormat && localization.postalCityFormat) {
     settingsMap.postalCityFormat = localization.postalCityFormat;
   }
 
   if (sRes.status === "rejected") {
-    error = sRes.reason?.message || String(sRes.reason || "Failed to load settings");
+    error =
+      sRes.reason?.message || String(sRes.reason || "Failed to load settings");
   }
 
   return {

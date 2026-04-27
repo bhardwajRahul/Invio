@@ -160,7 +160,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each sortedFiltered as inv}
+        {#each sortedFiltered as inv (inv.id)}
           <tr class="hover">
             <td class="font-medium hover:underline">
               <a href={`/invoices/${inv.id}`}>{inv.invoiceNumber}</a>

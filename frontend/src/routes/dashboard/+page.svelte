@@ -194,7 +194,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each data.recent as inv}
+        {#each data.recent as inv (inv.id)}
           <tr class="hover">
             <td class="font-medium hover:underline">
               <a href={`/invoices/${inv.id}`}>{inv.invoiceNumber}</a>

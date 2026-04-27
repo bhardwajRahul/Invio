@@ -135,7 +135,7 @@
         {t("No tax definitions yet.")}
       </div>
     {:else}
-      {#each taxDefinitions as tax}
+      {#each taxDefinitions as tax (tax.id)}
         <div class="border-base-300 rounded-box bg-base-100 flex items-center justify-between border p-3">
           <div class="flex-1">
             <div class="font-medium">

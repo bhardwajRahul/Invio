@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getContext } from "svelte";
+  import { SvelteSet } from "svelte/reactivity";
   import { Image } from "lucide-svelte";
 
   let { settings, templates, canUpdateSettings } = $props();
@@ -71,7 +72,7 @@
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const colors = new Set<string>();
+    const colors = new SvelteSet<string>();
 
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 200) continue; // skip transparent
@@ -106,7 +107,7 @@
     <div class="label"><span class="label-text">{t("Template")}</span></div>
     <select class="select select-bordered w-full" bind:value={settings.templateId} disabled={!canUpdateSettings}>
       <option value="">{t("Default")}</option>
-      {#each templates as tmpl}
+      {#each templates as tmpl (tmpl.id)}
         <option value={tmpl.id}>{tmpl.name}</option>
       {/each}
     </select>
@@ -126,7 +127,7 @@
     <div class="text-base-content/70 mt-2 text-sm">
       <p class="mb-2">{t("Suggested colors from logo:")}</p>
       <div class="flex flex-wrap gap-2">
-        {#each colorSuggestions as color}
+        {#each colorSuggestions as color (color)}
           <button
             type="button"
             class="border-base-300 h-8 w-8 cursor-pointer rounded-full border shadow-sm transition-transform hover:scale-110"

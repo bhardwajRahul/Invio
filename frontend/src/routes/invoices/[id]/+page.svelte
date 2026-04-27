@@ -265,15 +265,9 @@
         <span class="mr-1 opacity-70">{t("Address")}:</span>
         <div class="whitespace-pre-line">
           {#if invoice.customer?.address || invoice.customer?.city}
-            {[
-              invoice.customer?.address,
-              formatPostalCityLine(
-                invoice.customer?.city,
-                invoice.customer?.postalCode,
-                invoice.customer?.countryCode,
-                getLoc()?.postalCityFormat,
-              ),
-            ].filter(Boolean).join("\n")}
+            {[invoice.customer?.address, formatPostalCityLine(invoice.customer?.city, invoice.customer?.postalCode, invoice.customer?.countryCode, getLoc()?.postalCityFormat)]
+              .filter(Boolean)
+              .join("\n")}
             {#if invoice.customer?.countryCode}
               <br />{invoice.customer.countryCode}
             {/if}
@@ -361,7 +355,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each invoice.items as item}
+            {#each invoice.items as item (item.id)}
               <tr>
                 <td class="whitespace-pre-wrap">{item.description || t("Item")}</td>
                 <td class="text-right">{item.quantity}</td>

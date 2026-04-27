@@ -63,7 +63,7 @@
       <thead>
         <tr>
           <th class="bg-base-200">{t("Resource")}</th>
-          {#each allActions as action}
+          {#each allActions as action (action)}
             <th class="bg-base-200 text-center">
               {formatAction(action)}
             </th>
@@ -71,10 +71,10 @@
         </tr>
       </thead>
       <tbody>
-        {#each Object.entries(resourceActions) as [resource, actions]}
+        {#each Object.entries(resourceActions) as [resource, actions] (resource)}
           <tr>
             <td class="font-medium">{formatResource(resource)}</td>
-            {#each allActions as action}
+            {#each allActions as action (action)}
               {@const available = actions.includes(action)}
               {@const key = `${resource}:${action}`}
               {@const name = `perm.${resource}.${action}`}

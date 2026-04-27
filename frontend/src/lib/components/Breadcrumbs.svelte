@@ -50,7 +50,7 @@
 {#if segments.length >= 2}
   <div class="breadcrumbs mb-4 text-sm">
     <ul>
-      {#each crumbs as c}
+      {#each crumbs as c (c.href ?? c.label)}
         <li>
           {#if c.href}
             <a href={c.href}>{c.label}</a>
