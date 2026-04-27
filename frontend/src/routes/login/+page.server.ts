@@ -5,22 +5,12 @@ import {
   SESSION_COOKIE,
   DEFAULT_SESSION_MAX_AGE,
 } from "$lib/backend";
+import { getDemoMode } from "$lib/demo";
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.user) {
     throw redirect(303, "/dashboard");
   }
-
-  let demoMode = false;
-  try {
-    const resp = await fetch(`${BACKEND_URL}/api/v1/demo-mode`);
-    if (resp.ok) {
-      const body = await resp.json();
-      demoMode = body?.demoMode === true || body?.demoMode === "true";
-    }
-  } catch (e) {}
-
-  return { demoMode };
 };
 export const actions: Actions = {
   login: async ({ request, cookies }) => {

@@ -2,10 +2,9 @@
   import { page } from "$app/state";
   import "@fontsource-variable/inter/wght.css";
   import { LayoutDashboard, LogOut, Ellipsis, Package, ReceiptText, Settings, UserCog, Users } from "lucide-svelte";
-  import DemoModeDisabler from "$lib/components/DemoModeDisabler.svelte";
   import Breadcrumbs from "$lib/components/Breadcrumbs.svelte";
   import "./layout.css";
-  import { setThemeFromStorage } from "$lib/theme";
+  import DemoAlert from "$lib/components/DemoAlert.svelte";
   import { setContext } from "svelte";
   import { createTranslator } from "$lib/i18n/mod";
   let { data, children } = $props();
@@ -213,10 +212,8 @@
       </div>
     </div>
     <main class={"container mx-auto px-3 py-4 sm:px-4 sm:py-6 " + (wide ? "max-w-screen-2xl" : "")}>
-      {#if demoMode}
-        <DemoModeDisabler />
-      {/if}
       {#if authed}
+        <DemoAlert data={page.data} />
         <Breadcrumbs {t} />
       {/if}
       {@render children()}

@@ -3,7 +3,7 @@
   import { Plus, Pencil, Trash2 } from "lucide-svelte";
   import { invalidateAll } from "$app/navigation";
 
-  let { productCategories = [], productUnits = [], demoMode } = $props();
+  let { productCategories = [], productUnits = [] } = $props();
   let t = getContext("i18n") as (key: string, params?: any) => string;
 
   let showCategoryForm = $state(false);
@@ -116,7 +116,7 @@
   <div class="space-y-4">
     <div class="border-base-300 flex items-center justify-between border-b pb-2">
       <h3 class="text-lg font-semibold">{t("Product Categories")}</h3>
-      <button type="button" onclick={handleAddCategory} class="btn btn-sm btn-primary" disabled={demoMode}>
+      <button type="button" onclick={handleAddCategory} class="btn btn-sm btn-primary">
         <Plus size={16} class="mr-1" />
         {t("Add Category")}
       </button>
@@ -129,17 +129,17 @@
             <div class="label">
               <span class="label-text">{t("Category Code")} *</span>
             </div>
-            <input type="text" class="input input-bordered w-full" bind:value={categoryForm.code} required disabled={demoMode} />
+            <input type="text" class="input input-bordered w-full" bind:value={categoryForm.code} required />
           </label>
           <label class="form-control">
             <div class="label">
               <span class="label-text">{t("Category Name")} *</span>
             </div>
-            <input type="text" class="input input-bordered w-full" bind:value={categoryForm.name} required disabled={demoMode} />
+            <input type="text" class="input input-bordered w-full" bind:value={categoryForm.name} required />
           </label>
         </div>
         <div class="flex gap-2">
-          <button type="submit" class="btn btn-primary" disabled={demoMode || isSubmitting}>{editingCategoryId ? t("Update") : t("Create")}</button>
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>{editingCategoryId ? t("Update") : t("Create")}</button>
           <button type="button" onclick={handleCancelCategory} class="btn btn-ghost" disabled={isSubmitting}>{t("Cancel")}</button>
         </div>
       </form>
@@ -153,8 +153,8 @@
             <span class="text-base-content/60">&mdash; {cat.name}</span>
           </div>
           <div class="flex gap-2">
-            <button type="button" onclick={() => handleEditCategory(cat)} class="btn btn-sm btn-ghost" disabled={demoMode}><Pencil size={16} /></button>
-            <button type="button" onclick={() => handleDeleteCategory(cat)} class="btn btn-sm btn-ghost text-error" disabled={demoMode || cat.isBuiltin}><Trash2 size={16} /></button>
+            <button type="button" onclick={() => handleEditCategory(cat)} class="btn btn-sm btn-ghost"><Pencil size={16} /></button>
+            <button type="button" onclick={() => handleDeleteCategory(cat)} class="btn btn-sm btn-ghost text-error" disabled={cat.isBuiltin}><Trash2 size={16} /></button>
           </div>
         </div>
       {/each}
@@ -170,7 +170,7 @@
   <div class="space-y-4">
     <div class="border-base-300 flex items-center justify-between border-b pb-2">
       <h3 class="text-lg font-semibold">{t("Product Units")}</h3>
-      <button type="button" onclick={handleAddUnit} class="btn btn-sm btn-primary" disabled={demoMode}>
+      <button type="button" onclick={handleAddUnit} class="btn btn-sm btn-primary">
         <Plus size={16} class="mr-1" />
         {t("Add Unit")}
       </button>
@@ -183,17 +183,17 @@
             <div class="label">
               <span class="label-text">{t("Unit Code")} *</span>
             </div>
-            <input type="text" class="input input-bordered w-full" bind:value={unitForm.code} required disabled={demoMode} />
+            <input type="text" class="input input-bordered w-full" bind:value={unitForm.code} required />
           </label>
           <label class="form-control">
             <div class="label">
               <span class="label-text">{t("Unit Name")} *</span>
             </div>
-            <input type="text" class="input input-bordered w-full" bind:value={unitForm.name} required disabled={demoMode} />
+            <input type="text" class="input input-bordered w-full" bind:value={unitForm.name} required />
           </label>
         </div>
         <div class="flex gap-2">
-          <button type="submit" class="btn btn-primary" disabled={demoMode || isSubmitting}>{editingUnitId ? t("Update") : t("Create")}</button>
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>{editingUnitId ? t("Update") : t("Create")}</button>
           <button type="button" onclick={handleCancelUnit} class="btn btn-ghost" disabled={isSubmitting}>{t("Cancel")}</button>
         </div>
       </form>
@@ -207,8 +207,8 @@
             <span class="text-base-content/60">&mdash; {unit.name}</span>
           </div>
           <div class="flex gap-2">
-            <button type="button" onclick={() => handleEditUnit(unit)} class="btn btn-sm btn-ghost" disabled={demoMode}><Pencil size={16} /></button>
-            <button type="button" onclick={() => handleDeleteUnit(unit)} class="btn btn-sm btn-ghost text-error" disabled={demoMode || unit.isBuiltin}><Trash2 size={16} /></button>
+            <button type="button" onclick={() => handleEditUnit(unit)} class="btn btn-sm btn-ghost"><Pencil size={16} /></button>
+            <button type="button" onclick={() => handleDeleteUnit(unit)} class="btn btn-sm btn-ghost text-error" disabled={unit.isBuiltin}><Trash2 size={16} /></button>
           </div>
         </div>
       {/each}

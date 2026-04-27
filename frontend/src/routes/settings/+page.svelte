@@ -209,13 +209,6 @@
   <h1 class="text-2xl font-semibold">{t("Settings")}</h1>
 </div>
 
-{#if data.demoMode}
-  <div class="alert alert-warning mb-4">
-    <CircleAlert size={20} />
-    <div>{t("Demo mode warning")}</div>
-  </div>
-{/if}
-
 {#if error || data.error}
   <div class="alert alert-error mb-4">
     <CircleAlert size={20} />
@@ -289,15 +282,15 @@
         </div>
       </form>
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl border p-6">
-        <TaxDefinitionsManager taxDefinitions={data.taxDefinitions} demoMode={data.demoMode} />
+        <TaxDefinitionsManager taxDefinitions={data.taxDefinitions} />
       </div>
     {:else if section === "products"}
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl border p-6">
-        <ProductOptionsManager productCategories={data.productCategories} productUnits={data.productUnits} demoMode={data.demoMode} />
+        <ProductOptionsManager productCategories={data.productCategories} productUnits={data.productUnits} />
       </div>
     {:else if section === "templates"}
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl border p-6">
-        <TemplateOptionsManager templates={data.templates} demoMode={data.demoMode} />
+        <TemplateOptionsManager templates={data.templates} />
       </div>
     {:else if section === "security"}
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl space-y-6 border p-6">

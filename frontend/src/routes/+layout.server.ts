@@ -1,11 +1,14 @@
 import type { LayoutServerLoad } from "./$types";
+import { getDemoMode } from "$lib/demo";
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-  // Omit the `t` function from serialization since it can't be passed from server to client
   const { t, ...serializableLocalization } = locals.localization;
+  const demo = await getDemoMode();
 
   return {
     user: locals.user,
     localization: serializableLocalization,
+    demoMode: demo.demoMode,
+    demoResetMinutes: demo.demoResetMinutes,
   };
 };

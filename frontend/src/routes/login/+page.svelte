@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from "$app/state";
   import { getContext } from "svelte";
   import { enhance } from "$app/forms";
 
@@ -16,6 +17,18 @@
         <h2 class="mb-2 text-center text-2xl font-semibold">
           {t("Welcome to Invio")}
         </h2>
+        {#if page.data.demoMode == true}
+          <div role="alert" class="alert alert-info">
+            <span class="text-center">
+              Invio is running in demo mode, log in using the following username and password:
+              <br class="mb-2" />
+              Username: <span class="font-medium">demo</span>
+              <br />
+              Password: <span class="font-medium">demo</span>
+            </span>
+          </div>
+        {/if}
+
         <form
           method="POST"
           action="?/login"

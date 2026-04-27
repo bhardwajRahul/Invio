@@ -3,7 +3,7 @@
   import { Plus, Pencil, Trash2 } from "lucide-svelte";
   import { invalidateAll } from "$app/navigation";
 
-  let { taxDefinitions = [], demoMode } = $props();
+  let { taxDefinitions = [] } = $props();
   let t = getContext("i18n") as (key: string, params?: any) => string;
 
   let showForm = $state(false);
@@ -80,7 +80,7 @@
 <div class="space-y-4">
   <div class="flex items-center justify-between">
     <h3 class="text-lg font-semibold">{t("Tax Definitions")}</h3>
-    <button type="button" onclick={handleAdd} class="btn btn-sm btn-primary" disabled={demoMode}>
+    <button type="button" onclick={handleAdd} class="btn btn-sm btn-primary">
       <Plus size={16} class="mr-1" />
       {t("Add tax")}
     </button>
@@ -93,13 +93,13 @@
           <div class="label">
             <span class="label-text">{t("Tax code")} *</span>
           </div>
-          <input type="text" class="input input-bordered w-full" bind:value={formData.code} placeholder={t("Tax code placeholder")} required disabled={demoMode} />
+          <input type="text" class="input input-bordered w-full" bind:value={formData.code} placeholder={t("Tax code placeholder")} required />
         </label>
         <label class="form-control">
           <div class="label">
             <span class="label-text">{t("Display name")} *</span>
           </div>
-          <input type="text" class="input input-bordered w-full" bind:value={formData.name} placeholder={t("Display name placeholder")} required disabled={demoMode} />
+          <input type="text" class="input input-bordered w-full" bind:value={formData.name} placeholder={t("Display name placeholder")} required />
         </label>
       </div>
 
@@ -108,18 +108,18 @@
           <div class="label">
             <span class="label-text">{t("Tax Rate (%)")} *</span>
           </div>
-          <input type="number" class="input input-bordered w-full" bind:value={formData.percent} step="0.01" min="0" required disabled={demoMode} />
+          <input type="number" class="input input-bordered w-full" bind:value={formData.percent} step="0.01" min="0" required />
         </label>
         <label class="form-control">
           <div class="label">
             <span class="label-text">{t("Country code")}</span>
           </div>
-          <input type="text" class="input input-bordered w-full" bind:value={formData.countryCode} placeholder={t("Country code placeholder")} maxlength="2" disabled={demoMode} />
+          <input type="text" class="input input-bordered w-full" bind:value={formData.countryCode} placeholder={t("Country code placeholder")} maxlength="2" />
         </label>
       </div>
 
       <div class="flex gap-2">
-        <button type="submit" class="btn btn-primary" disabled={demoMode || isSubmitting}>
+        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
           {editingId ? t("Update") : t("Create")}
         </button>
         <button type="button" onclick={handleCancel} class="btn btn-ghost" disabled={isSubmitting}>
@@ -149,10 +149,10 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button type="button" onclick={() => handleEdit(tax)} class="btn btn-sm btn-ghost" disabled={demoMode} title={t("Edit")}>
+            <button type="button" onclick={() => handleEdit(tax)} class="btn btn-sm btn-ghost" title={t("Edit")}>
               <Pencil size={16} />
             </button>
-            <button type="button" onclick={() => handleDelete(tax)} class="btn btn-sm btn-ghost text-error" disabled={demoMode} title={t("Delete")}>
+            <button type="button" onclick={() => handleDelete(tax)} class="btn btn-sm btn-ghost text-error" title={t("Delete")}>
               <Trash2 size={16} />
             </button>
           </div>

@@ -10,7 +10,6 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
 
   // Define fallback defaults
-  let demoMode = false;
   let settings = {};
   let templates: { id: string; name: string }[] = [];
   let taxDefinitions = [];
@@ -18,18 +17,6 @@ export const load: PageServerLoad = async ({ locals }) => {
   let productUnits = [];
   let xmlProfiles = [];
   let error = null;
-
-  try {
-    const demoModeRes = await fetch(
-      "http://localhost:3000/api/public/demo-mode",
-      { headers: { "Content-Type": "application/json" } },
-    );
-    if (demoModeRes.ok) {
-      demoMode = (await demoModeRes.json()).demoMode || false;
-    }
-  } catch (err) {
-    console.error("demo mode fetch failed", err);
-  }
 
   const [sRes, tRes, taxRes, pcRes, puRes, xpRes] = await Promise.allSettled([
     backendGet("/api/v1/settings", auth),
@@ -72,7 +59,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     productCategories,
     productUnits,
     xmlProfiles,
-    demoMode,
     error,
     hasTemplates: templates.length > 0,
   };
