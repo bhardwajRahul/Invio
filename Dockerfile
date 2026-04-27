@@ -19,12 +19,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl fontconfig python3 weasyprint \
-    fonts-dejavu fonts-liberation fonts-noto fonts-noto-cjk fonts-noto-color-emoji \
-    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
-    libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+    fonts-dejavu fonts-liberation fonts-noto \
     libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0 \
-    libcairo2 libasound2 libxshmfence1 libx11-6 libxext6 libxfixes3 \
-    libxi6 libxrender1 libxtst6 libxss1 libglib2.0-0 libdbus-1-3 libexpat1 \
+    libcairo2 libglib2.0-0 libexpat1 \
     supervisor \
   && rm -rf /var/lib/apt/lists/*
 
@@ -33,7 +30,6 @@ COPY --from=denoland/deno:bin-2.6.8 /deno /usr/local/bin/deno
 
 # Install Bun
 COPY --from=oven/bun:1 /usr/local/bin/bun /usr/local/bin/bun
-
 
 # ---------- App setup ----------
 WORKDIR /app
