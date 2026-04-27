@@ -198,6 +198,50 @@ function ensureUserColumns(database: DB): void {
   addColumnIfMissing(database, "users", "two_factor_recovery_codes", "TEXT");
 }
 
+function ensureStatusHistoryTable(database: DB): void {
+  database.execute(`
+    CREATE TABLE IF NOT EXISTS invoice_status_history (
+      id TEXT PRIMARY KEY,
+      invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      status TEXT NOT NULL,
+      changed_at TEXT NOT NULL,
+      payment_method TEXT,
+      note TEXT
+    )
+  `);
+  database.execute(
+    `CREATE INDEX IF NOT EXISTS idx_invoice_status_history_invoice_id
+     ON invoice_status_history(invoice_id, changed_at)`,
+  );
+  backfillStatusHistory(database);
+}
+
+function backfillStatusHistory(database: DB): void {
+  // Insert one history entry per invoice that has no history yet.
+  // Uses the invoice's current status and updated_at as the best available timestamp.
+  const rows = database.query(
+    `SELECT id, status, updated_at FROM invoices
+     WHERE id NOT IN (SELECT DISTINCT invoice_id FROM invoice_status_history)`,
+  ) as unknown[][];
+
+  if (rows.length === 0) return;
+
+  for (const row of rows) {
+    const invoiceId = String(row[0]);
+    const status = String(row[1]);
+    const changedAt = row[2] ? String(row[2]) : new Date().toISOString();
+    database.query(
+      `INSERT INTO invoice_status_history (id, invoice_id, status, changed_at, payment_method, note)
+       VALUES (?, ?, ?, ?, NULL, NULL)`,
+      [crypto.randomUUID(), invoiceId, status, changedAt],
+    );
+  }
+
+  console.log(
+    `  Backfilled status history for ${rows.length} existing invoice(s).`,
+  );
+}
+
 function ensureTaxTables(database: DB): void {
   database.execute(`
     CREATE TABLE IF NOT EXISTS tax_definitions (
@@ -417,6 +461,7 @@ function ensureSchemaUpgrades(database: DB): void {
     migrateInvoicesForVoided(database);
     ensureInvoiceItemColumns(database);
     ensureUserColumns(database);
+    ensureStatusHistoryTable(database);
   } catch (e) {
     console.warn("Schema upgrade check failed:", e);
   }
@@ -513,12 +558,10 @@ async function seedAdminUser(database: DB): Promise<void> {
       [id, username, username, passwordHash, now, now],
     );
 
-    for (
-      const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
-        Resource,
-        readonly Action[],
-      ][]
-    ) {
+    for (const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
+      Resource,
+      readonly Action[],
+    ][]) {
       for (const action of actions) {
         database.query(
           "INSERT INTO user_permissions (id, user_id, resource, action) VALUES (?, ?, ?, ?)",

@@ -58,8 +58,11 @@ export const actions: Actions = {
         throw redirect(303, `/invoices/${id}`);
       }
       if (intent === "mark-paid") {
+        const paymentMethod =
+          data.get("paymentMethod")?.toString().trim() || undefined;
         await backendPut(`/api/v1/invoices/${id}`, locals.authHeader, {
           status: "paid",
+          ...(paymentMethod ? { paymentMethod } : {}),
         });
         throw redirect(303, `/invoices/${id}`);
       }

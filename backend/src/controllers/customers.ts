@@ -1,8 +1,5 @@
 import { getDatabase } from "../database/init.ts";
-import {
-  CreateCustomerRequest,
-  Customer,
-} from "../types/index.ts";
+import { CreateCustomerRequest, Customer } from "../types/index.ts";
 import { generateUUID } from "../utils/uuid.ts";
 
 const mapRowToCustomer = (row: unknown[]): Customer => ({
@@ -136,16 +133,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
         INSERT INTO customers (id, name, email, phone, address, country_code, tax_id, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
-        [
-          customerId,
-          data.name,
-          email,
-          phone,
-          address,
-          countryCode,
-          taxId,
-          now,
-        ],
+        [customerId, data.name, email, phone, address, countryCode, taxId, now],
       );
     }
   }
@@ -177,7 +165,8 @@ export const updateCustomer = (
 
   const next = {
     name: data.name ?? existing.name,
-    contactName: data.contactName === undefined ? existing.contactName : undefined,
+    contactName:
+      data.contactName === undefined ? existing.contactName : undefined,
     email: data.email === undefined ? existing.email : undefined,
     phone: data.phone === undefined ? existing.phone : undefined,
     address: data.address === undefined ? existing.address : undefined,
@@ -185,35 +174,43 @@ export const updateCustomer = (
   } as Partial<Customer>;
 
   // If provided, coerce empty to NULL
-  const contactName = data.contactName !== undefined
-    ? toNullable(data.contactName)
-    : (existing.contactName ?? null);
-  const email = data.email !== undefined
-    ? toNullable(data.email)
-    : (existing.email ?? null);
-  const phone = data.phone !== undefined
-    ? toNullable(data.phone)
-    : (existing.phone ?? null);
-  const address = data.address !== undefined
-    ? toNullable(data.address)
-    : (existing.address ?? null);
-  const countryCode = data.countryCode !== undefined
-    ? toNullable(data.countryCode)
-    : (existing.countryCode ?? null);
-  const taxId = data.taxId !== undefined
-    ? toNullable(data.taxId)
-    : (existing.taxId ?? null);
-  const city = (data as { city?: string }).city !== undefined
-    ? toNullable((data as { city?: string }).city)
-    : (existing.city ?? null);
-  const postal = (data as { postalCode?: string }).postalCode !== undefined
-    ? toNullable((data as { postalCode?: string }).postalCode)
-    : (existing.postalCode ?? null);
+  const contactName =
+    data.contactName !== undefined
+      ? toNullable(data.contactName)
+      : (existing.contactName ?? null);
+  const email =
+    data.email !== undefined
+      ? toNullable(data.email)
+      : (existing.email ?? null);
+  const phone =
+    data.phone !== undefined
+      ? toNullable(data.phone)
+      : (existing.phone ?? null);
+  const address =
+    data.address !== undefined
+      ? toNullable(data.address)
+      : (existing.address ?? null);
+  const countryCode =
+    data.countryCode !== undefined
+      ? toNullable(data.countryCode)
+      : (existing.countryCode ?? null);
+  const taxId =
+    data.taxId !== undefined
+      ? toNullable(data.taxId)
+      : (existing.taxId ?? null);
+  const city =
+    (data as { city?: string }).city !== undefined
+      ? toNullable((data as { city?: string }).city)
+      : (existing.city ?? null);
+  const postal =
+    (data as { postalCode?: string }).postalCode !== undefined
+      ? toNullable((data as { postalCode?: string }).postalCode)
+      : (existing.postalCode ?? null);
 
   try {
     db.query(
       `
-      UPDATE customers SET 
+      UPDATE customers SET
         name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
       WHERE id = ?
     `,
@@ -234,7 +231,7 @@ export const updateCustomer = (
     try {
       db.query(
         `
-        UPDATE customers SET 
+        UPDATE customers SET
           name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
         WHERE id = ?
       `,
@@ -253,19 +250,11 @@ export const updateCustomer = (
     } catch (_e2) {
       db.query(
         `
-        UPDATE customers SET 
+        UPDATE customers SET
           name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?
         WHERE id = ?
       `,
-        [
-          next.name,
-          email,
-          phone,
-          address,
-          countryCode,
-          taxId,
-          id,
-        ],
+        [next.name, email, phone, address, countryCode, taxId, id],
       );
     }
   }

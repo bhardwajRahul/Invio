@@ -6,6 +6,7 @@ import {
   duplicateInvoice,
   getInvoiceById,
   getInvoices,
+  getLatestPaidPaymentMethods,
   publishInvoice,
   unpublishInvoice,
   updateInvoice,
@@ -341,7 +342,14 @@ adminRoutes.post(
 
 adminRoutes.get("/invoices", requirePermission("invoices", "read"), (c) => {
   const invoices = getInvoices();
-  // Enrich with customer name and snake_case issue_date for UI compatibility
+
+  // Look up payment methods for paid and complete invoices — complete invoices
+  // were previously paid and their payment method should remain visible.
+  const paidIds = invoices
+    .filter((inv) => inv.status === "paid" || inv.status === "complete")
+    .map((inv) => inv.id);
+  const paymentMethods = getLatestPaidPaymentMethods(paidIds);
+
   const list = invoices.map((inv) => {
     let customerName: string | undefined = undefined;
     try {
@@ -357,6 +365,7 @@ adminRoutes.get("/invoices", requirePermission("invoices", "read"), (c) => {
       ...inv,
       customer: customerName ? { name: customerName } : undefined,
       issue_date,
+      paidWith: paymentMethods.get(inv.id),
     } as unknown;
   });
   return c.json(list);

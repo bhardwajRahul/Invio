@@ -1,7 +1,8 @@
 <script lang="ts">
   import { getContext } from "svelte";
-  import { FileText, Edit, Copy, ExternalLink, Download, ArrowLeft, MoreHorizontal, FileCode2, ShieldOff, Send, Ban, Trash2, CheckCircle, Upload, Check, Pencil } from "lucide-svelte";
+  import { FileText, Edit, Copy, ExternalLink, Download, ArrowLeft, MoreHorizontal, FileCode2, ShieldOff, Send, Ban, Trash2, CheckCircle, Upload, Check, Pencil, ChevronDown } from "lucide-svelte";
   import { enhance } from "$app/forms";
+  import { page } from "$app/state";
   import type { SubmitFunction } from "@sveltejs/kit";
 
   import { hasPermission } from "$lib/types";
@@ -31,6 +32,8 @@
   let canPublish = $derived(hasPermission(user, "invoices", "publish"));
   let canVoid = $derived(hasPermission(user, "invoices", "void"));
 
+  let paidPaymentMethod = $state("");
+
   function fmtDate(d?: string | Date) {
     if (!d) return "";
     const dt = typeof d === "string" ? new Date(d) : d;
@@ -48,8 +51,16 @@
     return `${Number(v || 0).toFixed(2)} ${invoice?.currency || "EUR"}`;
   }
 
+  function fmtDateTime(d: Date) {
+    if (!d || Number.isNaN(d.getTime())) return "";
+    const date = fmtDate(d);
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+    return `${date} ${h}:${m}`;
+  }
+
   function copyLink() {
-    navigator.clipboard.writeText(`${window.location.origin}/public/invoices/${invoice.shareToken}`);
+    navigator.clipboard.writeText(`${page.url.origin}/public/invoices/${invoice.shareToken}`);
     alert(t("Link copied!"));
   }
 
@@ -77,7 +88,7 @@
         <div class="truncate text-sm break-all opacity-80">
           {t("Public link")}:
           <a class="link" href="/public/invoices/{invoice.shareToken}" target="_blank">
-            {window?.location?.origin}/public/invoices/{invoice.shareToken}
+            {page.url.origin}/public/invoices/{invoice.shareToken}
           </a>
         </div>
       </div>
@@ -179,13 +190,42 @@
         {/if}
 
         {#if (invoice.status === "sent" || invoice.status === "overdue") && canUpdate}
-          <form method="post" use:enhance>
-            <input type="hidden" name="intent" value="mark-paid" />
-            <button type="submit" class="btn btn-sm btn-primary" title={t("Mark as Paid")}>
-              <Check size={16} />
-              <span class="hidden sm:inline">{t("Mark as Paid")}</span>
-            </button>
-          </form>
+          <div class="join">
+            <form method="post" use:enhance>
+              <input type="hidden" name="intent" value="mark-paid" />
+              <button type="submit" class="btn btn-sm btn-primary join-item" title={t("Mark as Paid")}>
+                <Check size={16} />
+                <span class="hidden sm:inline">{t("Mark as Paid")}</span>
+              </button>
+            </form>
+            <div class="dropdown dropdown-end">
+              <button tabindex="0" type="button" class="btn btn-sm btn-primary join-item border-l-primary-content/20 border-l px-2">
+                <ChevronDown size={14} />
+              </button>
+              <div tabindex="0" class="dropdown-content bg-base-100 rounded-box border-base-200 z-10 mt-1 w-60 space-y-2 border p-3 shadow">
+                <p class="text-sm font-medium opacity-70">{t("Payment Method")}</p>
+                <form method="post" use:enhance>
+                  <input type="hidden" name="intent" value="mark-paid" />
+                  <input
+                    class="input input-bordered input-sm w-full"
+                    type="text"
+                    name="paymentMethod"
+                    bind:value={paidPaymentMethod}
+                    placeholder={t("e.g. Bank Transfer, PayPal")}
+                    autocomplete="off"
+                  />
+                  <div class="flex flex-wrap gap-1 pt-2">
+                    {#each ["Bank Transfer", "PayPal", "Cash", "Credit Card", "Stripe"] as method (method)}
+                      <button type="button" class="badge badge-outline hover:badge-primary cursor-pointer text-xs" onclick={() => (paidPaymentMethod = method)}>
+                        {method}
+                      </button>
+                    {/each}
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm btn-block mt-2">{t("Mark as Paid")}</button>
+                </form>
+              </div>
+            </div>
+          </div>
         {/if}
 
         <div class="dropdown dropdown-end">
@@ -366,6 +406,38 @@
           </tbody>
         </table>
       </div>
+    </div>
+  {/if}
+
+  {#if invoice.statusHistory && invoice.statusHistory.length > 0}
+    <div class="mt-8">
+      <h2 class="mb-3 text-base font-semibold opacity-70">{t("Status History")}</h2>
+      <ul class="border-base-300 space-y-4 border-l-2 pl-4">
+        {#each invoice.statusHistory as entry (entry.id)}
+          <li class="relative">
+            <span class="bg-base-300 border-base-100 absolute top-1 -left-[1.3rem] h-3 w-3 rounded-full border-2"></span>
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                class="badge badge-sm {entry.status === 'paid'
+                  ? 'badge-success'
+                  : entry.status === 'voided'
+                    ? 'badge-warning'
+                    : entry.status === 'complete'
+                      ? 'badge-secondary'
+                      : entry.status === 'sent'
+                        ? 'badge-info'
+                        : 'badge-ghost'}"
+              >
+                {t(entry.status.charAt(0).toUpperCase() + entry.status.slice(1))}
+              </span>
+              <span class="text-sm opacity-60">{fmtDateTime(new Date(entry.changedAt))}</span>
+              {#if entry.paymentMethod}
+                <span class="text-sm opacity-80">· {entry.paymentMethod}</span>
+              {/if}
+            </div>
+          </li>
+        {/each}
+      </ul>
     </div>
   {/if}
 {/if}
