@@ -54,14 +54,14 @@ import {
 } from "../controllers/taxDefinitions.ts";
 import {
   createCategory,
-  deleteCategory,
-  getCategories,
-  isCategoryUsed,
-  updateCategory,
   createUnit,
+  deleteCategory,
   deleteUnit,
+  getCategories,
   getUnits,
+  isCategoryUsed,
   isUnitUsed,
+  updateCategory,
   updateUnit,
 } from "../controllers/productOptions.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
@@ -74,19 +74,30 @@ import { getNextInvoiceNumber } from "../database/init.ts";
 import { isDemoMode } from "../utils/env.ts";
 import { saveDataUrlLogo, saveUploadedLogoFile } from "../utils/logoStorage.ts";
 import {
+  getAuthUser,
   requireAdminAuth,
   requirePermission,
-  requireAdmin,
-  getAuthUser,
 } from "../middleware/auth.ts";
 import {
-  listUsers,
-  getUserById as getUserByIdCtrl,
   createUser as createUserCtrl,
-  updateUser as updateUserCtrl,
   deleteUser as deleteUserCtrl,
+  disableUserTwoFactor,
+  getUserById as getUserByIdCtrl,
+  getUserTwoFactorState,
+  listUsers,
+  setUserTwoFactorState,
+  updateUser as updateUserCtrl,
 } from "../controllers/users.ts";
-import { RESOURCES, RESOURCE_ACTIONS } from "../types/index.ts";
+import { RESOURCE_ACTIONS, RESOURCES } from "../types/index.ts";
+import {
+  createPendingTwoFactorSetup,
+  decryptTwoFactorSecret,
+  encryptTwoFactorSecret,
+  generateRecoveryCodes,
+  hashRecoveryCodes,
+  verifyPendingTwoFactorSetup,
+  verifyTotpToken,
+} from "../utils/twoFactor.ts";
 
 const adminRoutes = new Hono();
 
@@ -1377,10 +1388,12 @@ adminRoutes.get(
       },
       {} as Record<string, string>,
     );
-    if (!settingsMap.postalCityFormat && settingsMap.postal_city_format)
+    if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) {
       settingsMap.postalCityFormat = settingsMap.postal_city_format;
-    if (!settingsMap.postalCityFormat && settingsMap.postalcityformat)
+    }
+    if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) {
       settingsMap.postalCityFormat = settingsMap.postalcityformat;
+    }
     if (!settingsMap.logo && settingsMap.logoUrl) {
       settingsMap.logo = settingsMap.logoUrl;
     }
@@ -1413,13 +1426,14 @@ adminRoutes.get(
     if (
       selectedTemplateId === "professional" ||
       selectedTemplateId === "professional-modern"
-    )
+    ) {
       selectedTemplateId = "professional-modern";
-    else if (
+    } else if (
       selectedTemplateId === "minimalist" ||
       selectedTemplateId === "minimalist-clean"
-    )
+    ) {
       selectedTemplateId = "minimalist-clean";
+    }
 
     const customer = getCustomerById(invoice.customerId);
     const renderLocale = resolveInvoiceRenderLocale(
@@ -1465,10 +1479,12 @@ adminRoutes.get(
       },
       {} as Record<string, string>,
     );
-    if (!settingsMap.postalCityFormat && settingsMap.postal_city_format)
+    if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) {
       settingsMap.postalCityFormat = settingsMap.postal_city_format;
-    if (!settingsMap.postalCityFormat && settingsMap.postalcityformat)
+    }
+    if (!settingsMap.postalCityFormat && settingsMap.postalcityformat) {
       settingsMap.postalCityFormat = settingsMap.postalcityformat;
+    }
     if (!settingsMap.logo && settingsMap.logoUrl) {
       settingsMap.logo = settingsMap.logoUrl;
     }
@@ -1501,13 +1517,14 @@ adminRoutes.get(
     if (
       selectedTemplateId === "professional" ||
       selectedTemplateId === "professional-modern"
-    )
+    ) {
       selectedTemplateId = "professional-modern";
-    else if (
+    } else if (
       selectedTemplateId === "minimalist" ||
       selectedTemplateId === "minimalist-clean"
-    )
+    ) {
       selectedTemplateId = "minimalist-clean";
+    }
 
     try {
       const embedXml =
@@ -1722,6 +1739,69 @@ adminRoutes.get("/users/me", (c) => {
     ...user,
     availableResources: RESOURCE_ACTIONS,
   });
+});
+
+adminRoutes.post("/users/me/2fa/setup", (c) => {
+  const user = getAuthUser(c);
+  if (!user) return c.json({ error: "Not authenticated" }, 401);
+  const setup = createPendingTwoFactorSetup(user.id, user.username);
+  return c.json({
+    otpAuthUrl: setup.otpAuthUrl,
+    expiresIn: setup.expiresIn,
+  });
+});
+
+adminRoutes.post("/users/me/2fa/verify", async (c) => {
+  const user = getAuthUser(c);
+  if (!user) return c.json({ error: "Not authenticated" }, 401);
+  let token: string | undefined;
+  try {
+    const body = await c.req.json();
+    if (body && typeof body.token === "string") token = body.token;
+  } catch {
+    // ignore parse errors
+  }
+  if (!token) return c.json({ error: "Missing 2FA token" }, 400);
+
+  const result = verifyPendingTwoFactorSetup(user.id, user.username, token);
+  if (!result.ok) return c.json({ error: result.reason }, 400);
+
+  const recoveryCodes = generateRecoveryCodes();
+  const recoveryCodeHashes = await hashRecoveryCodes(recoveryCodes);
+  const encryptedSecret = await encryptTwoFactorSecret(result.secretBase32);
+  setUserTwoFactorState(user.id, encryptedSecret, recoveryCodeHashes);
+
+  return c.json({
+    twoFactorEnabled: true,
+    recoveryCodes,
+  });
+});
+
+adminRoutes.delete("/users/me/2fa", async (c) => {
+  const user = getAuthUser(c);
+  if (!user) return c.json({ error: "Not authenticated" }, 401);
+
+  let token: string | undefined;
+  try {
+    const body = await c.req.json();
+    if (body && typeof body.token === "string") token = body.token;
+  } catch {
+    // ignore parse errors
+  }
+  if (!token) return c.json({ error: "Missing 2FA token" }, 400);
+
+  const state = getUserTwoFactorState(user.id);
+  if (!state?.enabled || !state.encryptedSecret) {
+    return c.json({ error: "2FA is not enabled" }, 400);
+  }
+
+  const secret = await decryptTwoFactorSecret(state.encryptedSecret);
+  if (!secret || !verifyTotpToken(secret, user.username, token)) {
+    return c.json({ error: "Invalid 2FA token" }, 401);
+  }
+
+  disableUserTwoFactor(user.id);
+  return c.json({ twoFactorEnabled: false });
 });
 
 // GET /users/permissions-schema — returns the valid resources and actions

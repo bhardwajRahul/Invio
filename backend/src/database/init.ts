@@ -24,7 +24,9 @@ function ensureDir(dir: string): void {
   if (dir && dir !== "." && dir !== "/") {
     try {
       Deno.mkdirSync(dir, { recursive: true });
-    } catch { /* ok */ }
+    } catch {
+      /* ok */
+    }
   }
 }
 
@@ -57,7 +59,9 @@ function storeSchemaVersion(database: DB): void {
       "INSERT OR REPLACE INTO settings (key, value) VALUES ('_schema_version', ?)",
       [readAppVersion()],
     );
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function createDatabaseBackup(
@@ -85,7 +89,9 @@ function backupIfVersionChanged(database: DB, dbPath: string): void {
   } catch {
     try {
       createDatabaseBackup(dbPath);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -130,8 +136,9 @@ function addColumnIfMissing(
   column: string,
   definition: string,
 ): void {
-  const cols = (database.query(`PRAGMA table_info(${table})`) as unknown[][])
-    .map((r) => String(r[1]));
+  const cols = (
+    database.query(`PRAGMA table_info(${table})`) as unknown[][]
+  ).map((r) => String(r[1]));
   if (cols.includes(column)) return;
   try {
     database.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
@@ -178,6 +185,17 @@ function ensureInvoiceItemColumns(database: DB): void {
     "product_id",
     "TEXT REFERENCES products(id)",
   );
+}
+
+function ensureUserColumns(database: DB): void {
+  addColumnIfMissing(database, "users", "two_factor_secret", "TEXT");
+  addColumnIfMissing(
+    database,
+    "users",
+    "two_factor_enabled",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfMissing(database, "users", "two_factor_recovery_codes", "TEXT");
 }
 
 function ensureTaxTables(database: DB): void {
@@ -254,7 +272,9 @@ function seedProductDefaults(database: DB): void {
         "INSERT OR IGNORE INTO product_categories (id, code, name, sort_order, is_builtin) VALUES (?, ?, ?, ?, 1)",
         [c.code, c.code, c.name, c.sort],
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   const units = [
@@ -271,7 +291,9 @@ function seedProductDefaults(database: DB): void {
         "INSERT OR IGNORE INTO product_units (id, code, name, sort_order, is_builtin) VALUES (?, ?, ?, ?, 1)",
         [u.code, u.code, u.name, u.sort],
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -290,7 +312,9 @@ function migrateInvoicesForVoided(database: DB): void {
   if (
     !createSql ||
     (createSql.includes("voided") && createSql.includes("complete"))
-  ) return;
+  ) {
+    return;
+  }
 
   console.log(
     "Migrating invoices table to support 'voided' and 'complete' statuses",
@@ -330,14 +354,12 @@ function migrateInvoicesForVoided(database: DB): void {
       )
     `);
 
-    const existingCols =
-      (database.query("PRAGMA table_info(invoices)") as unknown[][]).map((r) =>
-        String(r[1])
-      );
-    const newCols =
-      (database.query("PRAGMA table_info(invoices_new)") as unknown[][]).map((
-        r,
-      ) => String(r[1]));
+    const existingCols = (
+      database.query("PRAGMA table_info(invoices)") as unknown[][]
+    ).map((r) => String(r[1]));
+    const newCols = (
+      database.query("PRAGMA table_info(invoices_new)") as unknown[][]
+    ).map((r) => String(r[1]));
     const colList = existingCols.filter((c) => newCols.includes(c)).join(", ");
 
     database.execute(
@@ -394,6 +416,7 @@ function ensureSchemaUpgrades(database: DB): void {
     seedProductDefaults(database);
     migrateInvoicesForVoided(database);
     ensureInvoiceItemColumns(database);
+    ensureUserColumns(database);
   } catch (e) {
     console.warn("Schema upgrade check failed:", e);
   }
@@ -524,7 +547,9 @@ export async function initDatabase(): Promise<void> {
   try {
     Deno.statSync(dbPath);
     dbFileExisted = true;
-  } catch { /* new install */ }
+  } catch {
+    /* new install */
+  }
 
   db = new DB(dbPath);
 
@@ -558,13 +583,17 @@ export async function resetDatabaseFromDemo(): Promise<void> {
 
   try {
     closeDatabase();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   try {
     ensureDir(simpleDirname(activePath));
     try {
       Deno.removeSync(activePath);
-    } catch { /* ok if missing */ }
+    } catch {
+      /* ok if missing */
+    }
     Deno.copyFileSync(resolvePath(demoDb), activePath);
     console.log("  Demo database reset from DEMO_DB_PATH.");
   } catch (e) {
@@ -639,8 +668,12 @@ function getNumberingSettings(): {
       if (raw.length > 0) {
         cfg.enabled = String(raw[0][0]).toLowerCase() !== "false";
       }
-    } catch { /* ignore */ }
-  } catch { /* use defaults */ }
+    } catch {
+      /* ignore */
+    }
+  } catch {
+    /* use defaults */
+  }
   return cfg;
 }
 
@@ -720,8 +753,8 @@ export function calculateInvoiceTotals(
 ): CalculatedTotals {
   const rate = Math.max(0, Number(taxRate) || 0) / 100;
 
-  const lineGrosses = items.map((it) =>
-    (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)
+  const lineGrosses = items.map(
+    (it) => (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0),
   );
   const subtotal = lineGrosses.reduce((a, b) => a + b, 0);
 
@@ -746,7 +779,8 @@ export function calculateInvoiceTotals(
       return d;
     });
 
-    let sumTax = 0, sumTotal = 0;
+    let sumTax = 0,
+      sumTotal = 0;
     for (let i = 0; i < lineGrosses.length; i++) {
       const afterDiscount = Math.max(
         0,

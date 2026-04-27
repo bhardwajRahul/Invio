@@ -28,62 +28,126 @@ export const actions: Actions = {
 
     const username = String(form.get("username") ?? "").trim();
     const password = String(form.get("password") ?? "").trim();
-
-    if (!username || !password) {
-      return fail(400, {
-        error: "Missing credentials",
-        username,
-      });
-    }
+    const twoFactorToken = String(form.get("twoFactorToken") ?? "").trim();
+    const totpToken = String(form.get("token") ?? "")
+      .replace(/\s+/g, "")
+      .trim();
+    const recoveryCode = String(form.get("recoveryCode") ?? "").trim();
 
     let resp: Response;
-
-    try {
-      resp = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-    } catch {
-      return fail(500, {
-        error: "Unable to reach authentication server",
-        username,
-      });
-    }
-
     let data: any = null;
 
-    try {
-      data = await resp.json();
-    } catch {
-      return fail(500, {
-        error: "Invalid server response",
-        username,
-      });
-    }
-
-    if (!resp.ok) {
-      if (resp.status === 401) {
-        return fail(401, { error: "Invalid credentials", username });
-      }
-
-      if (resp.status === 429) {
-        const retryAfter = data?.retryAfter;
-        const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15;
-
-        return fail(429, {
-          error: "Too many login attempts. Try again in {{minutes}} minute(s).",
-          errorParams: { minutes },
+    const isSecondStep = Boolean(twoFactorToken);
+    if (!isSecondStep) {
+      if (!username || !password) {
+        return fail(400, {
+          error: "Missing credentials",
           username,
         });
       }
 
-      return fail(resp.status, {
-        error: data?.error ?? "Login failed",
-        username,
-      });
+      try {
+        resp = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        });
+      } catch {
+        return fail(500, {
+          error: "Unable to reach authentication server",
+          username,
+        });
+      }
+
+      try {
+        data = await resp.json();
+      } catch {
+        return fail(500, {
+          error: "Invalid server response",
+          username,
+        });
+      }
+
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          return fail(401, { error: "Invalid credentials", username });
+        }
+
+        if (resp.status === 429) {
+          const retryAfter = data?.retryAfter;
+          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15;
+
+          return fail(429, {
+            error:
+              "Too many login attempts. Try again in {{minutes}} minute(s).",
+            errorParams: { minutes },
+            username,
+          });
+        }
+
+        return fail(resp.status, {
+          error: data?.error ?? "Login failed",
+          username,
+        });
+      }
+
+      if (data?.twoFactorRequired && data?.twoFactorToken) {
+        return {
+          twoFactorRequired: true,
+          twoFactorToken: data.twoFactorToken,
+          username,
+        };
+      }
+    } else {
+      const useRecovery = Boolean(recoveryCode);
+      if (!totpToken && !useRecovery) {
+        return fail(400, {
+          error: "Enter your 2FA code or recovery code",
+          twoFactorRequired: true,
+          twoFactorToken,
+          username,
+        });
+      }
+      const endpoint = useRecovery ? "recover-2fa" : "verify-2fa";
+      const payload = useRecovery
+        ? { twoFactorToken, recoveryCode }
+        : { twoFactorToken, token: totpToken };
+      try {
+        resp = await fetch(`${BACKEND_URL}/api/v1/auth/${endpoint}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        return fail(500, {
+          error: "Unable to reach authentication server",
+          twoFactorRequired: true,
+          twoFactorToken,
+          username,
+        });
+      }
+      try {
+        data = await resp.json();
+      } catch {
+        return fail(500, {
+          error: "Invalid server response",
+          twoFactorRequired: true,
+          twoFactorToken,
+          username,
+        });
+      }
+      if (!resp.ok) {
+        return fail(resp.status, {
+          error: data?.error ?? "2FA verification failed",
+          twoFactorRequired: true,
+          twoFactorToken,
+          username,
+        });
+      }
     }
 
     if (!data?.token) {

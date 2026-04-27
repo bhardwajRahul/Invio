@@ -17,7 +17,9 @@ function validateSecret(secretKey: string) {
 
   const trimmed = secretKey.trim();
   if (trimmed.length < 16) {
-    console.warn("Warning: JWT_SECRET is shorter than 16 characters. Consider using a longer secret for better security.");
+    console.warn(
+      "Warning: JWT_SECRET is shorter than 16 characters. Consider using a longer secret for better security.",
+    );
   }
 }
 
@@ -71,6 +73,19 @@ export async function verifyJWT(token: string): Promise<JWTPayload | null> {
     }
 
     return null;
+  } catch (error) {
+    console.error("JWT verification failed:", error);
+    return null;
+  }
+}
+
+export async function verifyJWTPayload(
+  token: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const key = await getKey();
+    const payload = await verify(token, key);
+    return payload as Record<string, unknown>;
   } catch (error) {
     console.error("JWT verification failed:", error);
     return null;

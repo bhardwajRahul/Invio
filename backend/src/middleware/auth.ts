@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
 import { verifyJWT } from "../utils/jwt.ts";
 import type { JWTPayload } from "../utils/jwt.ts";
-import type { UserWithPermissions, Resource, Action } from "../types/index.ts";
+import type { Action, Resource, UserWithPermissions } from "../types/index.ts";
 import { getDatabase } from "../database/init.ts";
 
 // ---- Context helpers ----
@@ -34,19 +34,22 @@ function forbidden(message = "Forbidden"): Response {
 
 // ---- User lookup from DB ----
 
-function loadUserWithPermissions(userId: string, username?: string): UserWithPermissions | null {
+function loadUserWithPermissions(
+  userId: string,
+  username?: string,
+): UserWithPermissions | null {
   const db = getDatabase();
 
   // Support legacy tokens that only have a username, no real userId
   let rows;
   if (userId === "__legacy__" && username) {
     rows = db.query(
-      "SELECT id, username, email, display_name, is_admin, is_active, created_at, updated_at FROM users WHERE username = ?",
+      "SELECT id, username, email, display_name, is_admin, is_active, two_factor_enabled, created_at, updated_at FROM users WHERE username = ?",
       [username],
     );
   } else {
     rows = db.query(
-      "SELECT id, username, email, display_name, is_admin, is_active, created_at, updated_at FROM users WHERE id = ?",
+      "SELECT id, username, email, display_name, is_admin, is_active, two_factor_enabled, created_at, updated_at FROM users WHERE id = ?",
       [userId],
     );
   }
@@ -61,8 +64,9 @@ function loadUserWithPermissions(userId: string, username?: string): UserWithPer
     displayName: row[3] ? String(row[3]) : undefined,
     isAdmin: Boolean(row[4]),
     isActive: Boolean(row[5]),
-    createdAt: new Date(String(row[6])),
-    updatedAt: new Date(String(row[7])),
+    twoFactorEnabled: Boolean(row[6]),
+    createdAt: new Date(String(row[7])),
+    updatedAt: new Date(String(row[8])),
     permissions: [],
   };
 
@@ -96,7 +100,9 @@ export async function requireAuth(c: Context, next: Next) {
   if (!payload) return unauthorized();
 
   const user = loadUserWithPermissions(payload.userId, payload.username);
-  if (!user || !user.isActive) return unauthorized("Account disabled or not found");
+  if (!user || !user.isActive) {
+    return unauthorized("Account disabled or not found");
+  }
 
   c.set("authUser", user);
   return await next();

@@ -34,38 +34,64 @@
             </div>
           {/if}
 
-          <div class="form-control">
-            <label class="label" for="username">
-              <span class="label-text">{t("Username")}</span>
-            </label>
-            <input
-              id="username"
-              type="text"
-              name="username"
-              placeholder={t("Enter your username")}
-              class="input input-bordered w-full"
-              value={form?.username ?? ""}
-              autocomplete="username"
-              required
-              disabled={isLoading}
-            />
-          </div>
+          {#if form?.twoFactorRequired}
+            <input type="hidden" name="twoFactorToken" value={form?.twoFactorToken ?? ""} />
+            <input type="hidden" name="username" value={form?.username ?? ""} />
+          {/if}
 
-          <div class="form-control mt-2">
-            <label class="label" for="password">
-              <span class="label-text">{t("Password")}</span>
-            </label>
-            <input
-              id="password"
-              type="password"
-              name="password"
-              placeholder={t("Enter your password")}
-              class="input input-bordered w-full"
-              autocomplete="current-password"
-              required
-              disabled={isLoading}
-            />
-          </div>
+          {#if !form?.twoFactorRequired}
+            <div class="form-control">
+              <label class="label" for="username">
+                <span class="label-text">{t("Username")}</span>
+              </label>
+              <input
+                id="username"
+                type="text"
+                name="username"
+                placeholder={t("Enter your username")}
+                class="input input-bordered w-full"
+                value={form?.username ?? ""}
+                autocomplete="username"
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div class="form-control mt-2">
+              <label class="label" for="password">
+                <span class="label-text">{t("Password")}</span>
+              </label>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                placeholder={t("Enter your password")}
+                class="input input-bordered w-full"
+                autocomplete="current-password"
+                required
+                disabled={isLoading}
+              />
+            </div>
+          {:else}
+            <div class="alert alert-info mb-2">
+              <span>{t("Two-factor authentication required")}</span>
+            </div>
+            <div class="form-control">
+              <label class="label" for="token">
+                <span class="label-text">{t("2FA code")}</span>
+              </label>
+              <input id="token" type="text" name="token" placeholder={t("Enter 6-digit code")} class="input input-bordered w-full" inputmode="numeric" maxlength="6" disabled={isLoading} />
+            </div>
+
+            <div class="divider">{t("or")}</div>
+
+            <div class="form-control mt-2">
+              <label class="label" for="recoveryCode">
+                <span class="label-text">{t("Recovery code")}</span>
+              </label>
+              <input id="recoveryCode" type="text" name="recoveryCode" placeholder={t("Enter recovery code")} class="input input-bordered w-full" autocomplete="one-time-code" disabled={isLoading} />
+            </div>
+          {/if}
 
           <div class="form-control mt-6">
             <button class="btn btn-primary w-full" type="submit" disabled={isLoading}>

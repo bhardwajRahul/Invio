@@ -200,9 +200,16 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   is_admin INTEGER NOT NULL DEFAULT 0,
   is_active INTEGER NOT NULL DEFAULT 1,
+  two_factor_secret TEXT,
+  two_factor_enabled INTEGER NOT NULL DEFAULT 0,
+  two_factor_recovery_codes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users ADD COLUMN two_factor_secret TEXT;
+ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN two_factor_recovery_codes TEXT;
 
 CREATE TABLE IF NOT EXISTS user_permissions (
   id TEXT PRIMARY KEY,

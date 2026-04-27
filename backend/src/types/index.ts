@@ -207,6 +207,7 @@ export interface User {
   displayName?: string;
   isAdmin: boolean;
   isActive: boolean;
+  twoFactorEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

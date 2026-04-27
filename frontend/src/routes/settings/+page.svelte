@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Settings, Save, CircleAlert, Building2, Palette, Sun, Languages, LayoutTemplate, CreditCard, Percent, Package, Hash, FileCodeCorner } from "lucide-svelte";
+  import { Save, CircleAlert, Building2, Palette, Sun, Languages, LayoutTemplate, CreditCard, Percent, Package, Hash, FileCodeCorner, Shield } from "lucide-svelte";
   import { getContext } from "svelte";
   import { invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
+  import QRCode from "qrcode";
   import ThemeToggle from "$lib/components/ThemeToggle.svelte";
   import TaxDefinitionsManager from "./components/TaxDefinitionsManager.svelte";
   import ProductOptionsManager from "./components/ProductOptionsManager.svelte";
@@ -17,12 +18,24 @@
     dateFormat: "YYYY-MM-DD",
     numberFormat: "comma",
     postalCityFormat: "auto",
-    ...data.settings
+    ...data.settings,
   } as Record<string, any>);
 
   let saving = $state(false);
   let error = $state("");
   let success = $state("");
+  let twoFactorLoading = $state(false);
+  let twoFactorVerifying = $state(false);
+  let twoFactorError = $state("");
+  let twoFactorSuccess = $state("");
+  let twoFactorToken = $state("");
+  let otpAuthUrl = $state("");
+  let otpQrDataUrl = $state("");
+  let recoveryCodes = $state([] as string[]);
+  let twoFactorEnabled = $state(Boolean((data as any)?.user?.twoFactorEnabled));
+  let twoFactorDisabling = $state(false);
+  let twoFactorDisableConfirm = $state(false);
+  let twoFactorDisableCode = $state("");
   let xmlProfiles = $derived((data.xmlProfiles || []) as Array<{ id: string; name: string }>);
 
   let section = $derived(page.url.searchParams.get("section") || "company");
@@ -75,6 +88,97 @@
     }
   }
 
+  async function startTwoFactorSetup() {
+    twoFactorLoading = true;
+    twoFactorError = "";
+    twoFactorSuccess = "";
+    recoveryCodes = [];
+    twoFactorToken = "";
+    try {
+      const res = await fetch("/api/v1/users/me/2fa/setup", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body?.error || t("Failed to generate 2FA setup"));
+      }
+      otpAuthUrl = String(body?.otpAuthUrl || "");
+      if (!otpAuthUrl) throw new Error(t("Invalid server response"));
+      otpQrDataUrl = await QRCode.toDataURL(otpAuthUrl);
+      twoFactorSuccess = t("Scan this QR code with your authenticator app");
+    } catch (err: any) {
+      twoFactorError = err?.message || t("Failed to generate 2FA setup");
+    } finally {
+      twoFactorLoading = false;
+    }
+  }
+
+  async function disableTwoFactor(e: SubmitEvent) {
+    e.preventDefault();
+    twoFactorDisabling = true;
+    twoFactorError = "";
+    twoFactorSuccess = "";
+    try {
+      const code = String(twoFactorDisableCode || "")
+        .replace(/\s+/g, "")
+        .trim();
+      if (!/^\d{6}$/.test(code)) throw new Error(t("Enter 6-digit code"));
+      const res = await fetch("/api/v1/users/me/2fa", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: code }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body?.error || t("Failed to disable two-factor authentication"));
+      }
+      twoFactorEnabled = false;
+      twoFactorDisableConfirm = false;
+      twoFactorDisableCode = "";
+      otpAuthUrl = "";
+      otpQrDataUrl = "";
+      recoveryCodes = [];
+      twoFactorSuccess = t("Two-factor authentication disabled");
+      await invalidateAll();
+    } catch (err: any) {
+      twoFactorError = err?.message || t("Failed to disable two-factor authentication");
+    } finally {
+      twoFactorDisabling = false;
+    }
+  }
+
+  async function verifyTwoFactor(e: SubmitEvent) {
+    e.preventDefault();
+    twoFactorVerifying = true;
+    twoFactorError = "";
+    twoFactorSuccess = "";
+    recoveryCodes = [];
+    try {
+      const token = String(twoFactorToken || "")
+        .replace(/\s+/g, "")
+        .trim();
+      if (!/^\d{6}$/.test(token)) throw new Error(t("Enter 6-digit code"));
+      const res = await fetch("/api/v1/users/me/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body?.error || t("Failed to enable two-factor authentication"));
+      }
+      twoFactorEnabled = true;
+      recoveryCodes = Array.isArray(body?.recoveryCodes) ? body.recoveryCodes.map((c: unknown) => String(c)) : [];
+      twoFactorSuccess = t("Two-factor authentication enabled");
+      otpAuthUrl = "";
+      otpQrDataUrl = "";
+      twoFactorToken = "";
+      await invalidateAll();
+    } catch (err: any) {
+      twoFactorError = err?.message || t("Failed to enable two-factor authentication");
+    } finally {
+      twoFactorVerifying = false;
+    }
+  }
+
   const sections = [
     { id: "company", label: "Company", icon: Building2 },
     { id: "branding", label: "Branding", icon: Palette },
@@ -91,6 +195,7 @@
     { id: "products", label: "Products", icon: Package },
     { id: "numbering", label: "Numbering", icon: Hash },
     { id: "xml", label: "XML Export", icon: FileCodeCorner },
+    { id: "security", label: "Security", icon: Shield },
   ];
 
   function getSectionUrl(id: string) {
@@ -194,7 +299,125 @@
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl border p-6">
         <TemplateOptionsManager templates={data.templates} demoMode={data.demoMode} />
       </div>
-    {:else if section !== "templates" && section !== "products" && section !== "tax"}
+    {:else if section === "security"}
+      <div class="bg-base-100 rounded-box border-base-200 max-w-4xl space-y-6 border p-6">
+        <div class="space-y-2">
+          <h2 class="text-xl font-semibold">{t("Security")}</h2>
+          <p class="text-sm opacity-80">{t("Protect your account with two-factor authentication.")}</p>
+        </div>
+
+        <div class="alert {twoFactorEnabled ? 'alert-success' : 'alert-warning'}">
+          <span>
+            {twoFactorEnabled ? t("Two-factor authentication is enabled") : t("Two-factor authentication is not enabled")}
+          </span>
+        </div>
+
+        {#if twoFactorError}
+          <div class="alert alert-error"><span>{twoFactorError}</span></div>
+        {/if}
+        {#if twoFactorSuccess}
+          <div class="alert alert-success"><span>{twoFactorSuccess}</span></div>
+        {/if}
+
+        <div class="flex flex-wrap gap-3">
+          <button class="btn btn-primary" onclick={startTwoFactorSetup} disabled={twoFactorLoading || twoFactorDisabling}>
+            {#if twoFactorLoading}
+              <span class="loading loading-spinner loading-sm"></span>
+            {/if}
+            {twoFactorEnabled ? t("Reconfigure 2FA") : t("Set up 2FA")}
+          </button>
+          {#if twoFactorEnabled && !twoFactorDisableConfirm}
+            <button class="btn btn-error btn-outline" onclick={() => (twoFactorDisableConfirm = true)} disabled={twoFactorLoading || twoFactorDisabling}>
+              {t("Disable 2FA")}
+            </button>
+          {/if}
+        </div>
+
+        {#if twoFactorDisableConfirm}
+          <div class="bg-base-200 rounded-box space-y-3 p-4">
+            <p class="font-semibold">{t("Confirm disable two-factor authentication")}</p>
+            <p class="text-sm opacity-80">{t("Enter your current 2FA code to confirm.")}</p>
+            <form class="flex flex-wrap items-end gap-3" onsubmit={disableTwoFactor}>
+              <label class="form-control">
+                <div class="label"><span class="label-text">{t("2FA code")}</span></div>
+                <input
+                  class="input input-bordered input-sm w-40"
+                  type="text"
+                  bind:value={twoFactorDisableCode}
+                  inputmode="numeric"
+                  maxlength="6"
+                  placeholder={t("Enter 6-digit code")}
+                  required
+                  disabled={twoFactorDisabling}
+                  autocomplete="one-time-code"
+                />
+              </label>
+              <div class="flex gap-2">
+                <button type="submit" class="btn btn-error btn-sm" disabled={twoFactorDisabling}>
+                  {#if twoFactorDisabling}
+                    <span class="loading loading-spinner loading-sm"></span>
+                  {/if}
+                  {t("Yes, disable")}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  onclick={() => {
+                    twoFactorDisableConfirm = false;
+                    twoFactorDisableCode = "";
+                  }}
+                  disabled={twoFactorDisabling}
+                >
+                  {t("Cancel")}
+                </button>
+              </div>
+            </form>
+          </div>
+        {/if}
+
+        {#if otpQrDataUrl}
+          <div class="space-y-3">
+            <img src={otpQrDataUrl} alt={t("2FA QR code")} class="border-base-300 h-48 w-48 rounded border p-2" />
+            <p class="text-xs break-all opacity-70">{otpAuthUrl}</p>
+            <form class="max-w-sm space-y-3" onsubmit={verifyTwoFactor}>
+              <label class="form-control">
+                <div class="label">
+                  <span class="label-text">{t("2FA code")}</span>
+                </div>
+                <input
+                  class="input input-bordered"
+                  type="text"
+                  bind:value={twoFactorToken}
+                  inputmode="numeric"
+                  maxlength="6"
+                  placeholder={t("Enter 6-digit code")}
+                  required
+                  disabled={twoFactorVerifying}
+                />
+              </label>
+              <button type="submit" class="btn btn-success" disabled={twoFactorVerifying}>
+                {#if twoFactorVerifying}
+                  <span class="loading loading-spinner loading-sm"></span>
+                {/if}
+                {t("Verify and Enable 2FA")}
+              </button>
+            </form>
+          </div>
+        {/if}
+
+        {#if recoveryCodes.length > 0}
+          <div class="bg-base-200 rounded-box space-y-2 p-4">
+            <p class="font-semibold">{t("Recovery codes (save these now)")}</p>
+            <p class="text-sm opacity-80">{t("These codes are shown once and can be used if you lose access to your authenticator app.")}</p>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {#each recoveryCodes as code}
+                <code class="bg-base-100 rounded px-3 py-2">{code}</code>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+    {:else if section !== "templates" && section !== "products" && section !== "tax" && section !== "security"}
       <form onsubmit={saveSettings} class="bg-base-100 rounded-box border-base-200 max-w-4xl space-y-6 border p-6">
         {#if section === "company"}
           <div class="space-y-4">

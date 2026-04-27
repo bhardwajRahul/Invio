@@ -9,6 +9,7 @@
     "npm:@tailwindcss/postcss@^4.1.7": "4.1.12",
     "npm:cssnano@^7.0.7": "7.1.1_postcss@8.5.6",
     "npm:daisyui@^5.0.54": "5.0.54",
+    "npm:otpauth@^9.4.1": "9.5.1",
     "npm:pdf-lib@^1.17.1": "1.17.1",
     "npm:postcss@^8.5.3": "8.5.6",
     "npm:tailwindcss@^4.1.12": "4.1.12"
@@ -103,6 +104,9 @@
         "@emnapi/runtime",
         "@tybys/wasm-util"
       ]
+    },
+    "@noble/hashes@2.2.0": {
+      "integrity": "sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg=="
     },
     "@pdf-lib/standard-fonts@1.0.0": {
       "integrity": "sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==",
@@ -529,6 +533,12 @@
         "boolbase"
       ]
     },
+    "otpauth@9.5.1": {
+      "integrity": "sha512-fJmDAHc8wImfqqqOXIlBvT1dEKrZK0Cmb2VEgScpNTolCz0PHh6ExUZGv4sLtOsWNaHCQlD+rRqaPgnoxFoZjQ==",
+      "dependencies": [
+        "@noble/hashes"
+      ]
+    },
     "pako@1.0.11": {
       "integrity": "sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw=="
     },
@@ -807,7 +817,8 @@
         "minizlib",
         "mkdirp",
         "yallist"
-      ]
+      ],
+      "deprecated": true
     },
     "tslib@1.14.1": {
       "integrity": "sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg=="
@@ -1133,6 +1144,7 @@
     "dependencies": [
       "jsr:@pakornv/fresh-plugin-tailwindcss@^1.0.3",
       "npm:daisyui@^5.0.54",
+      "npm:otpauth@^9.4.1",
       "npm:pdf-lib@^1.17.1",
       "npm:tailwindcss@^4.1.12"
     ]
