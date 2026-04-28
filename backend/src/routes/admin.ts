@@ -1751,6 +1751,9 @@ adminRoutes.get("/users/me", (c) => {
 });
 
 adminRoutes.post("/users/me/2fa/setup", (c) => {
+  if (DEMO_MODE) {
+    return c.json({ error: "2FA is not available in demo mode" }, 403);
+  }
   const user = getAuthUser(c);
   if (!user) return c.json({ error: "Not authenticated" }, 401);
   const setup = createPendingTwoFactorSetup(user.id, user.username);
@@ -1761,6 +1764,9 @@ adminRoutes.post("/users/me/2fa/setup", (c) => {
 });
 
 adminRoutes.post("/users/me/2fa/verify", async (c) => {
+  if (DEMO_MODE) {
+    return c.json({ error: "2FA is not available in demo mode" }, 403);
+  }
   const user = getAuthUser(c);
   if (!user) return c.json({ error: "Not authenticated" }, 401);
   let token: string | undefined;
@@ -1787,6 +1793,9 @@ adminRoutes.post("/users/me/2fa/verify", async (c) => {
 });
 
 adminRoutes.delete("/users/me/2fa", async (c) => {
+  if (DEMO_MODE) {
+    return c.json({ error: "2FA is not available in demo mode" }, 403);
+  }
   const user = getAuthUser(c);
   if (!user) return c.json({ error: "Not authenticated" }, 401);
 

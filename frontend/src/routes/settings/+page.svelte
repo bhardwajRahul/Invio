@@ -38,7 +38,9 @@
   let twoFactorDisableCode = $state("");
   let xmlProfiles = $derived((data.xmlProfiles || []) as Array<{ id: string; name: string }>);
 
-  let section = $derived(page.url.searchParams.get("section") || "company");
+  let demoMode = $derived((data as any)?.demoMode === true || (data as any)?.demoMode === "true");
+  let requestedSection = $derived(page.url.searchParams.get("section") || "company");
+  let section = $derived(requestedSection === "security" && demoMode ? "company" : requestedSection);
   let canUpdateSettings = $derived(true); // TODO: user permissions
 
   // Keep settings synced if data.settings changes from an external invalidation
@@ -195,7 +197,7 @@
     { id: "products", label: "Products", icon: Package },
     { id: "numbering", label: "Numbering", icon: Hash },
     { id: "xml", label: "XML Export", icon: FileCodeCorner },
-    { id: "security", label: "Security", icon: Shield },
+    { id: "security", label: "Security", icon: Shield, condition: () => !demoMode },
   ];
 
   function getSectionUrl(id: string) {
