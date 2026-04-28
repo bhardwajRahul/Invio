@@ -8,17 +8,28 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   }
 
   try {
-    const [invoiceRes, customersRes, productsRes, taxDefinitionsRes] =
-      await Promise.allSettled([
-        backendGet(`/api/v1/invoices/${params.id}`, locals.authHeader),
-        backendGet("/api/v1/customers", locals.authHeader),
-        backendGet("/api/v1/products", locals.authHeader),
-        backendGet("/api/v1/tax-definitions", locals.authHeader),
-      ]);
+    const [
+      invoiceRes,
+      customersRes,
+      productsRes,
+      taxDefinitionsRes,
+      settingsRes,
+    ] = await Promise.allSettled([
+      backendGet(`/api/v1/invoices/${params.id}`, locals.authHeader),
+      backendGet("/api/v1/customers", locals.authHeader),
+      backendGet("/api/v1/products", locals.authHeader),
+      backendGet("/api/v1/tax-definitions", locals.authHeader),
+      backendGet("/api/v1/settings", locals.authHeader),
+    ]);
 
     if (invoiceRes.status !== "fulfilled") {
       throw error(404, "Invoice not found");
     }
+
+    const settings =
+      settingsRes.status === "fulfilled"
+        ? (settingsRes.value as Record<string, unknown>)
+        : {};
 
     return {
       invoice: invoiceRes.value,
@@ -26,6 +37,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       products: productsRes.status === "fulfilled" ? productsRes.value : [],
       taxDefinitions:
         taxDefinitionsRes.status === "fulfilled" ? taxDefinitionsRes.value : [],
+      allowProtectedInvoiceChanges:
+        String(
+          settings.allowProtectedInvoiceChanges || "false",
+        ).toLowerCase() === "true",
     };
   } catch (err: any) {
     throw error(404, err?.message || "Invoice not found");

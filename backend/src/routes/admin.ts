@@ -271,6 +271,23 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
   }
 }
 
+function normalizeInvoiceProtectionSettingsPayload(data: Record<string, unknown>) {
+  if (
+    !Object.prototype.hasOwnProperty.call(data, "allowProtectedInvoiceChanges")
+  ) {
+    return;
+  }
+  const raw = String(data.allowProtectedInvoiceChanges ?? "")
+    .toLowerCase()
+    .trim();
+  const truthy = new Set(["1", "true", "yes", "y", "on"]);
+  (data as Record<string, unknown>).allowProtectedInvoiceChanges = truthy.has(
+    raw,
+  )
+    ? "true"
+    : "false";
+}
+
 // Demo mode flag (mutations allowed; periodic resets handle reverting state)
 const DEMO_MODE = isDemoMode();
 
@@ -885,6 +902,9 @@ adminRoutes.get("/settings", async (c) => {
   if (!map.dateFormat) map.dateFormat = "YYYY-MM-DD";
   if (!map.numberFormat) map.numberFormat = "comma";
   if (!map.postalCityFormat) map.postalCityFormat = "auto";
+  if (!map.allowProtectedInvoiceChanges) {
+    map.allowProtectedInvoiceChanges = "false";
+  }
   // Expose demo mode to frontend UI
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -906,6 +926,7 @@ adminRoutes.put(
     // Normalize tax-related settings
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
+    normalizeInvoiceProtectionSettingsPayload(data);
     const settings = await updateSettings(data);
     try {
       if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -946,6 +967,7 @@ adminRoutes.patch(
     // Normalize tax-related settings
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
+    normalizeInvoiceProtectionSettingsPayload(data);
     const settings = await updateSettings(data);
     if (typeof data.templateId === "string" && data.templateId) {
       try {
@@ -1013,6 +1035,9 @@ adminRoutes.get("/admin/settings", async (c) => {
   if (!map.dateFormat) map.dateFormat = "YYYY-MM-DD";
   if (!map.numberFormat) map.numberFormat = "comma";
   if (!map.postalCityFormat) map.postalCityFormat = "auto";
+  if (!map.allowProtectedInvoiceChanges) {
+    map.allowProtectedInvoiceChanges = "false";
+  }
   // Expose demo mode to frontend UI for admin-prefixed route as well
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -1030,6 +1055,7 @@ adminRoutes.put(
     // Normalize tax-related settings
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
+    normalizeInvoiceProtectionSettingsPayload(data);
     const settings = await updateSettings(data);
     try {
       if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -1052,6 +1078,7 @@ adminRoutes.patch(
     // Normalize tax-related settings
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
+    normalizeInvoiceProtectionSettingsPayload(data);
     const settings = await updateSettings(data);
     try {
       if ("logoUrl" in data) deleteSetting("logoUrl");

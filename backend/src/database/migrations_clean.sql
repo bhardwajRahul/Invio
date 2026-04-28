@@ -94,7 +94,8 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('paymentMethods', 'Bank Transfer, PayPal, Credit Card'),
   ('bankAccount', 'Account: 1234567890, Routing: 987654321'),
   ('paymentTerms', 'Due in 30 days'),
-  ('defaultNotes', 'Thank you for your business!');
+  ('defaultNotes', 'Thank you for your business!'),
+  ('allowProtectedInvoiceChanges', 'false');
 
 -- Insert a simple default template
 INSERT OR IGNORE INTO templates (id, name, html, is_default) VALUES 

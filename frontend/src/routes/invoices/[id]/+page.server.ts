@@ -13,12 +13,26 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
   }
 
   try {
-    const invoice = await backendGet(
-      `/api/v1/invoices/` + params.id,
-      locals.authHeader,
-    );
+    const [invoiceRes, settingsRes] = await Promise.allSettled([
+      backendGet(`/api/v1/invoices/` + params.id, locals.authHeader),
+      backendGet("/api/v1/settings", locals.authHeader),
+    ]);
+    if (invoiceRes.status !== "fulfilled") {
+      throw error(404, "Invoice not found");
+    }
+    const settings =
+      settingsRes.status === "fulfilled"
+        ? (settingsRes.value as Record<string, unknown>)
+        : {};
+    const allowProtectedInvoiceChanges =
+      String(settings.allowProtectedInvoiceChanges || "false").toLowerCase() ===
+      "true";
     const showPublishedBanner = url.searchParams.get("published") === "1";
-    return { invoice, showPublishedBanner };
+    return {
+      invoice: invoiceRes.value,
+      showPublishedBanner,
+      allowProtectedInvoiceChanges,
+    };
   } catch (err: any) {
     throw error(404, "Invoice not found");
   }

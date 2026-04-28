@@ -12,13 +12,15 @@
 
   let { data } = $props();
   let t = getContext("i18n") as (key: string) => string;
+  const asBool = (value: unknown) => String(value ?? "false").toLowerCase() === "true";
 
   let initialSettings = $derived(data.settings || {});
   let settings = $state({
     dateFormat: "YYYY-MM-DD",
     numberFormat: "comma",
     postalCityFormat: "auto",
-    ...data.settings,
+    ...initialSettings,
+    allowProtectedInvoiceChanges: asBool((initialSettings as Record<string, unknown>).allowProtectedInvoiceChanges),
   } as Record<string, any>);
 
   let saving = $state(false);
@@ -62,6 +64,7 @@
 
     try {
       const payload = JSON.parse(JSON.stringify(settings));
+      payload.allowProtectedInvoiceChanges = Boolean(settings.allowProtectedInvoiceChanges);
       const res = await fetch("/api/v1/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -78,6 +81,7 @@
           dateFormat: latest.dateFormat || "YYYY-MM-DD",
           numberFormat: latest.numberFormat || "comma",
           postalCityFormat: latest.postalCityFormat || "auto",
+          allowProtectedInvoiceChanges: String(latest.allowProtectedInvoiceChanges || "false").toLowerCase() === "true",
         };
       }
 
@@ -533,6 +537,14 @@
         {:else if section === "payments"}
           <div class="space-y-4">
             <h2 class="text-xl font-semibold">{t("Payments & Texts")}</h2>
+            <div class="alert alert-warning">
+              <CircleAlert size={16} />
+              <span>{t("Allowing edits/deletes for sent or paid invoices can violate invoice retention laws. Only enable this if you understand the legal impact.")}</span>
+            </div>
+            <label class="label cursor-pointer justify-start gap-4">
+              <input type="checkbox" class="checkbox" bind:checked={settings.allowProtectedInvoiceChanges} disabled={!canUpdateSettings} />
+              <span class="label-text">{t("Allow editing and deleting sent/paid invoices")}</span>
+            </label>
             <label class="form-control"
               ><div class="label">
                 <span class="label-text">{t("Payment Methods")}</span>

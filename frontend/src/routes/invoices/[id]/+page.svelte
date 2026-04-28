@@ -31,6 +31,10 @@
   let canDelete = $derived(hasPermission(user, "invoices", "delete"));
   let canPublish = $derived(hasPermission(user, "invoices", "publish"));
   let canVoid = $derived(hasPermission(user, "invoices", "void"));
+  let allowProtectedInvoiceChanges = $derived(Boolean(data.allowProtectedInvoiceChanges));
+  let isRetentionProtectedInvoice = $derived(invoice?.status === "sent" || invoice?.status === "paid" || invoice?.status === "complete" || invoice?.status === "overdue");
+  let canEditInvoice = $derived(canUpdate && Boolean(invoice && (invoice.status === "draft" || (allowProtectedInvoiceChanges && invoice.status !== "voided"))));
+  let canDeleteInvoice = $derived(canDelete && Boolean(invoice && (invoice.status === "draft" || invoice.status === "voided" || (allowProtectedInvoiceChanges && invoice.status !== "voided"))));
 
   let paidPaymentMethod = $state("");
 
@@ -64,10 +68,18 @@
     alert(t("Link copied!"));
   }
 
-  function confirmAction(message: string): SubmitFunction {
+  function confirmAction(message: string | (() => string)): SubmitFunction {
     return ({ cancel }) => {
-      if (!confirm(message)) cancel();
+      const text = typeof message === "function" ? message() : message;
+      if (!confirm(text)) cancel();
     };
+  }
+
+  function confirmEditNavigation(event: MouseEvent) {
+    if (!allowProtectedInvoiceChanges || !isRetentionProtectedInvoice) return;
+    if (!confirm(t("You are about to edit a sent/paid invoice. Ensure this is legally allowed in your jurisdiction. Continue?"))) {
+      event.preventDefault();
+    }
   }
 </script>
 
@@ -156,14 +168,23 @@
     <form id="inv-void" method="post" class="hidden" use:enhance={confirmAction(t("Void this invoice?"))}>
       <input type="hidden" name="intent" value="void" />
     </form>
-    <form id="inv-delete" method="post" class="hidden" use:enhance={confirmAction(t("Delete this invoice? This cannot be undone."))}>
+    <form
+      id="inv-delete"
+      method="post"
+      class="hidden"
+      use:enhance={confirmAction(() =>
+        isRetentionProtectedInvoice
+          ? t("You are about to delete a sent/paid invoice. This may violate invoice retention laws and cannot be undone. Continue?")
+          : t("Delete this invoice? This cannot be undone."),
+      )}
+    >
       <input type="hidden" name="intent" value="delete" />
     </form>
 
     {#if invoice}
       <div class="flex flex-wrap items-center gap-2">
-        {#if invoice.status === "draft" && !isOverdue && canUpdate}
-          <a href="/invoices/{invoice.id}/edit" class="btn btn-sm">
+        {#if canEditInvoice}
+          <a href="/invoices/{invoice.id}/edit" class="btn btn-sm" onclick={confirmEditNavigation}>
             <Pencil size={16} />
             <span class="hidden sm:inline">{t("Edit")}</span>
           </a>
@@ -279,7 +300,7 @@
                 </button>
               </li>
             {/if}
-            {#if (invoice.status === "draft" || invoice.status === "voided") && canDelete}
+            {#if canDeleteInvoice}
               <li>
                 <button type="submit" form="inv-delete" class="text-error flex items-center gap-2 py-2">
                   <Trash2 size={16} />

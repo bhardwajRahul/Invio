@@ -4,6 +4,7 @@ import {
   getDatabase,
   getNextInvoiceNumber,
 } from "../database/init.ts";
+import { getSetting } from "./settings.ts";
 import {
   CreateInvoiceRequest,
   Invoice,
@@ -50,6 +51,18 @@ type PerLineCalc = {
   // Summary grouped by percent
   summary: Array<{ percent: number; taxable: number; amount: number }>;
 };
+
+function isInvoiceProtectionOverrideEnabled(): boolean {
+  const raw = getSetting("allowProtectedInvoiceChanges");
+  if (raw === null || raw === undefined) return false;
+  const normalized = String(raw).trim().toLowerCase();
+  return (
+    normalized === "true" ||
+    normalized === "1" ||
+    normalized === "yes" ||
+    normalized === "on"
+  );
+}
 
 function calculatePerLineTotals(
   items: ItemInput[],
@@ -772,7 +785,8 @@ export const updateInvoice = async (
   }
 
   const isIssued = existing.status !== "draft";
-  if (isIssued) {
+  const allowProtectedChanges = isInvoiceProtectionOverrideEnabled();
+  if (isIssued && !allowProtectedChanges) {
     const forbidden = [
       "items",
       "discountAmount",
@@ -1091,8 +1105,13 @@ export const deleteInvoice = async (id: string): Promise<boolean> => {
   const existing = await getInvoiceById(id);
   if (!existing) throw new Error("Invoice not found");
 
+  const allowProtectedChanges = isInvoiceProtectionOverrideEnabled();
   // Only draft invoices can be deleted; issued invoices must be voided for audit trail
-  if (existing.status !== "draft" && existing.status !== "voided") {
+  if (
+    !allowProtectedChanges &&
+    existing.status !== "draft" &&
+    existing.status !== "voided"
+  ) {
     throw new Error(
       "Only draft or voided invoices can be deleted. Void the invoice first.",
     );
