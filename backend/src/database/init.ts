@@ -558,10 +558,12 @@ async function seedAdminUser(database: DB): Promise<void> {
       [id, username, username, passwordHash, now, now],
     );
 
-    for (const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
-      Resource,
-      readonly Action[],
-    ][]) {
+    for (
+      const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
+        Resource,
+        readonly Action[],
+      ][]
+    ) {
       for (const action of actions) {
         database.query(
           "INSERT INTO user_permissions (id, user_id, resource, action) VALUES (?, ?, ?, ?)",
@@ -618,32 +620,61 @@ export async function resetDatabaseFromDemo(): Promise<void> {
   const demoDb = getEnv("DEMO_DB_PATH");
   const activePath = resolvePath(getEnv("DATABASE_PATH", "./invio.db")!);
   if (!demoDb) {
-    console.warn(
-      "DEMO_MODE is true but DEMO_DB_PATH is not set; skipping reset.",
-    );
-    return;
+    throw new Error("DEMO_MODE is true but DEMO_DB_PATH is not set.");
   }
+  const demoPath = resolvePath(demoDb);
+  const tempPath =
+    `${activePath}.demo-reset-${Date.now()}-${crypto.randomUUID()}.tmp`;
 
   try {
     closeDatabase();
-  } catch {
-    /* ignore */
+  } catch (error) {
+    throw new Error(
+      `Failed to close current database before demo reset: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   }
 
+  let resetError: unknown = undefined;
   try {
+    Deno.statSync(demoPath);
     ensureDir(simpleDirname(activePath));
+
+    Deno.copyFileSync(demoPath, tempPath);
     try {
-      Deno.removeSync(activePath);
+      Deno.renameSync(tempPath, activePath);
     } catch {
-      /* ok if missing */
+      try {
+        Deno.removeSync(activePath);
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) {
+          throw error;
+        }
+      }
+      Deno.renameSync(tempPath, activePath);
     }
-    Deno.copyFileSync(resolvePath(demoDb), activePath);
     console.log("  Demo database reset from DEMO_DB_PATH.");
   } catch (e) {
-    console.error("Failed to reset demo database:", e);
+    resetError = e;
+  } finally {
+    try {
+      Deno.removeSync(tempPath);
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) {
+        console.warn("Could not remove temporary demo reset file:", error);
+      }
+    }
+    await initDatabase();
   }
 
-  await initDatabase();
+  if (resetError) {
+    throw new Error(
+      `Failed to reset demo database: ${
+        resetError instanceof Error ? resetError.message : String(resetError)
+      }`,
+    );
+  }
 }
 
 export function getDatabase(): DB {
@@ -654,7 +685,9 @@ export function getDatabase(): DB {
 }
 
 export function closeDatabase(): void {
-  if (db) db.close();
+  if (!db) return;
+  db.close();
+  db = undefined;
 }
 
 //
