@@ -15,6 +15,7 @@
   const asBool = (value: unknown) => String(value ?? "false").toLowerCase() === "true";
 
   let initialSettings = $derived(data.settings || {});
+  let baselineSettings = $state({} as Record<string, any>);
   let settings = $state({
     dateFormat: "YYYY-MM-DD",
     numberFormat: "comma",
@@ -48,6 +49,7 @@
   // Keep settings synced if data.settings changes from an external invalidation
   $effect(() => {
     if (data.settings) {
+      baselineSettings = { ...data.settings };
       if (Object.keys(settings).length === 0) {
         settings = { ...data.settings };
       } else {
@@ -63,10 +65,28 @@
     success = "";
 
     try {
-      const payload = JSON.parse(JSON.stringify(settings));
-      payload.allowProtectedInvoiceChanges = Boolean(settings.allowProtectedInvoiceChanges);
+      const current = JSON.parse(JSON.stringify(settings)) as Record<string, any>;
+      const baseline = JSON.parse(JSON.stringify(baselineSettings)) as Record<string, any>;
+      const payload: Record<string, any> = {};
+      for (const [key, value] of Object.entries(current)) {
+        if (key === "allowProtectedInvoiceChanges") {
+          const normalized = Boolean(value);
+          const baselineNormalized = Boolean(baseline[key]);
+          if (normalized !== baselineNormalized) {
+            payload[key] = normalized;
+          }
+          continue;
+        }
+        if (JSON.stringify(value) !== JSON.stringify(baseline[key])) {
+          payload[key] = value;
+        }
+      }
+      if (Object.keys(payload).length === 0) {
+        success = t("Settings updated successfully");
+        return;
+      }
       const res = await fetch("/api/v1/settings", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -83,6 +103,7 @@
           postalCityFormat: latest.postalCityFormat || "auto",
           allowProtectedInvoiceChanges: String(latest.allowProtectedInvoiceChanges || "false").toLowerCase() === "true",
         };
+        baselineSettings = { ...latest };
       }
 
       success = t("Settings updated successfully");
